@@ -10,7 +10,10 @@
 3. Android SDK Platform 34와 Build Tools 34.0.0을 설치하고 Gradle Sync를 실행합니다.
 4. 실행 구성 `app`을 선택하고 API 26 이상 기기/에뮬레이터에서 Run 합니다.
 
-이 PC의 작업 폴더: `C:\Users\jisun\Documents\ChatGPT\모바일 프로그래밍`
+이 PC의 앱 프로젝트 폴더: `C:\Users\jisun\Documents\ChatGPT\모바일 프로그래밍\MyCommuteAndroid`
+
+상위 작업 공간의 `agent-notes`에는 작업 기록, `materials`에는 원본 및 생성 자료를 보관합니다.
+두 폴더는 앱 Git 저장소 바깥에 있으며, Git 명령은 `MyCommuteAndroid` 안에서 실행합니다.
 
 `local.properties`에는 이 PC의 SDK 경로가 설정되어 있으며 Git에는 포함하지 않습니다.
 다른 PC에서는 Android Studio가 SDK 위치를 설정하도록 합니다.
