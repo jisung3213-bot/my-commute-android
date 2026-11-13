@@ -1,0 +1,16 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.example.seoulmobilitytester'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.example.seoulmobilitytester'
+        minSdk 26
+        targetSdk 28 // HTTP-based Seoul public APIs: demonstration only; not Play release-ready
+        versionCode 1
+        versionName '1.0'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

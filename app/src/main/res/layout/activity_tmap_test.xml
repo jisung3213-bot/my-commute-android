@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="18dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="TMAP REST API 연결 테스트" android:textStyle="bold" android:textSize="21sp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="테스트용 App Key를 입력해. 키는 저장하지 않으며 결과에는 표시하지 않아. 대중교통 API는 별도 이용 권한이 필요할 수 있어."
+            android:textSize="12sp" android:paddingTop="8dp" />
+        <EditText android:id="@+id/tmapKey" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="TMAP App Key" android:inputType="textVisiblePassword" android:singleLine="true" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="① POI 장소 검색" android:textStyle="bold" android:paddingTop="16dp"/>
+        <EditText android:id="@+id/tmapKeyword" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="장소 검색어" android:text="강남역" android:singleLine="true" />
+        <Button android:id="@+id/tmapPoi" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="TMAP 장소 검색 (GET)" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="② 도보 / 대중교통 경로 (경도 X, 위도 Y)" android:textStyle="bold" android:paddingTop="16dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="출발 좌표" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <EditText android:id="@+id/startLon" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:inputType="numberDecimal|numberSigned" android:hint="경도 X" android:text="127.024798" />
+            <EditText android:id="@+id/startLat" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:inputType="numberDecimal|numberSigned" android:hint="위도 Y" android:text="37.504585" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="도착 좌표" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <EditText android:id="@+id/endLon" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:inputType="numberDecimal|numberSigned" android:hint="경도 X" android:text="127.037476" />
+            <EditText android:id="@+id/endLat" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:inputType="numberDecimal|numberSigned" android:hint="위도 Y" android:text="37.479104" />
+        </LinearLayout>
+        <Button android:id="@+id/tmapWalk" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="TMAP 도보 경로 (POST)" />
+        <Button android:id="@+id/tmapTransit" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="TMAP 대중교통 경로 (POST)" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="③ HTTP 상태 · 요약 · 원본 JSON" android:textStyle="bold" android:paddingTop="16dp"/>
+        <TextView android:id="@+id/tmapStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="요청 전" android:padding="10dp"/>
+        <Button android:id="@+id/tmapCopy" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="결과 복사 (키 제외)"/>
+        <TextView android:id="@+id/tmapResult" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="버튼을 누르면 결과를 표시합니다." android:textSize="12sp" android:typeface="monospace"
+            android:textIsSelectable="true" android:background="#F1F1F1" android:padding="12dp"/>
+    </LinearLayout>
+</ScrollView>
