@@ -1,0 +1,275 @@
+{
+  "project": "MyCommuteAndroid",
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 84,
+      "sha256": "717cc5d8dafdf94ff44933f4da7d237c8485115527941d5d9afd4491979a39ae"
+    },
+    {
+      "path": "README.md",
+      "bytes": 9070,
+      "sha256": "d80d73723c919583814c986e77fac204e9169424f8e4e3a1dbddbc3c669a72cd"
+    },
+    {
+      "path": "app/build.gradle",
+      "bytes": 1683,
+      "sha256": "8ddfeeed9dd75016b73029f0a0cd2e5133fec771cb23c800ce723b5337912bc9"
+    },
+    {
+      "path": "app/src/main/AndroidManifest.xml",
+      "bytes": 2461,
+      "sha256": "854f66889098b4dce406d5b1a190e59f27798566850a78516b19c0daefc52d8a"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/CommuteApplication.java",
+      "bytes": 508,
+      "sha256": "750356c9f0666bd681c7d13e4ae990f3fee0bc3667fb99c7e224ab4bec04f010"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/alarms/BootReceiver.java",
+      "bytes": 862,
+      "sha256": "7ef64901aae3a32721b33e7bb9d573aafc5dae0702c0d6891d523f09561ec140"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/alarms/NotificationHelper.java",
+      "bytes": 2989,
+      "sha256": "964e0c9f4c7ba5181e13bc943f86068035eff46efad210313512bb5f0ce5b964"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/alarms/ReminderReceiver.java",
+      "bytes": 2109,
+      "sha256": "7c89a06582d61a6a73e63af0f9591242048f899aab72eedfc86f34622dd99ddd"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/alarms/ReminderScheduler.java",
+      "bytes": 4582,
+      "sha256": "fd73fe05206d0c9caf30090f4406eff42f062239ee01c1a3290621a2d76d7c12"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/data/AlarmLogDao.java",
+      "bytes": 569,
+      "sha256": "606b429908428f9cd6f9bcaabc0780656afbfad85fc72fecd1e8cfcc94845621"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/data/AlarmLogEntity.java",
+      "bytes": 402,
+      "sha256": "6e540a1fea1abdb6cb7d64019621d0583799e248b5943a0a5d9cfdcf5d4a6f7a"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/data/AlarmLogRepository.java",
+      "bytes": 1674,
+      "sha256": "4e5b37b67016795b4d721af45fdb15e0d12c0565d79ff8c04de483a94411dfd1"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/data/CommuteDatabase.java",
+      "bytes": 719,
+      "sha256": "e9296d59a6007efb01ef7e2096822f0495b9b8d47bea743ca8261800ba3f041b"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/data/FirestoreSync.java",
+      "bytes": 2085,
+      "sha256": "77582895982674413ab9902d07674ee1de9eedf6ed0bb451547246a0ebbd6973"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/data/RoutineStore.java",
+      "bytes": 1271,
+      "sha256": "1f72de6138c0659685382005d784d54469f21d7bc0b478220add76a2c0fc3438"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/data/Session.java",
+      "bytes": 1459,
+      "sha256": "33730bb743604ed06518a4fd67f8b26ef218e592c11d109763675da334c4353d"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/engine/DepartureDecisionEngine.java",
+      "bytes": 1382,
+      "sha256": "a17b078113ff64013fa3c9056aee4efdaf2b58aeb36ae6f72692131edf84905a"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/engine/RoutePlanner.java",
+      "bytes": 1649,
+      "sha256": "ebe246f238e98f9d6db12a32c35da6ebae284ff10bbad802a691c00990b48e07"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/engine/TripTimeline.java",
+      "bytes": 1496,
+      "sha256": "bb4f73e76a4051cc15b3caa36d3e899e13d7beeec0ec5c3c3e020b000aee1582"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/location/TrackingService.java",
+      "bytes": 3695,
+      "sha256": "8823bba5018367b3c0f85ddf2cd62721fcd32145b4386ea734f7e90af1eb831f"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/model/Routine.java",
+      "bytes": 4685,
+      "sha256": "174ce215906bd6451a7372ed2c87cf382992d51fd370726b8391eda365aff9cc"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/model/Waypoint.java",
+      "bytes": 996,
+      "sha256": "52aef6f8abac9f26d7d0dd535226fd9b50467028d0cc5bf9fe815619ac74394e"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/network/ProviderContracts.java",
+      "bytes": 944,
+      "sha256": "65635979a65f395c1a6d2e8e72135adead685fe77ad87616cd67413831f6b599"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/network/TmapWalkingClient.java",
+      "bytes": 4265,
+      "sha256": "34a6760d79e37f3889e7e6782d8d873133b9d066422271dbdd1592ec3ed10d83"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/ui/AlarmLogActivity.java",
+      "bytes": 2720,
+      "sha256": "939a568521e957e72ec9d64abaf7cd38242664c0afc8f6c49422c511ab66b20b"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/ui/CustomActivity.java",
+      "bytes": 10803,
+      "sha256": "2dc0d8da4cd468a9f08a0003e175905d426a3e8bf8e1c2548fc2028b0561243a"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/ui/LoginActivity.java",
+      "bytes": 3734,
+      "sha256": "1aa4e1962273202938eeeff6926d47f054b0e1f85d1344cb626ca94c05165e64"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/ui/MainActivity.java",
+      "bytes": 2991,
+      "sha256": "0cebe05272f6dde981a5cea07bec1d02942f229b715569f6b5fc5d3bb6cc2b5c"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/ui/MapActivity.java",
+      "bytes": 5148,
+      "sha256": "2e765a31d10931dc7685f37e990cfce455a1361b24378355961e76505531be2c"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/ui/Navigation.java",
+      "bytes": 1018,
+      "sha256": "92d29855dea185d5521eaa641e7027c2ceee66f2d5cea57b37acd541a446b7c9"
+    },
+    {
+      "path": "app/src/main/java/com/example/mycommute/ui/TrackingActivity.java",
+      "bytes": 6592,
+      "sha256": "aecbe5f232212736a3fbdf72e0ecc448ad909ddcebc90b8216c4ab499c3df7e5"
+    },
+    {
+      "path": "app/src/main/res/drawable/bg_card.xml",
+      "bytes": 224,
+      "sha256": "4203b807cc3f0d1f99b9b3148721a604b8b0518baa02438383a09bf193ec9bec"
+    },
+    {
+      "path": "app/src/main/res/drawable/ic_notification.xml",
+      "bytes": 380,
+      "sha256": "7c2bfc7361dc2feb2fca16779d1033ccacbc063923c9cc823fff08c6f53eccb2"
+    },
+    {
+      "path": "app/src/main/res/layout/activity_alarm_log.xml",
+      "bytes": 1655,
+      "sha256": "d3053cd351de05b0a3a9c046238e208d69bc92e749307eb39114f2f37e891989"
+    },
+    {
+      "path": "app/src/main/res/layout/activity_custom.xml",
+      "bytes": 9636,
+      "sha256": "1f3669b2a873c6a3f4b3f0d95ea3f5ff1affc37d9ef456250dcc601acab4473a"
+    },
+    {
+      "path": "app/src/main/res/layout/activity_login.xml",
+      "bytes": 3034,
+      "sha256": "d3ed027367f9957a1dfe068fdeb646cbe4e5e6df25eeac3de06e06e4bce98a61"
+    },
+    {
+      "path": "app/src/main/res/layout/activity_main.xml",
+      "bytes": 4144,
+      "sha256": "7103e97cae854d472e29e31bab831a19b39fe0f85b3f1d756695bd48543722fa"
+    },
+    {
+      "path": "app/src/main/res/layout/activity_map.xml",
+      "bytes": 1452,
+      "sha256": "f77b0f9308b05b5729617e2d442f2908a89bf7af8f7445e4da8b79742b768111"
+    },
+    {
+      "path": "app/src/main/res/layout/activity_tracking.xml",
+      "bytes": 3818,
+      "sha256": "2939bf6759a628d8436bb679b44dc9fbf8924fc961a90436ab53f0ebf3331531"
+    },
+    {
+      "path": "app/src/main/res/layout/view_bottom_nav.xml",
+      "bytes": 1616,
+      "sha256": "23ebde579e68ad637886a770946578e08f280087a4e0d7d5be7a5befebbc595f"
+    },
+    {
+      "path": "app/src/main/res/values/colors.xml",
+      "bytes": 428,
+      "sha256": "85c918df24d76ea8383055c1babf8eb93e6f5f6f9be3a20d2c1b05c735106ce5"
+    },
+    {
+      "path": "app/src/main/res/values/strings.xml",
+      "bytes": 82,
+      "sha256": "0664da6490b7b01dd2700fb1529d019870a1e1c42538d0bbc7417e8d203a6721"
+    },
+    {
+      "path": "app/src/main/res/values/themes.xml",
+      "bytes": 1065,
+      "sha256": "d31611ccb45a715d54c3a3d72686fc35fe0f9c1290cfc19916caa0af622eaef8"
+    },
+    {
+      "path": "app/src/test/java/com/example/mycommute/engine/DepartureDecisionEngineTest.java",
+      "bytes": 869,
+      "sha256": "6566dc6cfa202bfedbecbc36723f320f900e94400096f9440efb258ba1ae5379"
+    },
+    {
+      "path": "build.gradle",
+      "bytes": 141,
+      "sha256": "adf1d44e0807179e71be8b1863d870c292d9b940d11633e665b85fd055e9ba50"
+    },
+    {
+      "path": "docs/API_SETUP.md",
+      "bytes": 8367,
+      "sha256": "0b3f8a5a43383aedaedf366d6cf83fedf15baeb5ebfd46f484508847816d2ff7"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "bytes": 4642,
+      "sha256": "d7a358c532c5298cceceb354f177ff44fa77dac46e0ffa605d3c02a1eaa5a622"
+    },
+    {
+      "path": "docs/TEST_CASES.md",
+      "bytes": 2201,
+      "sha256": "a1c0ce71af0b14431503d1ad4205cea60e9bb73abaca187d38d26dbf7efeb0a3"
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "bytes": 1555,
+      "sha256": "4d3b4ae5f22c59244c27694182d6973de6ea12c0bd5e5f3649f07a9758f7001c"
+    },
+    {
+      "path": "firestore.rules",
+      "bytes": 562,
+      "sha256": "cef86b7330bdc3975a80b2a147b23e06fd17817499dd927ae2a9d93aa841c2de"
+    },
+    {
+      "path": "gradle/wrapper/gradle-wrapper.properties",
+      "bytes": 128,
+      "sha256": "905eb8b93d3a8b98153691e5e4c17411f4c0ebdde2da096b706c721eaba938c0"
+    },
+    {
+      "path": "gradle.properties",
+      "bytes": 109,
+      "sha256": "e6b436ff6a08da8b8c05e0e2fc1a7f40f41701bb506cd80fc2ddfd7b6e3b3b2b"
+    },
+    {
+      "path": "local.properties.example",
+      "bytes": 266,
+      "sha256": "885cbcd7b1d525da28ddb63d95d21266c524e97c65d7a559cd5be8b8340c585d"
+    },
+    {
+      "path": "settings.gradle",
+      "bytes": 281,
+      "sha256": "33867efaa6821347ce62467d53b714279df6d685cd85b4f4c335c1f66f20b91b"
+    }
+  ]
+}

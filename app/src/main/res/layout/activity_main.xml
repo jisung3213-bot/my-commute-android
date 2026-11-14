@@ -1,36 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:fillViewport="true">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="18dp">
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="서울 모빌리티 API 연결 테스트" android:textSize="21sp"
-            android:textStyle="bold" android:paddingBottom="12dp" />
-        <Button android:id="@+id/openTmap" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="TMAP 장소·경로 API 테스트 열기" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="① 서울시 따릉이 실시간 대여정보" android:textStyle="bold" android:textSize="17sp"/>
-        <EditText android:id="@+id/bikeKey" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:hint="서울 열린데이터광장 API 키 (없으면 sample)" android:singleLine="true" android:inputType="textVisiblePassword"/>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button android:id="@+id/bikeSample" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="샘플 5건" />
-            <Button android:id="@+id/bikeLive" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="실제 조회 20건" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="20dp" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오늘의 출퇴근"
+                android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+            <Button android:id="@+id/btnSelectRoutine" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="출근 / 퇴근 선택"/>
+            <Button android:id="@+id/btnApiTests" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="개발용 API 연결 확인"/>
+            <TextView android:id="@+id/mainGreeting" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="6dp" android:text="등록된 루틴을 확인해요" android:textColor="@color/text_secondary"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="22dp" android:padding="20dp" android:background="@drawable/bg_card" android:orientation="vertical">
+                <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="내 루틴"/>
+                <TextView android:id="@+id/mainRoute" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textSize="21sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+                <TextView android:id="@+id/mainTime" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:textSize="15sp" android:textColor="@color/text_secondary"/>
+                <TextView android:id="@+id/mainWeather" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textSize="14sp" android:textColor="@color/warning"/>
+                <TextView android:id="@+id/mainTransit" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:textColor="@color/text_secondary"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnGoTracking" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="실시간 이동 화면"/>
+            </LinearLayout>
+            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="24dp" android:text="바로가기"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnGoCustom" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="출퇴근 루틴 등록·편집"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnGoMap" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="지도에서 경로 확인"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnGoLogs" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="알림 로그 확인"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnSignOut" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:layout_gravity="end" android:text="로그아웃"
+                style="@style/Widget.MaterialComponents.Button.TextButton"/>
         </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="② 국토교통부 TAGO 공유 PM API" android:textStyle="bold" android:textSize="17sp" android:paddingTop="18dp"/>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="공공데이터포털 활용신청 후 API 상세명세의 완성된 요청 URL을 입력하세요. URL의 키 부분은 {KEY}로 치환할 수 있습니다. 미확인 엔드포인트를 임의로 고정하지 않았습니다." android:textSize="12sp" />
-        <EditText android:id="@+id/pmUrl" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:hint="https://.../공식요청경로?serviceKey={KEY}&amp;..."
-            android:inputType="textUri" android:minLines="2" android:maxLines="4"/>
-        <EditText android:id="@+id/pmKey" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:hint="TAGO API 키 (URL에 {KEY} 사용 시)" android:inputType="textVisiblePassword" />
-        <Button android:id="@+id/pmRequest" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="TAGO GET 요청" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="③ 요청·응답 결과" android:textStyle="bold" android:textSize="17sp" android:paddingTop="18dp" />
-        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="대기 중" android:padding="10dp" />
-        <Button android:id="@+id/copyResult" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="결과 복사 (키 마스킹)" />
-        <TextView android:id="@+id/result" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:background="#F1F1F1" android:textIsSelectable="true" android:padding="12dp"
-            android:text="버튼을 누르면 HTTP 상태코드, 파싱 결과와 원본 응답 일부가 여기에 표시됩니다." android:typeface="monospace" android:textSize="12sp"/>
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+    <include layout="@layout/view_bottom_nav"/>
+</LinearLayout>

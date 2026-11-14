@@ -1,0 +1,11 @@
+<resources>
+    <color name="primary">#6357B5</color>
+    <color name="primary_dark">#42368E</color>
+    <color name="primary_light">#F0EDFF</color>
+    <color name="background">#F7F8FC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#202331</color>
+    <color name="text_secondary">#656B7D</color>
+    <color name="border">#E0E2EE</color>
+    <color name="warning">#C16E1B</color>
+</resources>

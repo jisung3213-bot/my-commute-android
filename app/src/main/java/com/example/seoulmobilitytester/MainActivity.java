@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_api_test);
         bikeKey = findViewById(R.id.bikeKey);
         pmUrl = findViewById(R.id.pmUrl);
         pmKey = findViewById(R.id.pmKey);

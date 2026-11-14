@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="실시간 이동"
+                android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+            <TextView android:id="@+id/trackingStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:textColor="@color/text_secondary"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                android:layout_marginTop="18dp" android:padding="20dp" android:background="@drawable/bg_card">
+                <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="예상 도착 시각 (사용자 계획 기준)"/>
+                <TextView android:id="@+id/trackingEta" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:textSize="32sp" android:textStyle="bold" android:textColor="@color/primary_dark"/>
+                <TextView android:id="@+id/trackingProgress" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:textColor="@color/text_secondary"/>
+                <ProgressBar android:id="@+id/trackingBar" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent"
+                    android:layout_height="8dp" android:layout_marginTop="12dp" android:max="100"/>
+                <TextView android:id="@+id/trackingLocation" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:textColor="@color/text_secondary"/>
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnStartTracking" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="위치 추적 시작"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnStopTracking" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="위치 추적 종료"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="22dp" android:text="오늘의 이동 타임라인"/>
+            <LinearLayout android:id="@+id/trackingTimeline" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:orientation="vertical"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+                android:text="실제 GPS 위치는 표시되지만 교통 지연·차량 도착·실제 남은 이동시간은 API 미연동 상태야."
+                android:textColor="@color/warning" android:textSize="13sp"/>
+        </LinearLayout>
+    </ScrollView>
+    <include layout="@layout/view_bottom_nav"/>
+</LinearLayout>

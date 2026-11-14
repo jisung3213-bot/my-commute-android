@@ -1,40 +1,23 @@
-# 개발 기준 상태
+# 통합 상태 — 2026-11-15
 
-기준일: 2026-11-14 (한국 시간)
+## 기준
 
-## 출처와 범위
-
-Downloads의 `SeoulMobilityApiTester_TMAP_Java_AGP82/SeoulMobilityApiTester`에 있는 실제 Java/XML 프로젝트를 가져왔습니다.
-기존 빌드 출력과 IDE 개인 설정은 기준 소스에서 제외했습니다.
-지도·로그인 등 새 서비스 기능은 이번 구성 범위에 포함하지 않았습니다.
-
-## 구성 변경
-
-- 현재 작업 폴더를 Android Studio 프로젝트 루트로 구성.
-- Gradle 8.2 공식 Wrapper 작업으로 `gradlew`, `gradlew.bat`, `gradle-wrapper.jar` 복구.
-- Java/XML, AGP 8.2.0, SDK 및 기존 API 테스트 기능 유지.
-- Windows 한글 작업 경로용 Gradle 경로 검사 설정 추가.
-- `.gitignore`, `.gitattributes`, 열기·빌드·GitHub 작업 안내 추가.
-- 키·SDK 로컬 경로·빌드 출력·서명 파일을 Git 추적에서 제외.
+사용자 제공 ZIP을 현재 프로젝트에 실제 통합했다. 기존 앱 ID와 Android Studio/SDK/AGP/Gradle/JDK 버전은 유지했다.
+SDK 34에서 호환되지 않는 AndroidX Core 1.15.0을 1.13.1로 조정했고, 선택적 Firebase 설정에 Google Services 플러그인 4.4.2를 추가했다.
+기존 API 테스트 Java 파일과 테스트 화면은 보존하고 메인에서 연결했다.
+작업 전 Git 소스는 별도 `materials/sources/backups/before_zip_adoption_c0106db.zip`에 보존했다.
 
 ## 검증
 
-| 항목 | 이번 작업 결과 |
-| --- | --- |
-| Gradle 8.2 Wrapper 생성 | 성공 |
-| `gradlew.bat assembleDebug --offline` | 성공, Debug APK 생성 |
-| `gradlew.bat lintDebug` | 실패: 기존 `ExpiredTargetSdkVersion` 오류 1건, 경고 61건 |
-| Lint 실패 원인 | 원본의 targetSdk 28 유지에 따른 배포 정책 검사. 오류를 숨기거나 전체 검사를 비활성화하지 않음 |
-| GitHub | `jisung3213-bot/my-commute-android` 비공개 저장소 생성 및 Git 인증·원격 접근 확인 |
-| 실제 기기 실행 | 미검증. 연결된 ADB 기기 없음 |
-| Android Studio GUI Sync / Run | 이번 작업에서는 직접 실행하지 않음. 같은 프로젝트의 Gradle 명령 빌드는 성공 |
-| 실제 API 호출 | 이번 작업에서는 미실행. 기존 성공 보고는 HANDOFF 문서 참조 |
+- `assembleDebug`: 성공, APK 생성.
+- 실제 테스트 클래스 3종/JUnit 회귀 테스트 **16개 통과** (`scripts/test-core.ps1`).
+- 원래 `testDebugUnitTest`는 Windows 한글 경로의 Gradle worker에서 ClassNotFoundException으로 실행 실패했다. 이를 테스트 통과로 보고하지 않는다. 같은 컴파일 결과를 직접 JUnit으로 실행하여 16개 사례를 검증했다.
+- Lint: targetSdk 28 유지에 따른 ExpiredTargetSdkVersion 오류 1건 및 경고 187건. 새 소스의 NewApi 스타일 오류는 수정했다. 검사 비활성화/전체 baseline 처리는 하지 않았다.
+- 기상 API/특보, 실제 교통 도착, Firebase 서버, TMAP 실호출은 이번 작업에서 미검증.
+- 기존 API 34 가상기기 `U_Pixel_2_`의 읽기 전용 임시 세션에서 APK 설치 Success, LoginActivity 시작 Status: ok, 프로세스 유지 및 crash buffer 비어 있음 확인. 기기 설정/스냅샷을 저장하지 않고 종료했다. UI 전체 흐름과 실제 기기 알림/GPS 검증을 대신하지 않는다.
 
-APK 위치: `app/build/outputs/apk/debug/app-debug.apk` (Git 제외)
+## 한계
 
-Lint 상세 보고서: `app/build/reports/lint-results-debug.html` (로컬 생성)
-
-첫 오프라인 정적 검사에서는 Lint 의존성 캐시가 없어 실패했습니다.
-온라인으로 공식 의존성을 받은 뒤 위의 실제 정적 검사 결과를 확인했습니다.
-61개 경고에는 기존 테스트 UI의 문자열·접근성·입력 설정 등 개선 사항이 포함됩니다.
-기준 프로젝트 구성 후 기능 개발 과정에서 대상 SDK 및 UI 개선을 별도로 진행해야 합니다.
+로그 날짜 필터/상세, Firestore 동기화 상태 UI/충돌 해결, GPS 경로 매칭, 동적 ETA 등은 미구현이다.
+수동 기상 시험 및 사용자 입력 계획과 실제 외부 데이터를 구분해서 표시한다.
+날씨 가중치는 개발용 초기 정책이며 실측 성능이나 최적성을 검증한 값이 아니다.

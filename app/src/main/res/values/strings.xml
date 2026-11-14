@@ -1,1 +1,3 @@
-<resources><string name="app_name">서울 모빌리티 API 테스트</string></resources>
+<resources>
+    <string name="app_name">나만의 출퇴근</string>
+</resources>

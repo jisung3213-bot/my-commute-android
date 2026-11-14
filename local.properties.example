@@ -1,0 +1,4 @@
+# Android Studio will generate sdk.dir on your computer. Keep this file out of version control.
+# sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk
+# TMAP app key for local development; do not put production secrets into APK.
+TMAP_APP_KEY=YOUR_TMAP_APP_KEY_HERE
