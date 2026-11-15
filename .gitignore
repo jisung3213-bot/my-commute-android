@@ -16,3 +16,7 @@ secrets.properties
 .externalNativeBuild/
 captures/
 .tooling/
+# TMAP vendor binaries are distributed separately.
+app/libs/*.jar
+app/libs/*.aar
+app/src/main/jniLibs/

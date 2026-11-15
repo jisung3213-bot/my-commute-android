@@ -45,3 +45,15 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 - `app/src/test/`의 JUnit 단위 테스트는 앱의 실행 화면과 무관하므로 유지합니다.
 - 이전 테스트 앱의 API 실험 결과를 설명하는 `docs/HANDOFF.md` 및 `docs/imported/`는 **과거 참고 자료**입니다. 현재 앱 파일 구성·상태는 이 README와 `docs/STATUS.md`를 기준으로 합니다.
 - `docs/REQUIREMENTS_CURRENT.md`: 기능 설계. `docs/NEXT_STEPS.md`: 향후 개발 범위.
+
+## TMAP Raster 지도 SDK 로컬 설치
+
+TMAP SDK 파일은 저장소에 포함되지 않습니다. **Raster Map SDK (Android)** 를 공식 페이지에서 내려받고, 제공된 `.jar` 또는 `.aar`와 필요한 네이티브 라이브러리/종속성을 개발자 PC의 `app/libs/` 또는 안내된 위치에 추가하세요. JAR/AAR의 버전에 따라 메서드가 다를 수 있으니 공식 샘플과 맞는 버전을 사용하세요.
+
+- 공식 SDK 안내: https://tmapapi.tmapmobility.com/main.html#android/sample/androidSample.sdk_download
+- `local.properties` : `TMAP_APP_KEY=발급받은키` (Git에 올리지 않음)
+- `app/build.gradle` : `implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])`
+- Gradle Sync 후 앱 다시 실행. SDK 파일과 키가 모두 감지되면 `MapActivity`가 **TMAP Raster 지도**를 생성합니다.
+- SDK가 없거나 초기화에 실패하면 **OSM 임시 지도**가 표시되며 화면에 원인을 안내합니다. 이 경우 TMAP이 실제로 연결된 것이 아닙니다.
+- TMAP 지도는 `TmapRasterMapAdapter`의 `com.skt.Tmap.TMapView`를 통해 초기화하고, 기존 `TmapWalkingClient`의 보행 경로 좌표를 SDK 폴리라인에 그립니다.
+- *주의:* 본 변경은 Android SDK가 없는 환경에서 작성되어 실제 TMAP 배포 바이너리와의 호환성·APK 실행은 아직 검증하지 못했습니다. 최신 Vector SDK는 Raster SDK와 별개이므로 이 어댑터에 섞으면 안 됩니다.
