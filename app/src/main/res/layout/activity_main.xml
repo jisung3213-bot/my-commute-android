@@ -7,7 +7,6 @@
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오늘의 출퇴근"
                 android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
             <Button android:id="@+id/btnSelectRoutine" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="출근 / 퇴근 선택"/>
-            <Button android:id="@+id/btnApiTests" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="개발용 API 연결 확인"/>
             <TextView android:id="@+id/mainGreeting" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="6dp" android:text="등록된 루틴을 확인해요" android:textColor="@color/text_secondary"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.widget.Switch;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.model.Routine;

@@ -61,9 +61,6 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnClearWaypoints" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="경유지 전체 삭제"
                 style="@style/Widget.MaterialComponents.Button.TextButton"/>
-            <CheckBox android:id="@+id/checkDemoRain" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="10dp" android:text="테스트용 우천 시나리오 적용 (실제 기상 데이터 아님)"/>
-            <CheckBox android:id="@+id/checkDemoCold" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="테스트용 한파특보 적용 (실제 특보 아님)"/>
             <CheckBox android:id="@+id/checkShowMap" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:checked="true" android:text="지도 화면에 경로 표시"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnSaveRoutine" android:layout_width="match_parent"

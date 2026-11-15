@@ -25,7 +25,7 @@ public final class ReminderScheduler {
  public static void rescheduleOne(Context c,String id){schedule(c,RoutineStore.read(c,id));}
  private static void schedule(Context c,Routine r){
   cancel(c,r);if(!r.isConfigured())return;
-  RoutePlanner.Plan plan=RoutePlanner.select(r,RoutineStore.isRainDemo(c),RoutineStore.isColdDemo(c));
+  RoutePlanner.Plan plan=RoutePlanner.select(r);
   if(!plan.available)return;
   long when=PlanSchedule.nextAlert(Calendar.getInstance(),r.arrivalTime,plan.durationMinutes,r.marginMinutes,r.alertLeadMinutes,r.days);
   if(when<0)return;

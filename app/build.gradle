@@ -13,11 +13,11 @@ if (localFile.exists()) localFile.withInputStream { localConfig.load(it) }
 def tmapKey = (localConfig.getProperty('TMAP_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 
 android {
-    namespace 'com.example.seoulmobilitytester'
+    namespace 'com.example.mycommute'
     compileSdk 34
 
     defaultConfig {
-        applicationId 'com.example.seoulmobilitytester'
+        applicationId 'com.example.mycommute'
         minSdk 26
         targetSdk 28
         versionCode 2

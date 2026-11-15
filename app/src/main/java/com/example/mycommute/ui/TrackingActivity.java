@@ -17,7 +17,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.engine.RoutePlanner;
@@ -64,7 +64,7 @@ public class TrackingActivity extends AppCompatActivity {
     }
     private void startTracking() {
         if(!RoutineStore.read(this).isConfigured()) {Toast.makeText(this,"먼저 루틴을 등록해",Toast.LENGTH_LONG).show();return;}
-        if(!RoutePlanner.select(RoutineStore.read(this),RoutineStore.isRainDemo(this),RoutineStore.isColdDemo(this)).available){Toast.makeText(this,"대체 경로를 설정하세요",Toast.LENGTH_LONG).show();return;}
+        if(!RoutePlanner.select(RoutineStore.read(this)).available){Toast.makeText(this,"대체 경로를 설정하세요",Toast.LENGTH_LONG).show();return;}
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED &&
                 ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)!=PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
@@ -85,7 +85,7 @@ public class TrackingActivity extends AppCompatActivity {
     }
     private void renderClock() {
         Routine r=RoutineStore.read(this);
-        RoutePlanner.Plan plan=RoutePlanner.select(r,RoutineStore.isRainDemo(this),RoutineStore.isColdDemo(this));
+        RoutePlanner.Plan plan=RoutePlanner.select(r);
         ((TextView)findViewById(R.id.trackingStatus)).setText(RoutineStore.prefs(this).getBoolean("tracking_active",false)
                 ? "GPS 추적 실행 중 · 차량 도착정보 미연동" : "GPS 추적 중지됨 · 시작 버튼을 누르면 활성화돼");
         if(!r.isConfigured()) {

@@ -7,7 +7,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 import com.example.mycommute.data.AlarmLogEntity;
 import com.example.mycommute.data.AlarmLogRepository;
 import com.example.mycommute.data.Session;

@@ -3,7 +3,7 @@ package com.example.mycommute.ui;
 import android.app.Activity;
 import android.content.Intent;
 import android.view.View;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 
 /** Simple uniform bottom navigation for the six PDF-defined screens. */
 public final class Navigation {

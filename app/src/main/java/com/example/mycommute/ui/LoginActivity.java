@@ -6,7 +6,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 import com.example.mycommute.data.FirestoreSync;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
@@ -24,15 +24,12 @@ public class LoginActivity extends AppCompatActivity {
         email=findViewById(R.id.inputEmail);password=findViewById(R.id.inputPassword);
         status=findViewById(R.id.textAuthStatus);
         if(!Session.firebaseConfigured(this)) {
-            status.setText("Firebase가 아직 연결되지 않았어. 데모 모드로 기본 화면을 시험할 수 있어.");
+            status.setText("Firebase가 연결되지 않았어. Firebase 설정 파일과 이메일 로그인을 설정한 후 이용할 수 있어.");
             findViewById(R.id.btnLogin).setEnabled(false);
             findViewById(R.id.btnRegister).setEnabled(false);
         } else status.setText("Firebase 이메일/비밀번호 로그인");
         findViewById(R.id.btnLogin).setOnClickListener(v -> authenticate(false));
         findViewById(R.id.btnRegister).setOnClickListener(v -> authenticate(true));
-        findViewById(R.id.btnDemo).setOnClickListener(v -> {
-            Session.signInDemo(this);openApp();
-        });
     }
     private void authenticate(boolean register) {
         String e=email.getText().toString().trim(),p=password.getText().toString();

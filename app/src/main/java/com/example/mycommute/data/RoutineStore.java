@@ -14,9 +14,5 @@ public final class RoutineStore {
  }
  public static void save(Context c,Routine r){saveLocal(c,r);FirestoreSync.uploadIfSignedIn(r);}
  public static void saveLocal(Context c,Routine r){try{prefs(c).edit().putString("routine_"+r.id,r.toJson().toString()).apply();}catch(Exception e){throw new IllegalArgumentException("루틴 저장 실패",e);}}
- public static boolean isRainDemo(Context c){return prefs(c).getBoolean("rain_demo",false);}
- public static boolean isColdDemo(Context c){return prefs(c).getBoolean("cold_demo",false);}
- public static void setRainDemo(Context c,boolean b){prefs(c).edit().putBoolean("rain_demo",b).apply();}
- public static void setColdDemo(Context c,boolean b){prefs(c).edit().putBoolean("cold_demo",b).apply();}
  private RoutineStore(){}
 }

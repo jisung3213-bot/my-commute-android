@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
@@ -17,7 +17,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedState);
         if(!Session.signedIn(this)) {startActivity(new Intent(this,LoginActivity.class));finish();return;}
         setContentView(R.layout.activity_main);Navigation.bind(this);
-        findViewById(R.id.btnApiTests).setOnClickListener(v->startActivity(new Intent(this,com.example.seoulmobilitytester.MainActivity.class)));
         findViewById(R.id.btnSelectRoutine).setOnClickListener(v->new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("루틴 선택")
             .setItems(new String[]{"출근 / 등교","퇴근 / 하교"},(d,index)->{
                 if(RoutineStore.prefs(this).getBoolean("tracking_active",false)){android.widget.Toast.makeText(this,"현재 이동을 종료한 뒤 변경하세요",android.widget.Toast.LENGTH_SHORT).show();return;}
@@ -39,10 +38,8 @@ public class MainActivity extends AppCompatActivity {
     private void render() {
         Routine r=RoutineStore.read(this);
         ((TextView)findViewById(R.id.btnSelectRoutine)).setText(r.id.equals("outbound")?"현재: 출근 / 등교 · 변경":"현재: 퇴근 / 하교 · 변경");
-        boolean rain=RoutineStore.isRainDemo(this);
-        RoutePlanner.Plan plan=RoutePlanner.select(r,rain,RoutineStore.isColdDemo(this));
-        ((TextView)findViewById(R.id.mainGreeting)).setText(Session.accountId(this).equals("demo")
-                ? "데모 계정 · 기기 내부 저장" : "로그인된 계정 · 루틴 저장");
+        RoutePlanner.Plan plan=RoutePlanner.select(r);
+        ((TextView)findViewById(R.id.mainGreeting)).setText("로그인된 계정 · 루틴 저장");
         ((TextView)findViewById(R.id.mainRoute)).setText(r.isConfigured()?r.startName+" → "+r.endName:"아직 등록된 루틴이 없어");
         ((TextView)findViewById(R.id.mainTime)).setText(r.isConfigured()
                 ? (plan.available ? r.plannedDeparture(plan.durationMinutes)+" 출발 권장 · "+TripTimeline.expectedArrival(r,plan.durationMinutes)+" 계획 도착 / "+r.arrivalTime+" 목표" : "대체 경로 필요 · 출발 알림 미예약")

@@ -2,7 +2,7 @@ package com.example.mycommute.network;
 
 import android.os.Handler;
 import android.os.Looper;
-import com.example.seoulmobilitytester.BuildConfig;
+import com.example.mycommute.BuildConfig;
 import com.example.mycommute.model.Waypoint;
 import org.json.JSONArray;
 import org.json.JSONObject;

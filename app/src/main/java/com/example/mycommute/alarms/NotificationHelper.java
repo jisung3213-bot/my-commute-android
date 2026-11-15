@@ -11,7 +11,7 @@ import android.app.PendingIntent;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 import com.example.mycommute.ui.TrackingActivity;
 
 public final class NotificationHelper {

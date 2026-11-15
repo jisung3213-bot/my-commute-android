@@ -8,7 +8,7 @@ public class ReminderReceiver extends BroadcastReceiver {
   if(!Session.signedIn(c)||!Session.accountId(c).equals(i.getStringExtra("account")))return;
   String id=i.getStringExtra("routineId");if(!"outbound".equals(id)&&!"return".equals(id))return;
   Routine r=RoutineStore.read(c,id);if(!r.isConfigured())return;
-  var plan=RoutePlanner.select(r,RoutineStore.isRainDemo(c),RoutineStore.isColdDemo(c));
+  var plan=RoutePlanner.select(r);
   if(!plan.available)return;
   String title="출발 준비 · "+r.name;
   String message=r.plannedDeparture(plan.durationMinutes)+" 출발 권장 / "+r.arrivalTime+" 도착 목표 · "+plan.note;

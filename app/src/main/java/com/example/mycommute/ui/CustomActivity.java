@@ -19,7 +19,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.example.seoulmobilitytester.R;
+import com.example.mycommute.R;
 import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
@@ -64,8 +64,6 @@ public class CustomActivity extends AppCompatActivity {
         text(R.id.editBoardingStopId,r.boardingStopId);text(R.id.editBoardingRoute,r.boardingRoute);
         text(R.id.editBoardingDirection,r.boardingDirection);
         ((CheckBox)findViewById(R.id.checkShowMap)).setChecked(r.mapVisible);
-        ((CheckBox)findViewById(R.id.checkDemoRain)).setChecked(RoutineStore.isRainDemo(this));
-        ((CheckBox)findViewById(R.id.checkDemoCold)).setChecked(RoutineStore.isColdDemo(this));
         points.clear();for(Waypoint point:r.waypoints)if(point.category.equals("경유"))points.add(point);renderPoints();
     }
     private void coordinate(int id,double v) {text(id,v==0?"":String.format(Locale.US,"%.6f",v));}
@@ -107,8 +105,6 @@ public class CustomActivity extends AppCompatActivity {
         }
         ReminderScheduler.cancel(this,prior);
         RoutineStore.save(this,r);
-        RoutineStore.setRainDemo(this,((CheckBox)findViewById(R.id.checkDemoRain)).isChecked());
-        RoutineStore.setColdDemo(this,((CheckBox)findViewById(R.id.checkDemoCold)).isChecked());
         ReminderScheduler.scheduleCurrent(this);
         toast("루틴 저장 완료 · 대체 경로 필요 시 출발 알림은 예약하지 않습니다");
         requestNotificationAndExactAlarmPermissions();
