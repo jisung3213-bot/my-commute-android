@@ -47,6 +47,17 @@
                 <CheckBox android:id="@+id/daySun" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="일"/>
             </LinearLayout>
             <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="18dp" android:text="대중교통 경로 검색"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="먼저 루틴을 저장해. 아래 버튼을 누를 때만 TMAP API를 호출하며 무료체험 호출 한도가 소모돼."
+                android:textColor="@color/text_secondary"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnSearchTransit"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="저장된 출발·도착지로 대중교통 경로 검색"/>
+            <TextView android:id="@+id/textTransitResult" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:padding="8dp" android:text="검색 결과 없음"
+                android:textColor="@color/text_secondary"/>
+            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="18dp" android:text="첫 대중교통 / 실시간 연동 정보"/>
             <EditText android:id="@+id/editBoardingStopId" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="정류장 ID / 지하철역 코드"/>
             <EditText android:id="@+id/editBoardingRoute" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="버스 번호 또는 노선"/>

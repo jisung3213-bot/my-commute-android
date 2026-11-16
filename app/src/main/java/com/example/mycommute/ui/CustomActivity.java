@@ -25,6 +25,9 @@ import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.Waypoint;
+import com.example.mycommute.model.TransitRoute;
+import com.example.mycommute.data.TransitRouteMemory;
+import com.example.mycommute.network.TmapTransitClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -35,6 +38,7 @@ public class CustomActivity extends AppCompatActivity {
     private final int[] dayIds={R.id.dayMon,R.id.dayTue,R.id.dayWed,R.id.dayThu,R.id.dayFri,R.id.daySat,R.id.daySun};
     private final int[] calendarDays={2,3,4,5,6,7,1};
     private Spinner normal;
+    private boolean searchingTransit;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         if(!Session.signedIn(this)) {startActivity(new Intent(this,LoginActivity.class));finish();return;}
@@ -47,6 +51,7 @@ public class CustomActivity extends AppCompatActivity {
         findViewById(R.id.btnAddWaypoint).setOnClickListener(v -> waypointDialog());
         findViewById(R.id.btnClearWaypoints).setOnClickListener(v -> {points.clear();renderPoints();});
         findViewById(R.id.btnSaveRoutine).setOnClickListener(v -> save());
+        findViewById(R.id.btnSearchTransit).setOnClickListener(v -> searchTransit());
     }
     private EditText field(int id) { return findViewById(id); }
     private String value(int id) {return field(id).getText().toString().trim();}
@@ -105,10 +110,59 @@ public class CustomActivity extends AppCompatActivity {
         }
         ReminderScheduler.cancel(this,prior);
         RoutineStore.save(this,r);
+        TransitRouteMemory.clear();
         ReminderScheduler.scheduleCurrent(this);
         toast("루틴 저장 완료 · 대체 경로 필요 시 출발 알림은 예약하지 않습니다");
         requestNotificationAndExactAlarmPermissions();
     }
+
+    /** Runs only on user action: the trial API has a small daily request allowance. */
+    private void searchTransit() {
+        if(searchingTransit)return;
+        Routine route=RoutineStore.read(this);
+        if(!route.isConfigured()||!route.validCoordinates()) {
+            toast("먼저 루틴을 저장하고 출발·도착 좌표를 등록해줘");
+            return;
+        }
+        if(!TmapTransitClient.enabled()) {
+            toast("local.properties의 TMAP_TRANSIT_APP_KEY를 설정해줘");
+            return;
+        }
+        searchingTransit=true;
+        findViewById(R.id.btnSearchTransit).setEnabled(false);
+        ((TextView)findViewById(R.id.textTransitResult)).setText("대중교통 경로를 조회하고 있어...");
+        final String account=Session.accountId(this);
+        TmapTransitClient.search(route,new TmapTransitClient.Callback() {
+            private void finish() {
+                searchingTransit=false;
+                findViewById(R.id.btnSearchTransit).setEnabled(true);
+            }
+            @Override public void success(List<TransitRoute> routes) {
+                if(isFinishing()||isDestroyed())return;
+                finish();
+                TransitRouteMemory.put(account,route,routes);
+                ((TextView)findViewById(R.id.textTransitResult)).setText(
+                        "경로 "+routes.size()+"개 조회됨 · 원하는 후보를 선택해 지도에서 확인해");
+                String[] options=new String[routes.size()];
+                for(int i=0;i<routes.size();i++)
+                    options[i]=routes.get(i).summary(i+1)+"\n"+routes.get(i).stepsSummary();
+                new AlertDialog.Builder(CustomActivity.this)
+                        .setTitle("대중교통 경로 후보")
+                        .setItems(options,(dialog,index)-> {
+                            // The route is only previewed, not saved as a permanent routine.
+                            if(TransitRouteMemory.choose(account,route,index)) {
+                                startActivity(new Intent(CustomActivity.this,MapActivity.class));
+                            } else toast("경로가 만료됐어. 다시 검색해줘");
+                        }).setNegativeButton("닫기",null).show();
+            }
+            @Override public void error(String reason) {
+                if(isFinishing()||isDestroyed())return;
+                finish();
+                ((TextView)findViewById(R.id.textTransitResult)).setText("대중교통 조회 실패: "+reason);
+            }
+        });
+    }
+
     private void toast(String s) {Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
     private void requestNotificationAndExactAlarmPermissions() {
         if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(this,Manifest.permission.POST_NOTIFICATIONS)

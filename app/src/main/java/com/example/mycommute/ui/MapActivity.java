@@ -12,8 +12,10 @@ import com.example.mycommute.BuildConfig;
 import com.example.mycommute.R;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
+import com.example.mycommute.data.TransitRouteMemory;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.Waypoint;
+import com.example.mycommute.model.TransitRoute;
 import com.example.mycommute.network.TmapWalkingClient;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
@@ -33,6 +35,7 @@ public class MapActivity extends AppCompatActivity {
     private Switch show;
     private Routine routine;
     private Polyline osmLine;
+    private final List<Polyline> transitLines=new ArrayList<>();
     private int requestGeneration;
     private boolean refreshing;
 
@@ -137,6 +140,8 @@ public class MapActivity extends AppCompatActivity {
             try {tmapMap.clearRoute();}
             catch(Exception e){Log.w(TAG,"TMAP line removal failed",e);}
         } else if(osmMap!=null) {
+            for(Polyline line:transitLines)osmMap.getOverlays().remove(line);
+            transitLines.clear();
             if(osmLine!=null)osmMap.getOverlays().remove(osmLine);
             osmLine=null;osmMap.invalidate();
         }
@@ -145,6 +150,8 @@ public class MapActivity extends AppCompatActivity {
     private void loadRoute() {
         final int generation=++requestGeneration;
         if(!show.isChecked()||!routine.isConfigured()||!routine.validCoordinates())return;
+        TransitRoute selected=TransitRouteMemory.selected(Session.accountId(this),routine);
+        if(selected!=null){renderTransitRoute(selected);return;}
         if(!"도보".equals(routine.transportMode)) {
             showStatus("대중교통·혼합 경로는 아직 연동하지 않았어. 마커만 표시돼.");return;
         }
@@ -181,6 +188,40 @@ public class MapActivity extends AppCompatActivity {
         });
     }
 
+
+    private void renderTransitRoute(TransitRoute route) {
+        if(tmapMap!=null) {
+            try {tmapMap.drawTransit(route.legs);}
+            catch(Exception e) {
+                Log.e(TAG,"TMAP transit drawing failed",e);
+                showStatus("대중교통 경로 표시 실패: "+e.getMessage());return;
+            }
+        } else if(osmMap!=null) {
+            for(Polyline line:transitLines)osmMap.getOverlays().remove(line);
+            transitLines.clear();
+            for(TransitRoute.Leg leg:route.legs) {
+                if(leg.points.size()<2)continue;
+                Polyline line=new Polyline();
+                List<GeoPoint> positions=new ArrayList<>();
+                for(TransitRoute.Point point:leg.points)
+                    positions.add(new GeoPoint(point.lat,point.lon));
+                line.setPoints(positions);
+                line.setColor("BUS".equals(leg.mode)?android.graphics.Color.rgb(43,111,214):
+                        "SUBWAY".equals(leg.mode)?android.graphics.Color.rgb(214,62,81):
+                        android.graphics.Color.rgb(102,102,102));
+                line.getOutlinePaint().setStrokeWidth(8f);
+                osmMap.getOverlays().add(line);
+                transitLines.add(line);
+            }
+            osmMap.invalidate();
+        }
+        int visible=0;
+        for(TransitRoute.Leg leg:route.legs)if(leg.points.size()>=2)visible++;
+        showStatus("선택한 대중교통 경로 · "+TransitRoute.minutes(route.totalSeconds)
+                +"분 · 환승 "+route.transfers+"회 · 선 표시 "+visible+"/"+route.legs.size()+"구간"
+                +" (좌표가 제공되지 않는 구간은 표시하지 않음)");
+    }
+
     @Override protected void onResume() {
         super.onResume();
         routine=RoutineStore.read(this);
@@ -189,7 +230,7 @@ public class MapActivity extends AppCompatActivity {
             try {tmapMap.clearMarkers();tmapMap.clearRoute();}
             catch(Exception e){Log.w(TAG,"TMAP overlay clearing failed",e);}
         } else if(osmMap!=null) {
-            osmMap.onResume();osmMap.getOverlays().clear();osmLine=null;
+            osmMap.onResume();osmMap.getOverlays().clear();osmLine=null;transitLines.clear();
         }
         if(show!=null){refreshing=true;show.setChecked(routine.mapVisible);refreshing=false;}
         renderStops();loadRoute();

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.view.View;
 import org.osmdroid.util.GeoPoint;
+import com.example.mycommute.model.TransitRoute;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ final class TmapRasterMapAdapter {
     private final Class<?> lineClass;
     private final List<String> markers=new ArrayList<>();
     private boolean routeAdded;
+    private final List<String> transitLines=new ArrayList<>();
 
     static boolean isAvailable() {
         try {Class.forName(PACKAGE+"TMapView");return true;}
@@ -80,7 +82,31 @@ final class TmapRasterMapAdapter {
         routeAdded=true;
     }
 
+    void drawTransit(List<TransitRoute.Leg> legs) throws Exception {
+        clearRoute();
+        for(int i=0;i<legs.size();i++) {
+            TransitRoute.Leg leg=legs.get(i);
+            if(leg.points.size()<2)continue;
+            Object line=lineClass.getConstructor().newInstance();
+            for(TransitRoute.Point point:leg.points)
+                call(line,"addLinePoint",new Class[]{pointClass},point(point.lat,point.lon));
+            int color="BUS".equals(leg.mode)?Color.rgb(43,111,214):
+                    "SUBWAY".equals(leg.mode)?Color.rgb(214,62,81):Color.rgb(102,102,102);
+            call(line,"setLineColor",new Class[]{int.class},color);
+            try{call(line,"setLineWidth",new Class[]{float.class},5f);}
+            catch(NoSuchMethodException e){
+                try{call(line,"setLineWidth",new Class[]{int.class},5);}
+                catch(NoSuchMethodException ignored){}
+            }
+            String id="transit-leg-"+i;
+            call(map,"addTMapPolyLine",new Class[]{String.class,lineClass},id,line);
+            transitLines.add(id);
+        }
+    }
+
     void clearRoute() throws Exception {
+        for(String id:transitLines)call(map,"removeTMapPolyLine",new Class[]{String.class},id);
+        transitLines.clear();
         if(!routeAdded)return;
         call(map,"removeTMapPolyLine",new Class[]{String.class},"commute-route");
         routeAdded=false;
