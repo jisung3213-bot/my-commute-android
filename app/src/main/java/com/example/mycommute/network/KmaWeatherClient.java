@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import com.example.mycommute.BuildConfig;
 import com.example.mycommute.engine.WeatherRouteRanker;
+import com.example.mycommute.engine.CommuteWindow;
 import com.example.mycommute.model.Routine;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -136,18 +137,26 @@ public final class KmaWeatherClient {
     private static String clock(Calendar c){return String.format(Locale.US,"%02d00",c.get(Calendar.HOUR_OF_DAY));}
 
     private static Calendar targetArrival(Routine r) throws Exception {
-        String[] hhmm=r.arrivalTime.split(":");
-        if(hhmm.length!=2)throw new IllegalArgumentException("목표 도착시각이 없어");
-        Calendar target=Calendar.getInstance(KST);
-        Calendar now=Calendar.getInstance(KST);
-        target.set(Calendar.HOUR_OF_DAY,Integer.parseInt(hhmm[0]));
-        target.set(Calendar.MINUTE,Integer.parseInt(hhmm[1]));
-        target.set(Calendar.SECOND,0);
-        for(int i=0;i<8;i++){
-            if(target.after(now)&&r.runsOn(target.get(Calendar.DAY_OF_WEEK)))return target;
-            target.add(Calendar.DATE,1);
+        long now=System.currentTimeMillis();
+        long nearest=CommuteWindow.nearestTarget(r,now);
+        if(nearest<0)throw new IllegalStateException("유효한 목표 도착시각이 없어");
+        // Within the active travel window use today's trip, including shortly after
+        // the scheduled arrival. Otherwise use the next scheduled target.
+        if(!CommuteWindow.active(r,now)&&nearest<=now) {
+            Calendar target=Calendar.getInstance(KST);
+            target.setTimeInMillis(nearest);
+            for(int i=0;i<8&&target.getTimeInMillis()<=now;i++)
+                target.add(Calendar.DAY_OF_YEAR,1);
+            // Seek the next configured weekday rather than assuming tomorrow.
+            for(int i=0;i<8;i++){
+                if(target.after(Calendar.getInstance(KST))&&r.runsOn(target.get(Calendar.DAY_OF_WEEK)))
+                    return target;
+                target.add(Calendar.DAY_OF_YEAR,1);
+            }
         }
-        throw new IllegalStateException("도착 요일이 지정되지 않았어");
+        Calendar result=Calendar.getInstance(KST);
+        result.setTimeInMillis(nearest);
+        return result;
     }
 
     /** KMA 5 km Lambert-conformal projection, WGS84 latitude/longitude to nx/ny. */

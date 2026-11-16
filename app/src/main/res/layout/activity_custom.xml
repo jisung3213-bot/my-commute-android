@@ -97,14 +97,6 @@
                 android:padding="8dp" android:text="장소와 시간을 설정한 뒤 경로를 검색해"/>
             <LinearLayout android:id="@+id/transitCards" android:orientation="vertical"
                 android:layout_width="match_parent" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/textLiveArrival" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:padding="10dp"
-                android:text="경로를 선택하면 첫 탑승 버스·지하철의 실제 도착정보를 조회할 수 있어"
-                android:textColor="@color/text_secondary"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnRefreshArrival"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="실시간 첫 탑승 도착정보 조회" android:enabled="false"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnPreviewMap"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="선택 경로 지도에서 보기" android:enabled="false"
@@ -113,7 +105,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="선택한 경로로 출퇴근 루틴 저장" android:enabled="false"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="API 경로 시간은 임시 예측이야. 실시간 대중교통 도착·자동 출발 알림은 아직 연결되지 않아."
+                android:text="선택한 노선·승하차 패턴을 저장해. 실시간 차량·날씨·출발 판단은 실시간 이동 탭에서 확인해."
                 android:textColor="@color/text_secondary" android:textSize="12sp" android:padding="10dp"/>
         </LinearLayout>
     </ScrollView>

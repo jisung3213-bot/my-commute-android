@@ -1,54 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical"
-    android:layout_width="match_parent" android:layout_height="match_parent">
-    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp" android:orientation="vertical">
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="실시간 이동"
-                android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
-            <TextView android:id="@+id/trackingStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                android:textColor="@color/text_secondary"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
-                android:layout_marginTop="18dp" android:padding="20dp" android:background="@drawable/bg_card">
-                <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="전체 이동 도착 예상 (API 경로는 실시간 보정 전)"/>
-                <TextView android:id="@+id/trackingEta" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:textSize="32sp" android:textStyle="bold" android:textColor="@color/primary_dark"/>
-                <TextView android:id="@+id/trackingProgress" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:textColor="@color/text_secondary"/>
-                <ProgressBar android:id="@+id/trackingBar" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent"
-                    android:layout_height="8dp" android:layout_marginTop="12dp" android:max="100"/>
-                <TextView android:id="@+id/trackingLocation" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" android:textColor="@color/text_secondary"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical">
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="18dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="실시간 이동" android:textColor="@color/text_primary"
+                android:textStyle="bold" android:textSize="26sp"/>
+            <TextView android:id="@+id/liveRouteTitle" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="3dp"
+                android:text="등록된 출퇴근 루틴 확인 중" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/liveSyncStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                android:text="현재 정보 확인 중" android:textColor="@color/text_secondary" android:textSize="12sp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="15dp" android:padding="18dp"
+                android:background="@drawable/bg_card" android:orientation="vertical">
+                <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="지금의 출발 판단"/>
+                <TextView android:id="@+id/liveDepartureHeadline" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                    android:text="이동 정보 확인 중" android:textSize="27sp"
+                    android:textStyle="bold" android:textColor="@color/primary_dark"/>
+                <TextView android:id="@+id/liveDepartureDetail" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                    android:textColor="@color/text_primary" android:text="현재 경로를 확인하고 있어"/>
+                <TextView android:id="@+id/liveArrivalPlan" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                    android:textColor="@color/text_secondary"/>
             </LinearLayout>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnStartTracking" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="위치 추적 시작"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnStopTracking" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="위치 추적 종료"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginTop="12dp">
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical"
+                    android:padding="14dp" android:background="@drawable/bg_card">
+                    <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:text="이동 시간대 날씨"/>
+                    <TextView android:id="@+id/liveWeather" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                        android:text="확인 중" android:textSize="14sp" android:textColor="@color/text_primary"/>
+                </LinearLayout>
+                <View android:layout_width="10dp" android:layout_height="1dp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical"
+                    android:padding="14dp" android:background="@drawable/bg_card">
+                    <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:text="특이사항"/>
+                    <TextView android:id="@+id/liveAlerts" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                        android:text="정보 확인 중" android:textSize="14sp" android:textColor="@color/text_primary"/>
+                </LinearLayout>
+            </LinearLayout>
+
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="22dp"
-                android:text="첫 탑승 차량 실시간 도착정보"/>
-            <TextView android:id="@+id/trackingLiveArrival" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:padding="12dp"
-                android:text="현재 선택된 경로의 최신 열차·버스 도착정보를 조회할 수 있어"
+                android:text="오늘의 이동 경로"/>
+            <com.example.mycommute.ui.RouteSchematicView
+                android:id="@+id/liveSchematic" android:layout_width="match_parent"
+                android:layout_height="96dp" android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card"/>
+            <TextView android:id="@+id/liveRouteSteps" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:padding="10dp"
+                android:text="현재 경로를 확인하고 있어"
                 android:textColor="@color/text_secondary"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnRefreshTrackingArrival"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="실시간 도착정보 새로고침"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/liveOpenMap" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="전체 지도 보기"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="22dp" android:text="첫 탑승 가능성 (GPS 기반 추정)"/>
-            <TextView android:id="@+id/trackingBoardingEstimate" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:padding="12dp"
-                android:text="위치 추적과 도착정보 조회가 필요해"
-                android:background="@drawable/bg_card"
-                android:textColor="@color/text_primary"/>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="22dp" android:text="오늘의 이동 타임라인"/>
-            <LinearLayout android:id="@+id/trackingTimeline" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:orientation="vertical"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
-                android:text="탑승 가능성은 직선거리 기반의 추정이야. 정확한 도보 경로·차량의 실제 운행·전체 도착시간·자동 출발 알림은 아직 연결되지 않았어."
-                android:textColor="@color/warning" android:textSize="13sp"/>
+
+            <TextView style="@style/Text.Section" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="18dp"
+                android:text="다음 대중교통"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:padding="15dp" android:background="@drawable/bg_card"
+                android:orientation="vertical">
+                <TextView android:id="@+id/liveNextVehicle" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="도착정보 확인 중" android:textColor="@color/text_primary"
+                    android:textStyle="bold" android:textSize="18sp"/>
+                <TextView android:id="@+id/liveBoarding" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                    android:text="GPS 위치 확인 후 탑승 가능성 추정"
+                    android:textColor="@color/text_secondary"/>
+            </LinearLayout>
+            <TextView android:id="@+id/livePosition" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:text="GPS 추적은 사용자가 켜야 활성화돼"
+                android:textColor="@color/text_secondary" android:textSize="12sp"/>
+
+            <com.google.android.material.button.MaterialButton android:id="@+id/liveStartTracking"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="15dp" android:text="위치 추적 시작"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/liveStopTracking"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="위치 추적 종료"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/liveRefresh"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="현재 정보 확인"
+                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:padding="6dp"
+                android:text="전체 경로·보행시간은 예측값이야. 차량 도착정보는 확인된 첫 탑승만 표시하고, 실제 운행 이상·기상특보는 별도 데이터 연결 전까지 확인되지 않아."
+                android:textColor="@color/text_secondary" android:textSize="12sp"/>
         </LinearLayout>
     </ScrollView>
     <include layout="@layout/view_bottom_nav"/>

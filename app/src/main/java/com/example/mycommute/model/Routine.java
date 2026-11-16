@@ -29,6 +29,8 @@ public class Routine {
     public boolean weatherEnabled = false;
     public boolean apiBased = false;
     public String preferredMode = "";
+    /** SHA-256 signature for the user-selected route pattern, not the provider response. */
+    public String selectedRouteSignature = "";
     public List<Waypoint> waypoints = new ArrayList<>();
 
     public boolean isConfigured() { return !startName.trim().isEmpty() && !endName.trim().isEmpty() && (apiBased || (estimatedMinutes>=1 && estimatedMinutes<=720 && normalWalkMinutes>=0 && normalWalkMinutes<=estimatedMinutes)) && marginMinutes>=0 && marginMinutes<=180 && !days.isEmpty() && com.example.mycommute.engine.PlanSchedule.validTime(arrivalTime); }
@@ -58,6 +60,7 @@ public class Routine {
         o.put("boardingDirection",boardingDirection);o.put("mapVisible",mapVisible);
         o.put("weatherEnabled",weatherEnabled);o.put("apiBased",apiBased);
         o.put("preferredMode",preferredMode);
+        o.put("selectedRouteSignature",selectedRouteSignature);
         JSONArray arr=new JSONArray(); for(Waypoint w:waypoints) arr.put(w.toJson()); o.put("waypoints",arr);
         return o;
     }
@@ -77,6 +80,7 @@ public class Routine {
         r.weatherEnabled=o.optBoolean("weatherEnabled",false);
         r.apiBased=o.optBoolean("apiBased",false);
         r.preferredMode=o.optString("preferredMode","");
+        r.selectedRouteSignature=o.optString("selectedRouteSignature","");
         JSONArray a=o.optJSONArray("waypoints");if(a!=null) for(int i=0;i<a.length();i++) { JSONObject p=a.optJSONObject(i); if(p!=null)r.waypoints.add(Waypoint.fromJson(p)); }
         return r;
     }
