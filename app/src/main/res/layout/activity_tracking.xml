@@ -9,7 +9,7 @@
                 android:textColor="@color/text_secondary"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
                 android:layout_marginTop="18dp" android:padding="20dp" android:background="@drawable/bg_card">
-                <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="예상 도착 시각 (사용자 계획 기준)"/>
+                <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="전체 이동 도착 예상 (API 경로는 실시간 보정 전)"/>
                 <TextView android:id="@+id/trackingEta" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="8dp" android:textSize="32sp" android:textStyle="bold" android:textColor="@color/primary_dark"/>
                 <TextView android:id="@+id/trackingProgress" android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -36,11 +36,18 @@
                 android:text="실시간 도착정보 새로고침"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="22dp" android:text="첫 탑승 가능성 (GPS 기반 추정)"/>
+            <TextView android:id="@+id/trackingBoardingEstimate" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:padding="12dp"
+                android:text="위치 추적과 도착정보 조회가 필요해"
+                android:background="@drawable/bg_card"
+                android:textColor="@color/text_primary"/>
+            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="22dp" android:text="오늘의 이동 타임라인"/>
             <LinearLayout android:id="@+id/trackingTimeline" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="8dp" android:orientation="vertical"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
-                android:text="실제 GPS 위치는 표시되지만 교통 지연·차량 도착·실제 남은 이동시간은 API 미연동 상태야."
+                android:text="탑승 가능성은 직선거리 기반의 추정이야. 정확한 도보 경로·차량의 실제 운행·전체 도착시간·자동 출발 알림은 아직 연결되지 않았어."
                 android:textColor="@color/warning" android:textSize="13sp"/>
         </LinearLayout>
     </ScrollView>

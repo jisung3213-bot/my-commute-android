@@ -8,7 +8,9 @@ public final class TripTimeline {
   Calendar c=PlanSchedule.arrivalOn(Calendar.getInstance(),r.arrivalTime);c.add(Calendar.MINUTE,-r.marginMinutes);return PlanSchedule.time(c);
  }
  public static List<String> steps(Routine r){
-  List<String> steps=new ArrayList<>();steps.add(r.plannedDeparture(r.estimatedMinutes)+" · "+r.startName+" 출발 계획");
+  List<String> steps=new ArrayList<>();
+  if(r.apiBased){steps.add(r.startName+" → "+r.endName+" · 경로 검색 및 선택 후 구간을 표시해");return steps;}
+  steps.add(r.plannedDeparture(r.estimatedMinutes)+" · "+r.startName+" 출발 계획");
   if(!r.boardingStopId.isEmpty())steps.add(r.boardingRoute+" 탑승 · 실시간 도착 미연동");
   for(Waypoint w:r.waypoints)if(w.category.equals("경유"))steps.add("경유 · "+w.name);
   steps.add(r.arrivalTime+"까지 · "+r.endName+" 도착 목표");return steps;

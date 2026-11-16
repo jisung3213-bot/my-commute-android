@@ -44,12 +44,17 @@ public class TrackingService extends Service {
                 callback=new LocationCallback() {
                     @Override public void onLocationResult(LocationResult result) {
                         if(result.getLastLocation()==null)return;
-                        double lat=result.getLastLocation().getLatitude(),lon=result.getLastLocation().getLongitude();
-                        long time=System.currentTimeMillis();
+                        android.location.Location fix=result.getLastLocation();
+                        double lat=fix.getLatitude(),lon=fix.getLongitude();
+                        long now=System.currentTimeMillis(),time=fix.getTime();
+                        if(time<=0||time>now+30000L)time=now;
+                        float accuracy=fix.hasAccuracy()?fix.getAccuracy():Float.NaN;
                         trackingPrefs.edit().putFloat("lastLat",(float)lat)
-                                .putFloat("lastLon",(float)lon).putLong("lastFixTime",time).apply();
+                                .putFloat("lastLon",(float)lon).putLong("lastFixTime",time)
+                                .putFloat("lastAccuracy",accuracy).apply();
                         Intent event=new Intent(ACTION_LOCATION);event.setPackage(getPackageName());
                         event.putExtra("lat",lat);event.putExtra("lon",lon);event.putExtra("timestamp",time);
+                        event.putExtra("accuracyMeters",accuracy);
                         sendBroadcast(event);
                     }
                 };
