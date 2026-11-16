@@ -17,13 +17,17 @@ public final class TransitRoute {
 
     public static final class Leg {
         public final String mode, routeName, startName, endName;
+        /** Boarding point and next stop in TMAP's own dataset (not TAGO nodeId). */
+        public final double startLat, startLon;
+        public final String nextStopName;
         public final int seconds;
         public final List<Point> points;
 
         private Leg(String mode,String routeName,String startName,String endName,
-                    int seconds,List<Point> points) {
+                    int seconds,List<Point> points,double startLat,double startLon,String nextStopName) {
             this.mode=mode; this.routeName=routeName; this.startName=startName; this.endName=endName;
             this.seconds=seconds; this.points=Collections.unmodifiableList(points);
+            this.startLat=startLat;this.startLon=startLon;this.nextStopName=nextStopName;
         }
 
         public String title() {
@@ -79,7 +83,8 @@ public final class TransitRoute {
                 if(leg==null)continue;
                 String mode=leg.optString("mode","");
                 String line=leg.optString("route","");
-                JSONArray lanes=leg.optJSONArray("lane");
+                JSONArray lanes=leg.optJSONArray("Lane");
+                if(lanes==null)lanes=leg.optJSONArray("lane");
                 if(line.isEmpty()&&lanes!=null&&lanes.length()>0) {
                     JSONObject first=lanes.optJSONObject(0);
                     if(first!=null)line=first.optString("route","");
@@ -87,6 +92,20 @@ public final class TransitRoute {
                 JSONObject start=leg.optJSONObject("start"),end=leg.optJSONObject("end");
                 String startName=start==null?"출발":start.optString("name","출발");
                 String endName=end==null?"도착":end.optString("name","도착");
+                JSONObject passStopList=leg.optJSONObject("passStopList");
+                JSONArray stationList=passStopList==null?null:passStopList.optJSONArray("stationList");
+                if(stationList==null&&passStopList!=null)stationList=passStopList.optJSONArray("stations");
+                JSONObject firstStation=stationList==null?null:stationList.optJSONObject(0);
+                JSONObject nextStation=stationList!=null&&stationList.length()>1?stationList.optJSONObject(1):null;
+                String nextName=nextStation==null?"":nextStation.optString("stationName","");
+                double boardingLat=firstStation!=null?firstStation.optDouble("lat",Double.NaN):Double.NaN;
+                double boardingLon=firstStation!=null?firstStation.optDouble("lon",Double.NaN):Double.NaN;
+                if(!Double.isFinite(boardingLat)||!Double.isFinite(boardingLon)) {
+                    boardingLat=start==null?Double.NaN:start.optDouble("lat",Double.NaN);
+                    boardingLon=start==null?Double.NaN:start.optDouble("lon",Double.NaN);
+                }
+                if(firstStation!=null&&!firstStation.optString("stationName","").isEmpty())
+                    startName=firstStation.optString("stationName");
                 List<Point> geometry=new ArrayList<>();
                 JSONObject shape=leg.optJSONObject("passShape");
                 if(shape!=null)appendLine(geometry,shape.optString("linestring",""));
@@ -98,7 +117,8 @@ public final class TransitRoute {
                     }
                 }
                 legs.add(new Leg(mode,line,startName,endName,
-                        Math.max(0,leg.optInt("sectionTime",0)),geometry));
+                        Math.max(0,leg.optInt("sectionTime",0)),geometry,
+                        boardingLat,boardingLon,nextName));
             }
             if(legs.isEmpty())continue;
             JSONObject fare=item.optJSONObject("fare");

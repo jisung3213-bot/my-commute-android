@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
                 ? (r.weatherEnabled?"기상정보 반영 설정 ON · 경로 검색 시 평가":"기상정보 반영 설정 OFF")
                 : plan.note);
         ((TextView)findViewById(R.id.mainTransit)).setText(r.apiBased
-                ? "대중교통 경로 검색 연결됨 · 실시간 차량 도착정보 미연동"
+                ? "대중교통 검색 연결됨 · 첫 탑승 실시간 도착정보는 경로 선택 후 조회"
                 : "버스·지하철 실시간 도착정보: API 미연동");
     }
 }

@@ -20,6 +20,10 @@ import androidx.core.content.ContextCompat;
 import com.example.mycommute.R;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
+import com.example.mycommute.data.TransitRouteMemory;
+import com.example.mycommute.network.LiveArrivalClient;
+import com.example.mycommute.model.TransitArrival;
+import com.example.mycommute.model.TransitRoute;
 import com.example.mycommute.engine.RoutePlanner;
 import com.example.mycommute.engine.TripTimeline;
 import com.example.mycommute.location.TrackingService;
@@ -36,6 +40,9 @@ public class TrackingActivity extends AppCompatActivity {
         @Override public void onReceive(Context context,Intent intent) {updatePosition(intent.getDoubleExtra("lat",0),intent.getDoubleExtra("lon",0),intent.getLongExtra("timestamp",0));}
     };
     private boolean listening=false;
+    private boolean queryingArrival;
+    private int arrivalGeneration;
+    private long lastArrivalQueryTime;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         if(!Session.signedIn(this)) {startActivity(new Intent(this,LoginActivity.class));finish();return;}
@@ -48,6 +55,7 @@ public class TrackingActivity extends AppCompatActivity {
             stopService(stop);RoutineStore.prefs(this).edit().putBoolean("tracking_active",false).apply();
             Toast.makeText(this,"위치 추적을 종료했어",Toast.LENGTH_SHORT).show();renderClock();
         });
+        findViewById(R.id.btnRefreshTrackingArrival).setOnClickListener(v->loadLiveArrival());
         renderTimeline();
     }
     @Override protected void onResume() {
@@ -60,8 +68,39 @@ public class TrackingActivity extends AppCompatActivity {
     }
     @Override protected void onPause() {
         if(listening){unregisterReceiver(updates);listening=false;}
-        handler.removeCallbacks(ticker);super.onPause();
+        handler.removeCallbacks(ticker);
+        arrivalGeneration++;
+        queryingArrival=false;
+        super.onPause();
     }
+    private void loadLiveArrival() {
+        if(queryingArrival)return;
+        Routine r=RoutineStore.read(this);
+        TransitRoute route=TransitRouteMemory.selected(Session.accountId(this),r);
+        if(route==null){
+            ((TextView)findViewById(R.id.trackingLiveArrival)).setText(
+                    "선택한 경로의 임시 조회 정보가 없어. 커스텀 화면에서 경로를 다시 검색·선택해");
+            return;
+        }
+        long now=System.currentTimeMillis();
+        if(now-lastArrivalQueryTime<30000L){
+            Toast.makeText(this,"30초 후 다시 조회할 수 있어",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        lastArrivalQueryTime=now;
+        queryingArrival=true;
+        final int token=++arrivalGeneration;
+        findViewById(R.id.btnRefreshTrackingArrival).setEnabled(false);
+        ((TextView)findViewById(R.id.trackingLiveArrival)).setText("첫 탑승 실시간 도착정보 조회 중...");
+        LiveArrivalClient.fetch(route,result->{
+            if(isFinishing()||isDestroyed()||token!=arrivalGeneration)return;
+            queryingArrival=false;
+            findViewById(R.id.btnRefreshTrackingArrival).setEnabled(true);
+            ((TextView)findViewById(R.id.trackingLiveArrival)).setText(
+                    (result.available?"첫 탑승 · ":"확인 불가 · ")+result.description());
+        });
+    }
+
     private void startTracking() {
         if(!RoutineStore.read(this).isConfigured()) {Toast.makeText(this,"먼저 루틴을 등록해",Toast.LENGTH_LONG).show();return;}
         if(!RoutePlanner.select(RoutineStore.read(this)).available){Toast.makeText(this,"대체 경로를 설정하세요",Toast.LENGTH_LONG).show();return;}
@@ -87,11 +126,12 @@ public class TrackingActivity extends AppCompatActivity {
         Routine r=RoutineStore.read(this);
         RoutePlanner.Plan plan=RoutePlanner.select(r);
         ((TextView)findViewById(R.id.trackingStatus)).setText(RoutineStore.prefs(this).getBoolean("tracking_active",false)
-                ? "GPS 추적 실행 중 · 차량 도착정보 미연동" : "GPS 추적 중지됨 · 시작 버튼을 누르면 활성화돼");
+                ? "GPS 추적 실행 중 · 첫 탑승 도착정보는 별도 조회" : "GPS 추적 중지됨 · 시작 버튼을 누르면 활성화돼");
         if(!r.isConfigured()) {
             ((TextView)findViewById(R.id.trackingEta)).setText("루틴 미등록");return;
         }
-        if(!plan.available){((TextView)findViewById(R.id.trackingEta)).setText("대체 경로 필요");return;}
+        if(!plan.available){((TextView)findViewById(R.id.trackingEta)).setText(r.apiBased?
+                "실시간 경로 ETA 미연동":"대체 경로 필요");return;}
         boolean active=RoutineStore.prefs(this).getBoolean("tracking_active",false);
         long started=RoutineStore.prefs(this).getLong("trip_started",0);
         int elapsed=active&&started>0?(int)Math.max(0,(System.currentTimeMillis()-started)/60000):0;

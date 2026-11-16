@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Seoul subway provider still documents an HTTP endpoint. Allow only this host. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">swopenAPI.seoul.go.kr</domain>
+    </domain-config>
+</network-security-config>

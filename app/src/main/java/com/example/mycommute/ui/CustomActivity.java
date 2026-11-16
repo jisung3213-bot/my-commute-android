@@ -31,6 +31,8 @@ import com.example.mycommute.model.TransitRoute;
 import com.example.mycommute.model.Waypoint;
 import com.example.mycommute.network.KmaWeatherClient;
 import com.example.mycommute.network.TmapTransitClient;
+import com.example.mycommute.network.LiveArrivalClient;
+import com.example.mycommute.model.TransitArrival;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -48,6 +50,9 @@ public class CustomActivity extends AppCompatActivity {
     private List<Integer> order=new ArrayList<>();
     private int selected=-1;
     private boolean searching;
+    private boolean fetchingArrival;
+    private long lastArrivalQueryTime;
+    private int arrivalGeneration;
     private int requestGeneration,weatherGeneration;
     private boolean weatherKnown;
     private WeatherRouteRanker.Conditions conditions=new WeatherRouteRanker.Conditions(false,false,false);
@@ -81,6 +86,7 @@ public class CustomActivity extends AppCompatActivity {
                 }).show());
         findViewById(R.id.btnSearchTransit).setOnClickListener(v->searchRoutes());
         findViewById(R.id.btnSaveRoutine).setOnClickListener(v->saveSelected());
+        findViewById(R.id.btnRefreshArrival).setOnClickListener(v->loadLiveArrival());
         findViewById(R.id.btnPreviewMap).setOnClickListener(v->showMap());
         ((SwitchMaterial)findViewById(R.id.switchWeather)).setOnCheckedChangeListener((button,enabled)->{
             draft.weatherEnabled=enabled;
@@ -170,7 +176,10 @@ public class CustomActivity extends AppCompatActivity {
     }
 
     private void invalidateRoutes() {
-        requestGeneration++;weatherGeneration++;
+        requestGeneration++;weatherGeneration++;arrivalGeneration++;
+        fetchingArrival=false;lastArrivalQueryTime=0;
+        findViewById(R.id.btnRefreshArrival).setEnabled(false);
+        ((TextView)findViewById(R.id.textLiveArrival)).setText("경로를 선택한 후 첫 탑승 차량 도착정보를 조회해");
         routes=Collections.emptyList();order.clear();selected=-1;
         cards.removeAllViews();
         resultStatus.setText("장소를 설정한 뒤 경로를 검색해");
@@ -267,14 +276,43 @@ public class CustomActivity extends AppCompatActivity {
             LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
             params.bottomMargin=12;
             cards.addView(card,params);
-            card.setOnClickListener(v->{selected=index;rankAndRender();});
+            card.setOnClickListener(v->{
+                if(selected!=index){selected=index;arrivalGeneration++;lastArrivalQueryTime=0;
+                    ((TextView)findViewById(R.id.textLiveArrival)).setText("첫 탑승 도착정보를 조회해");}
+                rankAndRender();
+            });
         }
         if(selected>=0&&selected<routes.size()){
             resultStatus.setText("선택: "+routes.get(selected).summary(selected+1)
                     +" · 지도에서 경로 확인 후 저장할 수 있어");
             findViewById(R.id.btnSaveRoutine).setEnabled(true);
             findViewById(R.id.btnPreviewMap).setEnabled(true);
+            findViewById(R.id.btnRefreshArrival).setEnabled(!fetchingArrival);
         }
+    }
+
+    private void loadLiveArrival() {
+        if(fetchingArrival||selected<0||selected>=routes.size())return;
+        long now=System.currentTimeMillis();
+        // A user-triggered refresh is limited to once per 30 seconds.
+        if(now-lastArrivalQueryTime<30000L){
+            toast("실시간 정보는 30초 후 다시 조회할 수 있어");
+            return;
+        }
+        lastArrivalQueryTime=now;
+        final int token=++arrivalGeneration;
+        final TransitRoute route=routes.get(selected);
+        fetchingArrival=true;
+        findViewById(R.id.btnRefreshArrival).setEnabled(false);
+        ((TextView)findViewById(R.id.textLiveArrival)).setText("실시간 도착정보 조회 중...");
+        LiveArrivalClient.fetch(route,result->{
+            if(isFinishing()||isDestroyed()||token!=arrivalGeneration)return;
+            fetchingArrival=false;
+            findViewById(R.id.btnRefreshArrival).setEnabled(true);
+            ((TextView)findViewById(R.id.textLiveArrival)).setText(
+                    result.available?"첫 탑승 · "+result.description():
+                    "첫 탑승 도착정보 미확인 · "+result.description());
+        });
     }
 
     private double score(TransitRoute r) {
@@ -320,6 +358,8 @@ public class CustomActivity extends AppCompatActivity {
                 !=PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.POST_NOTIFICATIONS},302);
     }
+
+    @Override protected void onDestroy(){arrivalGeneration++;super.onDestroy();}
 
     private void toast(String text) {android.widget.Toast.makeText(this,text,android.widget.Toast.LENGTH_LONG).show();}
 }

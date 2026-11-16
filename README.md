@@ -96,3 +96,22 @@ KMA_SERVICE_KEY=OPTIONAL_DECODED_KMA_SERVICE_KEY
 \`\`\`
 
 **개발 검증 한계:** Android SDK·발급된 API 키·TMAP Raster 배포 파일이 없는 작업 환경이므로 실제 APK 빌드, 실 API 결과, 지도 SDK 1.77 바이너리 호환성은 확인되지 않았습니다. 배포용 앱에서는 API 키를 APK에 직접 포함하지 않는 별도 서버 프록시가 필요합니다.
+
+
+## 첫 탑승 구간 실시간 버스/지하철 도착정보
+
+커스텀 화면에서 TMAP 대중교통 경로 후보 중 하나를 **선택**한 후 **실시간 첫 탑승 도착정보 조회** 버튼을 누르면, 선택 경로의 첫 버스/지하철 구간을 찾아 도착정보를 조회합니다. 임시 경로가 유효하면 이동 화면에서도 수동 새로고침할 수 있습니다. 30초 간격 제한이며 백그라운드 반복 호출은 하지 않습니다.
+
+\`\`\`properties
+# 프로젝트 루트 local.properties (Git에 커밋하지 마세요)
+SEOUL_SUBWAY_API_KEY=발급받은_서울시_실시간지하철_인증키
+TAGO_BUS_SERVICE_KEY=발급받은_공공데이터포털_디코딩_인증키
+\`\`\`
+
+- **서울 지하철:** \`realtimeStationArrival\` REST/JSON을 사용합니다. 역명과 노선 ID를 확인하고, TMAP에서 다음 역 이름이 확보된 경우에는 서울시 응답의 행선지 텍스트에도 해당 역명이 명확하게 포함된 열차만 표시합니다. **행선지와 다음역의 연결은 제공자 데이터만으로 확실하지 않은 경우가 많아서** 실제 열차가 있어도 \`확인 불가\`라고 표시될 수 있습니다. 반대방향 열차를 추정으로 표시하지 않습니다. 서울시 공식 문서의 HTTP 엔드포인트를 위해 해당 도메인만 cleartext 허용했습니다.
+- **TAGO 버스:** TMAP 승차 정류장 좌표로 **TAGO 버스정류소정보** \`getCrdntPrxmtSttnList\`를 호출해 \`citycode\`·\`nodeid\`를 조회합니다. 정류장 이름과 거리(70m 이내) 기준이 충족되고, 근처 동일 이름의 후보가 모호하지 않을 때만 **TAGO 버스도착정보** \`getSttnAcctoArvlPrearngeInfoList\`를 호출해 같은 노선번호의 도착예정시간을 표시합니다. 별도의 **TAGO 버스정류소정보 API 활용신청**이 추가로 필요할 수 있습니다.
+- API 반환 시간은 조회 시점의 값이며 일정한 간격으로 자동 갱신되지 않습니다. **전체 여행 ETA/출발 알림에 자동 반영하지 않습니다.** 추가적인 차량 방향·급행 검증, 승차역 정규화, 실시간 자동 리프레시/알림은 추후 개선 대상입니다.
+- 두 API 키는 개발 단계에서 \`BuildConfig\`에 들어가므로 APK를 역분석하면 추출할 수 있습니다. 상용 서비스에서는 백엔드 프록시와 요청 제한으로 관리해야 합니다.
+- Android SDK·실제 API 키가 없어 이 커밋에서 APK 빌드와 인증된 API 호출은 확인하지 못했습니다. \`ArrivalMatcherTest\`에 정류장 중복 매칭 거부 및 버스 노선/역방향 미확인 테스트를 추가했습니다.
+
+참고: https://data.seoul.go.kr/dataList/OA-12764/F/1/datasetView.do · https://www.data.go.kr/data/15096280/standard.do · https://www.data.go.kr/data/15098530/openapi.do

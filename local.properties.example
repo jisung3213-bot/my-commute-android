@@ -8,3 +8,9 @@ TMAP_TRANSIT_APP_KEY=YOUR_TMAP_TRANSIT_APP_KEY_HERE
 
 # Optional: decoded (not percent-encoded) public data portal service key for KMA village forecast.
 KMA_SERVICE_KEY=YOUR_DECODED_KMA_SERVICE_KEY_HERE
+
+# Seoul subway real-time arrival key (Seoul Open Data Plaza)
+SEOUL_SUBWAY_API_KEY=YOUR_SEOUL_SUBWAY_API_KEY_HERE
+
+# Data.go.kr Decoding service key, TAGO bus arrivals AND bus stop lookup APIs
+TAGO_BUS_SERVICE_KEY=YOUR_TAGO_BUS_SERVICE_KEY_HERE

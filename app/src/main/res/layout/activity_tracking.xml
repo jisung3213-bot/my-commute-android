@@ -24,6 +24,17 @@
             <com.google.android.material.button.MaterialButton android:id="@+id/btnStopTracking" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="위치 추적 종료"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <TextView style="@style/Text.Section" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="22dp"
+                android:text="첫 탑승 차량 실시간 도착정보"/>
+            <TextView android:id="@+id/trackingLiveArrival" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:padding="12dp"
+                android:text="현재 선택된 경로의 최신 열차·버스 도착정보를 조회할 수 있어"
+                android:textColor="@color/text_secondary"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnRefreshTrackingArrival"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="실시간 도착정보 새로고침"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="22dp" android:text="오늘의 이동 타임라인"/>
             <LinearLayout android:id="@+id/trackingTimeline" android:layout_width="match_parent" android:layout_height="wrap_content"
