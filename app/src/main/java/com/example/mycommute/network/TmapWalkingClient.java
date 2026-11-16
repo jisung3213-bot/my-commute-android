@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 /** TMAP pedestrian segments only. Not a multimodal public transit routing engine. */
 public final class TmapWalkingClient {
     public interface Callback {void success(List<GeoPoint> points);void error(String reason);}
+    public interface DurationCallback {void success(int seconds);void error(String reason);}
     private static final java.util.concurrent.ExecutorService NETWORK=Executors.newSingleThreadExecutor();
     private TmapWalkingClient() { }
     public static boolean enabled() {
@@ -41,6 +42,74 @@ public final class TmapWalkingClient {
             }
         });
     }
+    /**
+     * Walk time from a fresh GPS fix to a confirmed boarding coordinate.
+     * Returns the provider's totalTime in seconds; does not persist the route.
+     */
+    public static void estimateSeconds(double fromLat,double fromLon,
+                                       double toLat,double toLon,DurationCallback cb) {
+        Handler ui=new Handler(Looper.getMainLooper());
+        if(!enabled()){ui.post(()->cb.error("TMAP 보행 경로 API 미설정"));return;}
+        if(!valid(fromLat,fromLon)||!valid(toLat,toLon)){
+            ui.post(()->cb.error("보행 경로 좌표가 유효하지 않아"));return;
+        }
+        NETWORK.execute(()->{
+            try{
+                int seconds=requestWalkSeconds(fromLat,fromLon,toLat,toLon);
+                ui.post(()->cb.success(seconds));
+            }catch(Exception e){
+                ui.post(()->cb.error(e.getMessage()==null?"보행 경로 조회 실패":e.getMessage()));
+            }
+        });
+    }
+
+    private static boolean valid(double lat,double lon) {
+        return Double.isFinite(lat)&&Double.isFinite(lon)&&lat>=33&&lat<=39&&lon>=124&&lon<=132;
+    }
+
+    private static int requestWalkSeconds(double startLat,double startLon,
+                                          double endLat,double endLon) throws Exception{
+        HttpURLConnection conn=(HttpURLConnection)new URL(
+                "https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1").openConnection();
+        try{
+            conn.setConnectTimeout(9000);conn.setReadTimeout(14000);
+            conn.setRequestMethod("POST");conn.setDoOutput(true);
+            conn.setRequestProperty("appKey",BuildConfig.TMAP_APP_KEY);
+            conn.setRequestProperty("Accept","application/json");
+            conn.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+            JSONObject body=new JSONObject();
+            body.put("startX",startLon);body.put("startY",startLat);
+            body.put("endX",endLon);body.put("endY",endLat);
+            body.put("startName","현재 위치");body.put("endName","승차 위치");
+            body.put("reqCoordType","WGS84GEO");body.put("resCoordType","WGS84GEO");
+            try(OutputStream out=conn.getOutputStream()){
+                out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            int http=conn.getResponseCode();
+            if(http<200||http>=300)throw new IllegalStateException("보행 경로 HTTP "+http);
+            StringBuilder raw=new StringBuilder();
+            try(BufferedReader in=new BufferedReader(new InputStreamReader(
+                    conn.getInputStream(),StandardCharsets.UTF_8))){
+                String line;
+                while((line=in.readLine())!=null){
+                    if(raw.length()+line.length()>1_000_000)
+                        throw new IllegalStateException("보행 경로 응답 크기 초과");
+                    raw.append(line);
+                }
+            }
+            JSONArray features=new JSONObject(raw.toString()).optJSONArray("features");
+            if(features==null)throw new IllegalStateException("보행 시간 응답 누락");
+            for(int i=0;i<features.length();i++){
+                JSONObject feature=features.optJSONObject(i);
+                JSONObject properties=feature==null?null:feature.optJSONObject("properties");
+                if(properties==null)continue;
+                int duration=properties.optInt("totalTime",-1);
+                if(duration>=0&&duration<=7200)return duration;
+            }
+            throw new IllegalStateException("보행 시간(totalTime) 미제공");
+        }finally{conn.disconnect();}
+    }
+
     private static List<GeoPoint> getSegment(Waypoint start,Waypoint end) throws Exception {
         URL url=new URL("https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1");
         HttpURLConnection conn=(HttpURLConnection)url.openConnection();

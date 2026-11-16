@@ -17,6 +17,8 @@ import com.example.mycommute.R;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.engine.BoardingFeasibilityEngine;
+import com.example.mycommute.engine.LiveDepartureAdvisor;
+import com.example.mycommute.engine.StagePositionMatcher;
 import com.example.mycommute.engine.RoutePlanner;
 import com.example.mycommute.location.TrackingService;
 import com.example.mycommute.model.Routine;
@@ -42,6 +44,8 @@ public class TrackingActivity extends AppCompatActivity {
             latestLon=intent.getDoubleExtra("lon",Double.NaN);
             gpsTime=intent.getLongExtra("timestamp",0);
             accuracy=intent.getFloatExtra("accuracyMeters",Float.NaN);
+            if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,
+                    RoutineStore.prefs(TrackingActivity.this).getBoolean("tracking_active",false));
             render();
         }
     };
@@ -80,6 +84,8 @@ public class TrackingActivity extends AppCompatActivity {
         accuracy=RoutineStore.prefs(this).getFloat("lastAccuracy",Float.NaN);
         live=new CommuteLiveCoordinator(this,routine,Session.accountId(this),this::render);
         live.start();
+        live.onPosition(latestLat,latestLon,gpsTime,accuracy,
+                RoutineStore.prefs(this).getBoolean("tracking_active",false));
         render();
     }
 
@@ -93,6 +99,7 @@ public class TrackingActivity extends AppCompatActivity {
         stopService(new Intent(this,TrackingService.class));
         RoutineStore.prefs(this).edit().putBoolean("tracking_active",false).apply();
         toast("위치 추적을 종료했어");
+        if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,false);
         render();
     }
 
@@ -150,6 +157,11 @@ public class TrackingActivity extends AppCompatActivity {
         long target=live.targetArrivalMillis();
         RouteSchematicView schematic=findViewById(R.id.liveSchematic);
         schematic.setRoute(route);
+        StagePositionMatcher.Match stage=live.stage();
+        schematic.setCurrentLeg(stage!=null&&stage.known()?stage.legIndex:-1);
+        label(R.id.liveCurrentStage).setText(
+                stage==null?"현재 단계: 위치 추적을 켜면 경로 주변 위치를 추정해":
+                        "현재 단계: "+stage.description);
         renderDeparture(now,target,route,vehicle);
         renderWeather();
         renderRoute(route);
@@ -172,93 +184,129 @@ public class TrackingActivity extends AppCompatActivity {
         }
         if(!live.activeWindow()){
             label(R.id.liveDepartureHeadline).setText("다음 이동: "+clock(target));
-            label(R.id.liveDepartureDetail).setText("출퇴근 시간대가 되면 최신 정보를 조회해");
+            label(R.id.liveDepartureDetail).setText("이동 시간대가 되면 경로·차량 정보를 조회해");
             label(R.id.liveArrivalPlan).setText("목표 도착 "+clock(target)+" · 여유 "+routine.marginMinutes+"분");
             return;
         }
         if(route==null){
             label(R.id.liveDepartureHeadline).setText("출발시각 계산 대기");
-            label(R.id.liveDepartureDetail).setText("경로 조회 결과가 없어서 출발시각을 확정할 수 없어");
+            label(R.id.liveDepartureDetail).setText("새 대중교통 경로를 확인하지 못해 권장시각을 계산할 수 없어");
             label(R.id.liveArrivalPlan).setText("목표 도착 "+clock(target));
             return;
         }
-        long departure=target-(routine.marginMinutes*60L+route.totalSeconds)*1000L;
-        long seconds=(departure-now)/1000L;
-        label(R.id.liveDepartureHeadline).setText(
-                seconds>60?"약 "+((seconds+59)/60)+"분 후 출발":
-                seconds>=-60?"계획상 지금 출발":"계획 출발시각 경과");
-        label(R.id.liveDepartureDetail).setText("계획상 출발 권장 "+clock(departure)
-                +" · TMAP 검색 당시 이동 "+TransitRoute.minutes(route.totalSeconds)+"분");
+        // The saved route includes the *planned* total time. Real-time data is
+        // incorporated only into first-boarding reachability, not entire-trip ETA.
+        int walk=live.walkSeconds();
+        LiveDepartureAdvisor.Advice advice=LiveDepartureAdvisor.compute(
+                now,target,routine.marginMinutes,route,walk,vehicle);
+        boolean transfer=live.boardingLegIndex()>LiveArrivalClient.firstBoardingIndex(route);
+        String headline=transfer?"환승 단계 · 다음 차량 확인":advice.headline;
+        label(R.id.liveDepartureHeadline).setText(headline);
+        label(R.id.liveDepartureDetail).setText("계획 기준 출발 권장 "+clock(advice.planDepartureMillis)
+                +" · 총 예상 이동 "+TransitRoute.minutes(route.totalSeconds)+"분"
+                +(advice.vehicleVerified&&!transfer?"\n"+advice.note:"\n실시간 첫 차량 정보는 아래에서 확인해"));
         label(R.id.liveArrivalPlan).setText("목표 도착 "+clock(target)
-                +" · 계획 도착 "+clock(departure+route.totalSeconds*1000L)
-                +" · 차량 실시간 반영 전");
+                +" · 지금부터 계획 이동 시 "+clock(advice.planArrivalIfLeavingNowMillis)
+                +" 도착 추정 (실제 운행·대기시간 미반영)");
     }
 
     private void renderWeather(){
+        StringBuilder alerts=new StringBuilder();
         if(live.weather()==null){
             label(R.id.liveWeather).setText(live.weatherStatus());
-            label(R.id.liveAlerts).setText("날씨 미확인 · 기상특보·운행 장애 데이터 미연동");
-            return;
+            alerts.append("기상자료 미확인\n");
+        }else{
+            label(R.id.liveWeather).setText(live.weatherStatus()+
+                    (routine.weatherEnabled?"":"\n추천 가중치 반영 OFF"));
+            if(live.weather().conditions.rain)
+                alerts.append("강수 예상 · 도보 구간에 주의\n");
+            if(live.weather().conditions.lowTemperature)
+                alerts.append("영하 예상 · 실외 이동에 주의\n");
         }
-        label(R.id.liveWeather).setText(live.weatherStatus()
-                +(routine.weatherEnabled?"":"\n경로 추천 가중치 반영 OFF"));
-        boolean rain=live.weather().conditions.rain;
-        boolean cold=live.weather().conditions.lowTemperature;
-        label(R.id.liveAlerts).setText((rain?"이동 시간대 강수 예상 · 도보 주의\n":"")
-                +(cold?"영하 기온 예상 · 보온 주의\n":"")
-                +"실제 기상특보·운행 장애는 아직 확인 불가");
+        TransitArrival a=live.arrival();
+        if(a!=null&&!a.available)
+            alerts.append("차량 도착정보 미확인 · 운행 장애로 단정하지 않아\n");
+        else if(a!=null&&a.available&&a.currentSeconds(System.currentTimeMillis())<=0)
+            alerts.append("이전 차량 도착정보 만료 · 새 조회 대기\n");
+        if(live.routeStatus().contains("일치하는 후보가 없어"))
+            alerts.append("기존에 선택한 노선과 다른 경로를 임시 표시 중\n");
+        if(alerts.length()==0)alerts.append("현재 예보 기준 추가 주의사항 미확인\n");
+        alerts.append("공식 기상특보·운행 사고 정보는 별도 API 미연동");
+        label(R.id.liveAlerts).setText(alerts.toString());
     }
 
     private void renderRoute(TransitRoute route){
         if(route==null){
-            label(R.id.liveRouteSteps).setText(live.routeStatus());
-            return;
+            label(R.id.liveRouteSteps).setText(live.routeStatus());return;
         }
+        StagePositionMatcher.Match stage=live.stage();
+        int focused=stage!=null&&stage.known()?stage.legIndex:-1;
         StringBuilder steps=new StringBuilder();
-        int max=Math.min(route.legs.size(),8);
+        int max=Math.min(route.legs.size(),12);
         for(int i=0;i<max;i++){
             TransitRoute.Leg leg=route.legs.get(i);
             if(steps.length()>0)steps.append('\n');
-            steps.append(i+1).append(". ").append(leg.title());
+            String label=leg.title();
+            if("WALK".equals(leg.mode)&&leg.startName.equals(leg.endName))
+                label="환승 통로·역내 이동 "+TransitRoute.minutes(leg.seconds)+"분 · "+leg.startName;
+            steps.append(i==focused?"▶ ":"   ").append(i+1).append(". ").append(label);
         }
         if(route.legs.size()>max)steps.append("\n그 외 ").append(route.legs.size()-max).append("개 구간");
-        label(R.id.liveRouteSteps).setText(steps+" \n※ 경로 약도는 지형·거리 비례가 아니야");
+        steps.append("\n※ 현재 구간은 GPS 주변 경로 추정이며, 실제 승차는 확인하지 못해");
+        label(R.id.liveRouteSteps).setText(steps.toString());
     }
 
     private void renderVehicle(long now,TransitRoute route,TransitArrival arrival,boolean tracking){
         if(route==null){
-            label(R.id.liveNextVehicle).setText("첫 차량 조회 대기");
-            label(R.id.liveBoarding).setText("유효한 경로가 없어 도착정보를 확인할 수 없어");
-            return;
+            label(R.id.liveNextVehicle).setText("차량 조회 대기");
+            label(R.id.liveBoarding).setText("조회 가능한 대중교통 경로가 없어");return;
         }
-        TransitRoute.Leg leg=LiveArrivalClient.firstBoarding(route);
-        if(leg==null){
-            label(R.id.liveNextVehicle).setText("도보 중심 경로");
-            label(R.id.liveBoarding).setText("첫 버스·지하철 탑승 구간이 없어");
-            return;
+        int index=live.boardingLegIndex();
+        if(index<0||index>=route.legs.size()){
+            label(R.id.liveNextVehicle).setText("버스·지하철 구간 없음");
+            label(R.id.liveBoarding).setText("도보 중심 경로야");return;
         }
+        TransitRoute.Leg leg=route.legs.get(index);
         if(arrival==null||!arrival.available){
             label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
-            label(R.id.liveBoarding).setText(live.arrivalStatus());
-            return;
+            label(R.id.liveBoarding).setText(live.arrivalStatus());return;
         }
-        long age=now-arrival.fetchedAtMillis;
-        int remaining=arrival.seconds-(int)Math.max(0,age/1000L);
-        if(age>120_000L||age< -30_000L||remaining<=0){
+        int remaining=arrival.currentSeconds(now);
+        if(remaining<=0){
             label(R.id.liveNextVehicle).setText("차량 도착정보 만료");
-            label(R.id.liveBoarding).setText("다음 자동 갱신을 기다려 · 이전 정보를 현재값으로 사용하지 않아");
+            label(R.id.liveBoarding).setText("현재 차량이 지나갔거나 데이터가 오래됐어 · 자동 재조회 중");
             return;
         }
-        label(R.id.liveNextVehicle).setText(
-                leg.startName+" · "+arrival.line+" · 약 "+((remaining+59)/60)+"분 후");
+        String primary=leg.startName+" · "+arrival.line+" · 약 "+((remaining+59)/60)+"분 후";
+        int second=arrival.nextRemainingSeconds(now);
+        if(second>remaining)primary+="\n다음 차량 약 "+((second+59)/60)+"분 후";
+        label(R.id.liveNextVehicle).setText(primary);
+        int walk=live.walkSeconds();
+        if(walk>=0){
+            int slack=remaining-walk-120;
+            String message=slack>=180?"승차지 접근 시간 여유 추정":
+                    slack>=0?"탑승이 촉박할 수 있어":
+                            "현재 도착예정 차량 탑승이 어려울 수 있어";
+            label(R.id.liveBoarding).setText(message+"\n승차지까지 "+
+                    ((walk+59)/60)+"분 · 여유 "+(slack>=0?"+":"")+
+                    ((slack>=0?slack+59:slack-59)/60)+"분\n"+live.walkingStatus()
+                    +(tracking?"":"\nGPS 미사용 · 루틴의 계획 보행시간 기준"));
+            return;
+        }
         if(!tracking){
-            label(R.id.liveBoarding).setText("현재 위치 기반 판단은 GPS 추적 시작 후 제공돼");
+            label(R.id.liveBoarding).setText("정류장까지 보행시간 확인 불가 · 위치 추적 시작 후 재평가");
             return;
         }
         BoardingFeasibilityEngine.Assessment estimate=BoardingFeasibilityEngine.assess(
                 now,latestLat,latestLon,gpsTime,accuracy,
-                leg.startLat,leg.startLon,arrival.fetchedAtMillis,arrival.seconds);
+                leg.startLat,leg.startLon,arrival.fetchedAtMillis,
+                // Use the ORIGINAL provider ETA at its fetch timestamp.
+                // 'remaining' has already been age-corrected and would double-decrement.
+                arrival.seconds-(int)Math.max(0,(now-arrival.fetchedAtMillis)/1000L)>0
+                        ?arrival.seconds:arrival.nextSeconds);
         label(R.id.liveBoarding).setText(estimate.describe()
-                +(estimate.hasEstimate()?"\n※ 직선거리 기반 보행 추정, 실제 보행 경로 아님":""));
+                +(estimate.hasEstimate()?"\n※ 보행 경로 미확보 시 GPS 직선거리 기반 근사":""));
     }
+
+
 }

@@ -36,14 +36,23 @@ public final class LiveArrivalClient {
     }
 
     public static TransitRoute.Leg firstBoarding(TransitRoute route) {
-        if(route==null)return null;
-        for(TransitRoute.Leg leg:route.legs)
-            if("BUS".equals(leg.mode)||"SUBWAY".equals(leg.mode))return leg;
-        return null;
+        int index=firstBoardingIndex(route);
+        return index>=0?route.legs.get(index):null;
+    }
+
+    public static int firstBoardingIndex(TransitRoute route) {
+        if(route==null)return -1;
+        for(int i=0;i<route.legs.size();i++)
+            if("BUS".equals(route.legs.get(i).mode)||
+                    "SUBWAY".equals(route.legs.get(i).mode))return i;
+        return -1;
     }
 
     public static void fetch(TransitRoute route,Callback callback) {
-        TransitRoute.Leg leg=firstBoarding(route);
+        fetchLeg(firstBoarding(route),callback);
+    }
+
+    public static void fetchLeg(TransitRoute.Leg leg,Callback callback) {
         if(leg==null){UI.post(()->callback.complete(TransitArrival.unavailable(
                 "이 경로에는 버스·지하철 탑승 구간이 없어",System.currentTimeMillis())));return;}
         if("SUBWAY".equals(leg.mode)&&!subwayEnabled()){

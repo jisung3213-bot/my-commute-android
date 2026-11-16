@@ -8,12 +8,14 @@ import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.TransitRouteMemory;
 import com.example.mycommute.engine.CommuteWindow;
 import com.example.mycommute.engine.RouteSignature;
+import com.example.mycommute.engine.StagePositionMatcher;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitArrival;
 import com.example.mycommute.model.TransitRoute;
 import com.example.mycommute.network.KmaWeatherClient;
 import com.example.mycommute.network.LiveArrivalClient;
 import com.example.mycommute.network.TmapTransitClient;
+import com.example.mycommute.network.TmapWalkingClient;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -28,11 +30,12 @@ final class CommuteLiveCoordinator {
     interface Listener { void changed(); }
 
     private static final long TICK_MS=60_000L;
-    private static final long ROUTE_TTL_MS=15*60_000L;
-    private static final long ROUTE_RETRY_MS=15*60_000L;
+    private static final long ROUTE_TTL_MS=2*60*60_000L;
+    private static final long ROUTE_RETRY_MS=2*60*60_000L;
     private static final long ARRIVAL_RETRY_MS=60_000L;
     private static final long WEATHER_RETRY_MS=60*60_000L;
-    private static final int MAX_LOCAL_TMAP_CALLS_PER_DAY=8;
+    private static final int MAX_LOCAL_TMAP_CALLS_PER_DAY=3;
+    private static final long WALK_RETRY_MS=5*60_000L;
 
     private final Context context;
     private final Routine routine;
@@ -42,7 +45,15 @@ final class CommuteLiveCoordinator {
 
     private boolean running;
     private int generation;
-    private boolean loadingRoute,loadingArrival,loadingWeather;
+    private boolean loadingRoute,loadingArrival,loadingWeather,loadingWalk;
+    private int boardingLegIndex=-1;
+    private int walkSeconds=-1;
+    private long walkingRequestedAt,walkingFetchedAt;
+    private StagePositionMatcher.Match stage;
+    private double currentLat=Double.NaN,currentLon=Double.NaN;
+    private float currentAccuracy=Float.NaN;
+    private long currentFixTime;
+    private boolean gpsTracking;
     private long routeFetchedAt,routeRequestedAt,arrivalRequestedAt,weatherRequestedAt;
     private TransitRoute route;
     private TransitArrival arrival;
@@ -50,6 +61,7 @@ final class CommuteLiveCoordinator {
     private String routeStatus="저장된 경로의 실시간 조회를 준비 중이야";
     private String arrivalStatus="첫 차량 도착정보 대기 중";
     private String weatherStatus="기상정보 대기 중";
+    private String walkingStatus="정류장 도보시간 확인 전";
 
     private final Runnable ticker=new Runnable(){
         @Override public void run(){
@@ -59,6 +71,7 @@ final class CommuteLiveCoordinator {
                 loadRoute(false);
                 loadArrival(false);
                 loadWeather(false);
+                loadWalking(false);
             }
             notifyChange();
             handler.postDelayed(this,TICK_MS);
@@ -88,7 +101,7 @@ final class CommuteLiveCoordinator {
                     :"지금은 등록한 이동 시간대가 아니야 · 자동 조회 대기 중";
         }
         if(CommuteWindow.active(routine,System.currentTimeMillis())){
-            loadRoute(false);loadArrival(false);loadWeather(false);
+            loadRoute(false);loadArrival(false);loadWeather(false);loadWalking(false);
         }
         handler.removeCallbacks(ticker);
         handler.postDelayed(ticker,TICK_MS);
@@ -106,6 +119,7 @@ final class CommuteLiveCoordinator {
         loadRoute(true);
         loadArrival(true);
         loadWeather(true);
+        loadWalking(true);
         notifyChange();
     }
 
@@ -118,6 +132,36 @@ final class CommuteLiveCoordinator {
     boolean activeWindow(){return CommuteWindow.active(routine,System.currentTimeMillis());}
     long targetArrivalMillis(){return CommuteWindow.nearestTarget(routine,System.currentTimeMillis());}
     long routeFetchedAtMillis(){return routeFetchedAt;}
+    StagePositionMatcher.Match stage(){return stage;}
+    int boardingLegIndex(){return boardingLegIndex;}
+    int walkSeconds(){
+        if(walkingFetchedAt>0&&System.currentTimeMillis()-walkingFetchedAt<10*60_000L&&walkSeconds>=0)
+            return walkSeconds;
+        if(route==null||boardingLegIndex<0)return -1;
+        int sec=0;
+        for(int i=0;i<boardingLegIndex;i++)
+            if("WALK".equals(route.legs.get(i).mode))
+                sec+=route.legs.get(i).seconds;
+        return sec>0?sec:-1;
+    }
+    String walkingStatus(){return walkingStatus;}
+
+    void onPosition(double lat,double lon,long fixTime,float accuracy,boolean tracking) {
+        currentLat=lat;currentLon=lon;currentFixTime=fixTime;
+        currentAccuracy=accuracy;gpsTracking=tracking;
+        if(route==null){stage=null;return;}
+        stage=tracking?StagePositionMatcher.locate(route,lat,lon,fixTime,accuracy,
+                System.currentTimeMillis()):null;
+        int newLeg=StagePositionMatcher.boardingIndex(route,stage);
+        if(newLeg!=boardingLegIndex){
+            boardingLegIndex=newLeg;arrival=null;arrivalRequestedAt=0;
+            loadingArrival=false;loadingWalk=false;
+            walkSeconds=-1;walkingFetchedAt=0;walkingRequestedAt=0;
+            loadArrival(false);
+        }
+        loadWalking(false);
+        notifyChange();
+    }
 
     private void loadRoute(boolean manual){
         if(!running||loadingRoute||!TmapTransitClient.enabled()) {
@@ -127,13 +171,15 @@ final class CommuteLiveCoordinator {
         long now=System.currentTimeMillis();
         if(route!=null&&now-routeFetchedAt<ROUTE_TTL_MS)return;
         if(route!=null){
-            route=null;arrival=null;routeFetchedAt=0;
+            route=null;arrival=null;boardingLegIndex=-1;routeFetchedAt=0;
+            loadingArrival=false;loadingWalk=false;
+            walkSeconds=-1;walkingFetchedAt=0;stage=null;
             routeStatus="기존 경로 정보가 만료되어 다시 조회해야 해";
         }
         if(!manual&&!activeWindow())return;
         if(now-routeRequestedAt<ROUTE_RETRY_MS)return;
         if(!takeRouteBudget(now)){
-            routeStatus="오늘의 앱 내 TMAP 자동 조회 상한에 도달했어 (8회)";
+            routeStatus="오늘의 앱 내 TMAP 경로 조회 상한에 도달했어 (3회)";
             notifyChange();return;
         }
         routeRequestedAt=now;loadingRoute=true;
@@ -156,7 +202,13 @@ final class CommuteLiveCoordinator {
                         "선택한 노선 패턴과 일치하는 후보가 없어 빠른 경로를 임시 표시 중")
                         +" · "+(selected+1)+"번 후보 · "+TransitRoute.minutes(route.totalSeconds)+"분 (계획 기준)";
                 arrival=null;arrivalRequestedAt=0;
+                loadingArrival=false;loadingWalk=false;
+                stage=gpsTracking?StagePositionMatcher.locate(route,currentLat,currentLon,
+                        currentFixTime,currentAccuracy,System.currentTimeMillis()):null;
+                boardingLegIndex=StagePositionMatcher.boardingIndex(route,stage);
+                walkSeconds=-1;walkingFetchedAt=0;walkingRequestedAt=0;
                 loadArrival(true);
+                loadWalking(false);
                 notifyChange();
             }
             @Override public void error(String reason){
@@ -182,19 +234,22 @@ final class CommuteLiveCoordinator {
 
     private void loadArrival(boolean manual){
         if(!running||loadingArrival||route==null)return;
+        if(boardingLegIndex<0)boardingLegIndex=StagePositionMatcher.boardingIndex(route,stage);
+        if(boardingLegIndex<0)return;
         long now=System.currentTimeMillis();
         if(!manual&&!activeWindow())return;
         if(now-arrivalRequestedAt<ARRIVAL_RETRY_MS)return;
         arrivalRequestedAt=now;loadingArrival=true;
         final int token=generation;
         final TransitRoute forRoute=route;
+        final int legIndex=boardingLegIndex;
         arrivalStatus="다음 차량 도착정보 갱신 중...";
         notifyChange();
-        LiveArrivalClient.fetch(forRoute,result->{
-            if(!valid(token)||forRoute!=route)return;
+        LiveArrivalClient.fetchLeg(forRoute.legs.get(legIndex),result->{
+            if(!valid(token)||forRoute!=route||legIndex!=boardingLegIndex)return;
             loadingArrival=false;arrival=result;
-            arrivalStatus=result.available?"첫 탑승 도착정보 갱신 완료":
-                    "첫 탑승 도착정보 미확인 · "+result.message;
+            arrivalStatus=result.available?"현재 선택 구간 도착정보 갱신 완료":
+                    "차량 도착정보 미확인 · "+result.message;
             notifyChange();
         });
     }
@@ -220,6 +275,41 @@ final class CommuteLiveCoordinator {
                 if(!valid(token))return;
                 loadingWeather=false;weather=null;
                 weatherStatus="기상정보 미확인 · "+why;
+                notifyChange();
+            }
+        });
+    }
+
+    private void loadWalking(boolean manual){
+        if(!running||!gpsTracking||loadingWalk||route==null||boardingLegIndex<0)return;
+        long now=System.currentTimeMillis();
+        if(!CommuteWindow.active(routine,now)&&!manual)return;
+        if(now-walkingRequestedAt<WALK_RETRY_MS)return;
+        if(currentFixTime<=0||now-currentFixTime>90000||now-currentFixTime< -30000||
+                !Float.isFinite(currentAccuracy)||currentAccuracy<0||currentAccuracy>75)return;
+        TransitRoute.Leg leg=route.legs.get(boardingLegIndex);
+        if(!Double.isFinite(leg.startLat)||!Double.isFinite(leg.startLon))return;
+        if(!TmapWalkingClient.enabled()){
+            walkingStatus="TMAP 보행 API 미설정 · 경로 계획 도보시간 사용";
+            return;
+        }
+        walkingRequestedAt=now;loadingWalk=true;
+        final int token=generation,legIndex=boardingLegIndex;
+        final TransitRoute forRoute=route;
+        walkingStatus="현재 위치에서 승차지까지 실제 보행시간 조회 중...";
+        TmapWalkingClient.estimateSeconds(currentLat,currentLon,
+                leg.startLat,leg.startLon,new TmapWalkingClient.DurationCallback(){
+            @Override public void success(int seconds){
+                if(!valid(token)||forRoute!=route||legIndex!=boardingLegIndex)return;
+                loadingWalk=false;walkSeconds=seconds;
+                walkingFetchedAt=System.currentTimeMillis();
+                walkingStatus="TMAP 보행 경로 기준 · 약 "+((seconds+59)/60)+"분";
+                notifyChange();
+            }
+            @Override public void error(String why){
+                if(!valid(token)||forRoute!=route||legIndex!=boardingLegIndex)return;
+                loadingWalk=false;walkSeconds=-1;walkingFetchedAt=0;
+                walkingStatus="보행 경로 조회 실패 · 계획 도보시간 사용: "+why;
                 notifyChange();
             }
         });

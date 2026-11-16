@@ -115,18 +115,31 @@ public final class ArrivalMatcher {
         String label=transitLine(leg.routeName);
         if(label.isEmpty())return TransitArrival.unavailable("TMAP 버스 노선명이 없어 조회할 수 없어",now);
         JSONArray data=items(new JSONObject(json));
-        int best=Integer.MAX_VALUE,remaining=-1;
+        java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
+        int remaining=-1,closest=Integer.MAX_VALUE;
         for(int i=0;i<data.length();i++){
             JSONObject row=data.optJSONObject(i);if(row==null)continue;
             if(!label.equals(transitLine(row.optString("routeno",""))))continue;
-            if(!stop.nodeId.equals(row.optString("nodeid","")))continue;
-            int seconds=row.optInt("arrtime",-1);
-            if(seconds<0||seconds>=best)continue;
-            best=seconds;remaining=row.optInt("arrprevstationcnt",-1);
+            // TAGO's node ID may be omitted in a stop-filtered response.
+            String node=row.optString("nodeid","");
+            if(!node.isEmpty()&&!stop.nodeId.equals(node))continue;
+            for(String field:new String[]{"arrtime","arrtime2"}) {
+                int seconds=row.optInt(field,-1);
+                if(seconds<=0)continue;
+                arrivals.add(seconds);
+                if(seconds<closest){
+                    closest=seconds;
+                    remaining="arrtime2".equals(field)?row.optInt("arrprevstationcnt2",-1)
+                            :row.optInt("arrprevstationcnt",-1);
+                }
+            }
         }
-        if(best==Integer.MAX_VALUE)
+        if(arrivals.isEmpty())
             return TransitArrival.unavailable(stop.name+" · "+label+"번 버스의 실시간 도착정보가 없어",now);
-        return TransitArrival.found(stop.name,label+"번 버스","TAGO 기준",best,remaining,now);
+        int first=arrivals.first();
+        Integer second=arrivals.higher(first);
+        return TransitArrival.found(stop.name,label+"번 버스","TAGO 기준",first,remaining,
+                second==null?-1:second,now);
     }
 
     public static TransitArrival subwayArrival(String json,TransitRoute.Leg leg,long now)
@@ -145,7 +158,7 @@ public final class ArrivalMatcher {
                     "서울 지하철 API: "+error.optString("message","조회 실패"),now);
         JSONArray list=root.optJSONArray("realtimeArrivalList");
         if(list==null)return TransitArrival.unavailable("해당 역의 실시간 열차 정보가 없어",now);
-        int best=Integer.MAX_VALUE;
+        java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         String direction="";
         for(int i=0;i<list.length();i++){
             JSONObject item=list.optJSONObject(i);if(item==null)continue;
@@ -159,13 +172,18 @@ public final class ArrivalMatcher {
             int raw=item.optInt("barvlDt",-1);
             if(raw<0)continue;
             int corrected=Math.max(0,raw-(int)Math.max(0,age/1000));
-            if(corrected>=best)continue;
-            best=corrected;direction=item.optString("trainLineNm","");
+            // Arrival and at-platform signals are not a future incoming train.
+            if(corrected<=0)continue;
+            arrivals.add(corrected);
+            if(direction.isEmpty())direction=item.optString("trainLineNm","");
         }
-        if(best==Integer.MAX_VALUE)
+        if(arrivals.isEmpty())
             return TransitArrival.unavailable(
                     leg.startName+" · "+leg.routeName+" · 진행 방향이 일치하는 최신 열차 정보가 없어",now);
-        return TransitArrival.found(leg.startName,leg.routeName,direction,best,-1,now);
+        int first=arrivals.first();
+        Integer next=arrivals.higher(first);
+        return TransitArrival.found(leg.startName,leg.routeName,direction,first,-1,
+                next==null?-1:next,now);
     }
 
     private static long timestamp(String text) {

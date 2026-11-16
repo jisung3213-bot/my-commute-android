@@ -14,6 +14,7 @@ import java.util.List;
 public final class RouteSchematicView extends View {
     private final Paint pen=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final List<String> modes=new ArrayList<>();
+    private int currentLeg=-1;
     public RouteSchematicView(Context c,AttributeSet a){super(c,a);}
     public void setRoute(TransitRoute route){
         modes.clear();
@@ -22,6 +23,7 @@ public final class RouteSchematicView extends View {
         }
         invalidate();
     }
+    public void setCurrentLeg(int index){currentLeg=index;invalidate();}
     private int color(String mode){
         if("BUS".equals(mode))return Color.rgb(43,111,214);
         if("SUBWAY".equals(mode))return Color.rgb(214,62,81);
@@ -39,12 +41,17 @@ public final class RouteSchematicView extends View {
         pen.setStrokeCap(Paint.Cap.ROUND);
         for(int i=0;i<edges;i++){
             pen.setColor(color(i<modes.size()?modes.get(i):"WALK"));
+            pen.setAlpha(currentLeg<0||i==currentLeg?255:90);
+            pen.setStrokeWidth((i==currentLeg?8:5)*d);
             canvas.drawLine(left+step*i,y,left+step*(i+1),y,pen);
+            pen.setAlpha(255);
         }
         pen.setStrokeWidth(2*d);
         for(int i=0;i<=edges;i++){
             pen.setStyle(Paint.Style.FILL);
-            pen.setColor(Color.WHITE);canvas.drawCircle(left+step*i,y,6*d,pen);
+            pen.setColor(currentLeg>=0&&(i==currentLeg||i==currentLeg+1)
+                    ?Color.rgb(98,82,183):Color.WHITE);
+            canvas.drawCircle(left+step*i,y,6*d,pen);
             pen.setStyle(Paint.Style.STROKE);pen.setColor(Color.rgb(91,86,124));
             canvas.drawCircle(left+step*i,y,6*d,pen);
         }
@@ -53,6 +60,7 @@ public final class RouteSchematicView extends View {
         canvas.drawText("출발",left,y+23*d,pen);
         canvas.drawText("도착",right,y+23*d,pen);
         for(int i=1;i<edges;i++){
+            if(modes.isEmpty())break;
             if(i>8)break; // Avoid overlapping text on multi-leg routes.
             if(edges>4)break;
             String label="WALK".equals(modes.get(i-1))?"도보":
