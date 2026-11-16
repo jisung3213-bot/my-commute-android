@@ -37,7 +37,7 @@ public final class TmapTransitClient {
 
     public static void search(final Routine r,final Callback cb) {
         if(!enabled()) {MAIN.post(() -> cb.error("대중교통 AppKey 미설정"));return;}
-        if(r==null||!r.isConfigured()||!r.validCoordinates()) {
+        if(r==null||r.startName.trim().isEmpty()||r.endName.trim().isEmpty()||!r.validCoordinates()) {
             MAIN.post(() -> cb.error("저장된 루틴의 출발·도착 좌표를 확인해"));return;
         }
         final double startLat=r.startLat,startLon=r.startLon,endLat=r.endLat,endLon=r.endLon;

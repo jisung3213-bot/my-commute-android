@@ -22,6 +22,7 @@
         <activity android:name="com.example.mycommute.ui.AlarmLogActivity" android:exported="false"/>
         <activity android:name="com.example.mycommute.ui.TrackingActivity" android:exported="false"/>
         <activity android:name="com.example.mycommute.ui.MapActivity" android:exported="false"/>
+        <activity android:name="com.example.mycommute.ui.PlaceSearchActivity" android:exported="false"/>
         <activity android:name="com.example.mycommute.ui.CustomActivity" android:exported="false"/>
         <activity android:name="com.example.mycommute.ui.MainActivity" android:exported="false"/>
         <activity android:name="com.example.mycommute.ui.LoginActivity" android:exported="true">

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:padding="18dp">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="장소 검색" android:textSize="24sp" android:textStyle="bold"
+        android:textColor="@color/text_primary" android:layout_marginBottom="12dp"/>
+    <LinearLayout android:orientation="horizontal" android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <EditText android:id="@+id/editPlaceQuery" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_height="wrap_content"
+            android:singleLine="true" android:hint="장소명 또는 주소 검색"/>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnPlaceSearch"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="검색"/>
+    </LinearLayout>
+    <TextView android:id="@+id/placeStatus" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:paddingTop="10dp" android:paddingBottom="10dp"
+        android:text="장소명을 입력하면 검색 결과를 표시해"
+        android:textColor="@color/text_secondary"/>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:id="@+id/placeResults" android:orientation="vertical"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    </ScrollView>
+</LinearLayout>

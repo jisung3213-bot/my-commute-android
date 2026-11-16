@@ -224,7 +224,8 @@ public class MapActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
-        routine=RoutineStore.read(this);
+        Routine pending=TransitRouteMemory.preview(Session.accountId(this));
+        routine=pending==null?RoutineStore.read(this):pending;
         if(tmapMap!=null) {
             tmapMap.onResume();
             try {tmapMap.clearMarkers();tmapMap.clearRoute();}

@@ -1,81 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical"
-    android:layout_width="match_parent" android:layout_height="match_parent">
-    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="18dp" android:orientation="vertical">
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="출퇴근 루틴 설정"
-                android:textSize="26sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
-                android:text="좌표는 지도 표시와 보행 경로 API를 사용할 때 필요해요. 시간은 24시간제 HH:mm 형식이에요."
-                android:textColor="@color/text_secondary" android:textSize="13sp"/>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="22dp" android:text="기본 경로"/>
-            <EditText android:id="@+id/editRoutineName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="루틴 이름" android:singleLine="true"/>
-            <EditText android:id="@+id/editStart" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="출발 장소 이름" android:singleLine="true"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <EditText android:id="@+id/editStartLat" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="출발 위도" android:inputType="numberDecimal|numberSigned"/>
-                <EditText android:id="@+id/editStartLon" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="출발 경도" android:inputType="numberDecimal|numberSigned"/>
-            </LinearLayout>
-            <EditText android:id="@+id/editEnd" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="도착 장소 이름" android:singleLine="true"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <EditText android:id="@+id/editEndLat" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="도착 위도" android:inputType="numberDecimal|numberSigned"/>
-                <EditText android:id="@+id/editEndLon" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="도착 경도" android:inputType="numberDecimal|numberSigned"/>
-            </LinearLayout>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="시간·이동수단"/>
-            <EditText android:id="@+id/editDeparture" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="목표 도착 시각 HH:mm" android:inputType="time"/>
-            <EditText android:id="@+id/editMargin" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="도착 여유시간 (분)" android:inputType="number"/>
-            <EditText android:id="@+id/editDuration" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="일반 계획 이동시간 (분)" android:inputType="number"/>
-
-            <EditText android:id="@+id/editNormalWalk" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="일반 계획 도보시간 (분)" android:inputType="number"/>
-
-            <EditText android:id="@+id/editAlertLead" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="사전 출발 알림 (분 전)" android:inputType="number"/>
-            <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="일반 이동수단"/>
-            <Spinner android:id="@+id/spinnerMode" android:layout_width="match_parent" android:layout_height="48dp"/>
-
-
-            <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="목표 도착일의 요일 (자정 이후 도착 포함)"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <CheckBox android:id="@+id/dayMon" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="월"/>
-                <CheckBox android:id="@+id/dayTue" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="화"/>
-                <CheckBox android:id="@+id/dayWed" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="수"/>
-                <CheckBox android:id="@+id/dayThu" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="목"/>
-                <CheckBox android:id="@+id/dayFri" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="금"/>
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <CheckBox android:id="@+id/daySat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="토"/>
-                <CheckBox android:id="@+id/daySun" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="일"/>
-            </LinearLayout>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="18dp" android:text="대중교통 경로 검색"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:orientation="vertical" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:padding="18dp">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="먼저 루틴을 저장해. 아래 버튼을 누를 때만 TMAP API를 호출하며 무료체험 호출 한도가 소모돼."
+                android:text="나만의 출퇴근" android:textColor="@color/text_primary"
+                android:textSize="26sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/textActiveRoutine" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:paddingTop="6dp"
+                android:textColor="@color/text_secondary" android:text="현재: 출근 / 등교"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectRoutineCustom" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="출근 / 퇴근 루틴 변경"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+
+            <TextView style="@style/Text.Section" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="14dp"
+                android:text="1. 이동 장소"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnStartPlace"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="출발지 검색" android:textAlignment="viewStart"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnEndPlace"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="도착지 검색" android:textAlignment="viewStart"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <TextView android:id="@+id/textWaypoints" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:textColor="@color/text_secondary"
+                android:padding="8dp" android:text="주변 시설·경유지 없음"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnAddWaypoint"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="주변 시설·경유지 장소 검색"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnClearWaypoints"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="추가한 장소 지우기"
+                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="추가 장소는 지도 마커로 표시돼. 대중교통 경로에 필수 경유지로 반영하는 기능은 아직 없어."
+                android:textColor="@color/text_secondary" android:textSize="12sp"/>
+
+            <TextView style="@style/Text.Section" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="22dp"
+                android:text="2. 목표 시간과 반복"/>
+            <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="목표 도착 시각 (HH:mm)"/>
+            <EditText android:id="@+id/editDeparture" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:hint="09:00"
+                android:inputType="time" android:singleLine="true"/>
+            <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="도착 여유시간 (분)"/>
+            <EditText android:id="@+id/editMargin" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:inputType="number" android:text="10"/>
+            <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="목표 도착일의 요일"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <CheckBox android:id="@+id/dayMon" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="월"/>
+                <CheckBox android:id="@+id/dayTue" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="화"/>
+                <CheckBox android:id="@+id/dayWed" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="수"/>
+                <CheckBox android:id="@+id/dayThu" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="목"/>
+                <CheckBox android:id="@+id/dayFri" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="금"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <CheckBox android:id="@+id/daySat" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="토"/>
+                <CheckBox android:id="@+id/daySun" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="일"/>
+            </LinearLayout>
+
+            <TextView style="@style/Text.Section" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="20dp"
+                android:text="3. 추천 조건"/>
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchWeather" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="기상정보 반영"
+                android:padding="10dp"/>
+            <TextView android:id="@+id/textWeatherStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:padding="8dp"
+                android:text="날씨 미적용 · 이동시간이 짧은 경로 우선"
                 android:textColor="@color/text_secondary"/>
+
             <com.google.android.material.button.MaterialButton android:id="@+id/btnSearchTransit"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="저장된 출발·도착지로 대중교통 경로 검색"/>
+                android:layout_marginTop="18dp" android:text="대중교통 경로 검색하기"/>
             <TextView android:id="@+id/textTransitResult" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:padding="8dp" android:text="검색 결과 없음"
-                android:textColor="@color/text_secondary"/>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="18dp" android:text="첫 대중교통 / 실시간 연동 정보"/>
-            <EditText android:id="@+id/editBoardingStopId" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="정류장 ID / 지하철역 코드"/>
-            <EditText android:id="@+id/editBoardingRoute" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="버스 번호 또는 노선"/>
-            <EditText android:id="@+id/editBoardingDirection" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="탑승 방향 또는 행선지"/>
-            <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:text="API를 연결하기 전에는 실시간 도착정보를 조회하지 않아요."/>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="18dp" android:text="경유지 (식사·커피 기능은 추후 추가)"/>
-            <TextView android:id="@+id/textWaypoints" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:padding="12dp" android:background="@drawable/bg_card"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnAddWaypoint" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="경유지 추가"
+                android:layout_height="wrap_content" android:textColor="@color/text_secondary"
+                android:padding="8dp" android:text="장소와 시간을 설정한 뒤 경로를 검색해"/>
+            <LinearLayout android:id="@+id/transitCards" android:orientation="vertical"
+                android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnPreviewMap"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="선택 경로 지도에서 보기" android:enabled="false"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnClearWaypoints" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="경유지 전체 삭제"
-                style="@style/Widget.MaterialComponents.Button.TextButton"/>
-            <CheckBox android:id="@+id/checkShowMap" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:checked="true" android:text="지도 화면에 경로 표시"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnSaveRoutine" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="루틴 저장 및 알림 예약"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnSaveRoutine"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="선택한 경로로 출퇴근 루틴 저장" android:enabled="false"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="API 경로 시간은 임시 예측이야. 실시간 대중교통 도착·자동 출발 알림은 아직 연결되지 않아."
+                android:textColor="@color/text_secondary" android:textSize="12sp" android:padding="10dp"/>
         </LinearLayout>
     </ScrollView>
     <include layout="@layout/view_bottom_nav"/>

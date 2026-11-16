@@ -41,11 +41,16 @@ public class MainActivity extends AppCompatActivity {
         RoutePlanner.Plan plan=RoutePlanner.select(r);
         ((TextView)findViewById(R.id.mainGreeting)).setText("로그인된 계정 · 루틴 저장");
         ((TextView)findViewById(R.id.mainRoute)).setText(r.isConfigured()?r.startName+" → "+r.endName:"아직 등록된 루틴이 없어");
-        ((TextView)findViewById(R.id.mainTime)).setText(r.isConfigured()
+        ((TextView)findViewById(R.id.mainTime)).setText(r.apiBased
+                ? "경로 검색 시 이동시간 갱신 · 실시간 출발 알림 미연동"
+                : r.isConfigured()
                 ? (plan.available ? r.plannedDeparture(plan.durationMinutes)+" 출발 권장 · "+TripTimeline.expectedArrival(r,plan.durationMinutes)+" 계획 도착 / "+r.arrivalTime+" 목표" : "대체 경로 필요 · 출발 알림 미예약")
                 : "출퇴근 커스텀에서 첫 루틴을 등록해줘");
-        ((TextView)findViewById(R.id.mainWeather)).setText(plan.note);
-        ((TextView)findViewById(R.id.mainTransit)).setText("버스·지하철 실시간 도착정보: API 미연동\n첫 탑승: "
-                +(r.boardingRoute.isEmpty()?"미등록":r.boardingRoute+" / "+r.boardingStopId));
+        ((TextView)findViewById(R.id.mainWeather)).setText(r.apiBased
+                ? (r.weatherEnabled?"기상정보 반영 설정 ON · 경로 검색 시 평가":"기상정보 반영 설정 OFF")
+                : plan.note);
+        ((TextView)findViewById(R.id.mainTransit)).setText(r.apiBased
+                ? "대중교통 경로 검색 연결됨 · 실시간 차량 도착정보 미연동"
+                : "버스·지하철 실시간 도착정보: API 미연동");
     }
 }

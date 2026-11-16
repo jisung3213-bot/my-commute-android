@@ -15,6 +15,7 @@ public final class TransitRouteMemory {
     private static String owner="",routeKey="";
     private static long receivedAt=0;
     private static int selected=-1;
+    private static Routine preview;
     private static List<TransitRoute> candidates=Collections.emptyList();
 
     private TransitRouteMemory() {}
@@ -25,6 +26,7 @@ public final class TransitRouteMemory {
 
     public static synchronized void put(String uid,Routine routine,List<TransitRoute> routes) {
         owner=uid; routeKey=key(routine); receivedAt=System.currentTimeMillis();
+        preview=routine;
         selected=-1;
         candidates=new ArrayList<>(routes);
     }
@@ -35,13 +37,18 @@ public final class TransitRouteMemory {
         return true;
     }
 
+    public static synchronized Routine preview(String uid) {
+        if(preview==null||!valid(uid,preview)||selected<0)return null;
+        return preview;
+    }
+
     public static synchronized TransitRoute selected(String uid,Routine routine) {
         if(!valid(uid,routine)||selected<0||selected>=candidates.size())return null;
         return candidates.get(selected);
     }
 
     public static synchronized void clear() {
-        owner="";routeKey="";receivedAt=0;selected=-1;
+        owner="";routeKey="";receivedAt=0;selected=-1;preview=null;
         candidates=Collections.emptyList();
     }
 

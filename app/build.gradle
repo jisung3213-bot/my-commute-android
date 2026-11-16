@@ -12,6 +12,7 @@ def localFile = rootProject.file('local.properties')
 if (localFile.exists()) localFile.withInputStream { localConfig.load(it) }
 def tmapKey = (localConfig.getProperty('TMAP_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 def transitKey = (localConfig.getProperty('TMAP_TRANSIT_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def weatherKey = (localConfig.getProperty('KMA_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 
 android {
     namespace 'com.example.mycommute'
@@ -25,6 +26,7 @@ android {
         versionName '0.2.0'
         buildConfigField 'String', 'TMAP_APP_KEY', '"' + tmapKey + '"'
         buildConfigField 'String', 'TMAP_TRANSIT_APP_KEY', '"' + transitKey + '"'
+        buildConfigField 'String', 'KMA_SERVICE_KEY', '"' + weatherKey + '"'
     }
 
     buildFeatures { buildConfig true }

@@ -3,8 +3,9 @@ import java.util.List;
 /** Initial policy weights; score is not a travel-time prediction. */
 public final class WeatherRouteRanker {
     public static final class Conditions {
-        public final boolean known,rain,coldAlert;
-        public Conditions(boolean known,boolean rain,boolean coldAlert){this.known=known;this.rain=rain;this.coldAlert=coldAlert;}
+        public final boolean known,rain,coldAlert,lowTemperature;
+        public Conditions(boolean known,boolean rain,boolean coldAlert){this(known,rain,coldAlert,false);}
+        public Conditions(boolean known,boolean rain,boolean coldAlert,boolean lowTemperature){this.known=known;this.rain=rain;this.coldAlert=coldAlert;this.lowTemperature=lowTemperature;}
     }
     public static final class Candidate {
         public final String id,mode;
@@ -20,6 +21,7 @@ public final class WeatherRouteRanker {
         double walk=.25,wait=.25;
         if(w.known&&w.rain){walk+=1.5;wait+=1.0;}
         if(w.known&&w.coldAlert){walk+=2;wait+=2.5;}
+        else if(w.known&&w.lowTemperature){walk+=1;wait+=1.5;}
         return r.durationMinutes+walk*r.walkingMinutes+wait*r.outdoorWaitMinutes+3*r.transfers;
     }
     public static Candidate select(List<Candidate> routes,Conditions weather){

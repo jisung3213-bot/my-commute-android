@@ -25,9 +25,13 @@ public class Routine {
     public String boardingRoute = "";
     public String boardingDirection = "";
     public boolean mapVisible = true;
+    /** Persist preference only; do not persist provider route details/ETAs. */
+    public boolean weatherEnabled = false;
+    public boolean apiBased = false;
+    public String preferredMode = "";
     public List<Waypoint> waypoints = new ArrayList<>();
 
-    public boolean isConfigured() { return !startName.trim().isEmpty() && !endName.trim().isEmpty() && estimatedMinutes>=1 && estimatedMinutes<=720 && marginMinutes>=0 && marginMinutes<=180 && normalWalkMinutes>=0 && normalWalkMinutes<=estimatedMinutes && !days.isEmpty() && com.example.mycommute.engine.PlanSchedule.validTime(arrivalTime); }
+    public boolean isConfigured() { return !startName.trim().isEmpty() && !endName.trim().isEmpty() && (apiBased || (estimatedMinutes>=1 && estimatedMinutes<=720 && normalWalkMinutes>=0 && normalWalkMinutes<=estimatedMinutes)) && marginMinutes>=0 && marginMinutes<=180 && !days.isEmpty() && com.example.mycommute.engine.PlanSchedule.validTime(arrivalTime); }
     public boolean validCoordinates() { return valid(startLat,startLon) && valid(endLat,endLon); }
     public static boolean valid(double lat,double lon) { return lat >= 33 && lat <= 39 && lon >= 124 && lon <= 132; }
     public boolean runsOn(int calendarDay) {
@@ -39,7 +43,7 @@ public class Routine {
         return com.example.mycommute.engine.PlanSchedule.time(com.example.mycommute.engine.PlanSchedule.departureOn(Calendar.getInstance(),arrivalTime,duration,marginMinutes));
     }
     public boolean isActiveNow(Calendar now) {
-        return isConfigured() && com.example.mycommute.engine.PlanSchedule.active(now,arrivalTime,estimatedMinutes,marginMinutes,days);
+        return !apiBased && isConfigured() && com.example.mycommute.engine.PlanSchedule.active(now,arrivalTime,estimatedMinutes,marginMinutes,days);
     }
     public JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
@@ -52,6 +56,8 @@ public class Routine {
         o.put("transportMode",transportMode);o.put("days",days);
         o.put("boardingStopId",boardingStopId);o.put("boardingRoute",boardingRoute);
         o.put("boardingDirection",boardingDirection);o.put("mapVisible",mapVisible);
+        o.put("weatherEnabled",weatherEnabled);o.put("apiBased",apiBased);
+        o.put("preferredMode",preferredMode);
         JSONArray arr=new JSONArray(); for(Waypoint w:waypoints) arr.put(w.toJson()); o.put("waypoints",arr);
         return o;
     }
@@ -68,6 +74,9 @@ public class Routine {
         r.days=o.optString("days",r.days);r.boardingStopId=o.optString("boardingStopId");
         r.boardingRoute=o.optString("boardingRoute");r.boardingDirection=o.optString("boardingDirection");
         r.mapVisible=o.optBoolean("mapVisible",true);
+        r.weatherEnabled=o.optBoolean("weatherEnabled",false);
+        r.apiBased=o.optBoolean("apiBased",false);
+        r.preferredMode=o.optString("preferredMode","");
         JSONArray a=o.optJSONArray("waypoints");if(a!=null) for(int i=0;i<a.length();i++) { JSONObject p=a.optJSONObject(i); if(p!=null)r.waypoints.add(Waypoint.fromJson(p)); }
         return r;
     }
