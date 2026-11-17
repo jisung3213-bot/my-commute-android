@@ -11,7 +11,10 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,6 +26,9 @@ public final class LiveArrivalClient {
     public interface Callback {void complete(TransitArrival result);}
     private static final Handler UI=new Handler(Looper.getMainLooper());
     private static final ExecutorService IO=Executors.newSingleThreadExecutor();
+    // All requests run on IO, so this map is accessed from one worker thread.
+    private static final Map<String,Long> blockedUntil=new HashMap<>();
+    private static final long AUTH_BACKOFF_MS=10*60_000L;
     private LiveArrivalClient(){}
 
     public static boolean subwayEnabled(){
@@ -86,7 +92,7 @@ public final class LiveArrivalClient {
                 +URLEncoder.encode(BuildConfig.SEOUL_SUBWAY_API_KEY,StandardCharsets.UTF_8.name())
                 +"/json/realtimeStationArrival/0/30/"
                 +URLEncoder.encode(station,StandardCharsets.UTF_8.name());
-        String text=request(url);
+        String text=request(url,"서울시 지하철 도착정보");
         return ArrivalMatcher.subwayArrival(text,leg,System.currentTimeMillis());
     }
 
@@ -99,7 +105,7 @@ public final class LiveArrivalClient {
                 +"?serviceKey="+encode(BuildConfig.TAGO_BUS_SERVICE_KEY)
                 +"&_type=json&pageNo=1&numOfRows=100"
                 +"&gpsLati="+leg.startLat+"&gpsLong="+leg.startLon;
-        ArrivalMatcher.Stop stop=ArrivalMatcher.chooseNearbyStop(request(base+location),leg);
+        ArrivalMatcher.Stop stop=ArrivalMatcher.chooseNearbyStop(request(base+location,"TAGO 정류소정보"),leg);
         if(stop==null)return TransitArrival.unavailable(
                 "가까운 TAGO 정류장 중 이름과 위치를 유일하게 확인할 수 없어",
                 System.currentTimeMillis());
@@ -107,33 +113,53 @@ public final class LiveArrivalClient {
                 +"?serviceKey="+encode(BuildConfig.TAGO_BUS_SERVICE_KEY)
                 +"&_type=json&pageNo=1&numOfRows=100"
                 +"&cityCode="+encode(stop.cityCode)+"&nodeId="+encode(stop.nodeId);
-        return ArrivalMatcher.busArrival(request(base+arrivals),leg,stop,System.currentTimeMillis());
+        return ArrivalMatcher.busArrival(request(base+arrivals,"TAGO 버스도착정보"),leg,stop,System.currentTimeMillis());
     }
 
     private static String encode(String text) throws Exception {
-        return URLEncoder.encode(text,StandardCharsets.UTF_8.name());
+        // Accept both decoded and percent-encoded portal keys, without double encoding.
+        String key=text.trim();
+        if(key.matches(".*%[0-9a-fA-F]{2}.*")) {
+            try {key=URLDecoder.decode(key,StandardCharsets.UTF_8.name());}
+            catch(IllegalArgumentException ignored) { }
+        }
+        return URLEncoder.encode(key,StandardCharsets.UTF_8.name());
     }
 
-    private static String request(String address) throws Exception {
+    private static String request(String address,String provider) throws Exception {
+        long now=System.currentTimeMillis();
+        Long blocked=blockedUntil.get(provider);
+        if(blocked!=null&&blocked>now)
+            throw new IllegalStateException(provider+" · 인증/호출 제한 오류 후 재조회 대기 (최대 10분)");
         HttpURLConnection conn=(HttpURLConnection)new URL(address).openConnection();
         try{
-            conn.setConnectTimeout(10000);conn.setReadTimeout(14000);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(14000);
             conn.setRequestProperty("Accept","application/json");
             int status=conn.getResponseCode();
-            if(status!=200)throw new IllegalStateException("HTTP "+status
-                    +" (API 인증키·권한 및 호출 한도 확인)");
+            if(status!=200){
+                String response=readLimited(conn.getErrorStream(),4096);
+                if(status==401||status==403||status==429)
+                    blockedUntil.put(provider,now+AUTH_BACKOFF_MS);
+                throw new IllegalStateException(ArrivalApiError.describe(provider,status,response));
+            }
+            return readLimited(conn.getInputStream(),1_500_000);
+        }finally{conn.disconnect();}
+    }
+
+    private static String readLimited(InputStream stream,int limit) throws Exception {
+        if(stream==null)return "";
+        try(InputStream input=stream;
+            BufferedReader reader=new BufferedReader(
+                    new InputStreamReader(input,StandardCharsets.UTF_8))){
             StringBuilder sb=new StringBuilder();
-            try(InputStream stream=conn.getInputStream();
-                BufferedReader input=new BufferedReader(
-                        new InputStreamReader(stream,StandardCharsets.UTF_8))){
-                char[] buffer=new char[4096];int count;
-                while((count=input.read(buffer))!=-1){
-                    if(sb.length()+count>1_500_000)
-                        throw new IllegalStateException("도착정보 응답 크기 초과");
-                    sb.append(buffer,0,count);
-                }
+            char[] chars=new char[4096];int count;
+            while((count=reader.read(chars))!=-1){
+                if(sb.length()+count>limit)
+                    throw new IllegalStateException("API 응답 크기 초과");
+                sb.append(chars,0,count);
             }
             return sb.toString();
-        }finally {conn.disconnect();}
+        }
     }
 }

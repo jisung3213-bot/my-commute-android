@@ -28,9 +28,28 @@ public final class KmaWeatherClient {
     public interface Callback {void success(Report report);void error(String reason);}
     public static final class Report {
         public final WeatherRouteRanker.Conditions conditions;
-        public final String label;
-        Report(WeatherRouteRanker.Conditions conditions,String label) {
-            this.conditions=conditions;this.label=label;
+        public final String label, forecastAt;
+        public final double temperatureC;
+        public final int rainProbability, precipitationType;
+        Report(WeatherRouteRanker.Conditions conditions,String label,
+               String forecastAt,double temperatureC,int rainProbability,int precipitationType) {
+            this.conditions=conditions;this.label=label;this.forecastAt=forecastAt;
+            this.temperatureC=temperatureC;this.rainProbability=rainProbability;
+            this.precipitationType=precipitationType;
+        }
+        public String temperatureText(){
+            return Double.isFinite(temperatureC)
+                    ?String.format(Locale.KOREA,"%.0f°C",temperatureC):"기온 미확인";
+        }
+        public String conditionText(){
+            String rain;
+            if(precipitationType==0)rain="강수 없음";
+            else if(precipitationType==1)rain="비";
+            else if(precipitationType==2)rain="비·눈";
+            else if(precipitationType==3)rain="눈";
+            else if(precipitationType==4)rain="소나기";
+            else rain="강수형태 미확인";
+            return rain+(rainProbability>=0?" · 강수확률 "+rainProbability+"%":"");
         }
     }
     private static final ExecutorService NETWORK=Executors.newSingleThreadExecutor();
@@ -128,7 +147,10 @@ public final class KmaWeatherClient {
         if(Double.isFinite(temp))label+=" · "+temp+"℃";
         if(chance>=0)label+=" · 강수확률 "+chance+"%";
         if(precipitation>=0)label+=" · 강수형태 "+(precipitation==0?"없음":"있음");
-        return new Report(new WeatherRouteRanker.Conditions(true,rain,false,cold),label);
+        return new Report(new WeatherRouteRanker.Conditions(true,rain,false,cold),
+                label,nearest.substring(4,6)+"/"+nearest.substring(6,8)+" "
+                        +nearest.substring(8,10)+":00",
+                temp,chance,precipitation);
     }
 
     private static int number(String s,int fallback){try{return Integer.parseInt(s);}catch(Exception e){return fallback;}}

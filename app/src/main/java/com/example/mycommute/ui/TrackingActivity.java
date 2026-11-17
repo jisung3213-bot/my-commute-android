@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +26,7 @@ import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitArrival;
 import com.example.mycommute.model.TransitRoute;
 import com.example.mycommute.network.LiveArrivalClient;
+import com.example.mycommute.network.KmaWeatherClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationTokenSource;
@@ -39,6 +41,7 @@ public class TrackingActivity extends AppCompatActivity {
     private Routine routine;
     private CommuteLiveCoordinator live;
     private boolean listening;
+    private boolean expandedRouteDetails;
     private CancellationTokenSource locationToken;
     private double latestLat=Double.NaN,latestLon=Double.NaN;
     private long gpsTime;
@@ -73,6 +76,10 @@ public class TrackingActivity extends AppCompatActivity {
         });
         findViewById(R.id.liveOpenMap).setOnClickListener(v->
                 startActivity(new Intent(this,MapActivity.class)));
+        findViewById(R.id.liveRouteSteps).setOnClickListener(v->{
+            expandedRouteDetails=!expandedRouteDetails;
+            render();
+        });
     }
 
     @Override protected void onResume(){
@@ -272,52 +279,65 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     private void renderWeather(){
-        StringBuilder alerts=new StringBuilder();
-        if(live.weather()==null){
-            label(R.id.liveWeather).setText(live.weatherStatus());
-            alerts.append("기상자료 미확인\n");
+        KmaWeatherClient.Report report=live.weather();
+        if(report==null){
+            label(R.id.liveWeather).setText("기온 미확인");
+            label(R.id.liveWeatherDetails).setText("날씨 정보 조회 대기");
+            label(R.id.liveWeatherTime).setText(live.weatherStatus());
         }else{
-            label(R.id.liveWeather).setText(live.weatherStatus()+
-                    (routine.weatherEnabled?"":"\n추천 가중치 반영 OFF"));
-            if(live.weather().conditions.rain)
-                alerts.append("강수 예상 · 도보 구간에 주의\n");
-            if(live.weather().conditions.lowTemperature)
-                alerts.append("영하 예상 · 실외 이동에 주의\n");
+            label(R.id.liveWeather).setText(report.temperatureText());
+            label(R.id.liveWeatherDetails).setText(report.conditionText());
+            label(R.id.liveWeatherTime).setText("기상청 "+report.forecastAt+" 예보");
         }
-        TransitArrival a=live.arrival();
-        if(a!=null&&!a.available)
-            alerts.append("차량 도착정보 미확인 · 운행 장애로 단정하지 않아\n");
-        else if(a!=null&&a.available&&a.currentSeconds(System.currentTimeMillis())<=0)
-            alerts.append("이전 차량 도착정보 만료 · 새 조회 대기\n");
-        if(live.routeStatus().contains("일치하는 후보가 없어"))
-            alerts.append("기존에 선택한 노선과 다른 경로를 임시 표시 중\n");
-        if(alerts.length()==0)alerts.append("현재 예보 기준 추가 주의사항 미확인\n");
-        alerts.append("공식 기상특보·운행 사고 정보는 별도 API 미연동");
-        label(R.id.liveAlerts).setText(alerts.toString());
+        java.util.List<String> notices=new java.util.ArrayList<>();
+        if(report==null)notices.add("기상정보를 확인하지 못했어");
+        else {
+            if(report.conditions.rain)notices.add("강수 예상 · 도보 이동에 주의");
+            if(report.conditions.lowTemperature)notices.add("영하 기온 예상 · 보온에 주의");
+        }
+        TransitArrival vehicle=live.arrival();
+        if(vehicle!=null&&!vehicle.available){
+            if(vehicle.message.contains("HTTP 403")||
+                    vehicle.message.contains("HTTP 401"))
+                notices.add("버스·지하철 도착정보 접근 오류");
+            else notices.add("실시간 차량 도착정보 미확인");
+        }else if(vehicle!=null&&vehicle.available
+                &&vehicle.currentSeconds(System.currentTimeMillis())<=0){
+            notices.add("차량 도착정보 만료 · 다음 조회 대기");
+        }
+        if(live.route()==null)
+            notices.add("상세 경로 미보유 · 루틴에서 경로 재검색 필요");
+        if(notices.isEmpty())notices.add("연결된 예보·교통정보에서 추가 주의사항이 확인되지 않았어");
+        label(R.id.liveAlerts).setText(android.text.TextUtils.join("\n",notices));
     }
 
     private void renderRoute(TransitRoute route){
         if(route==null){
             label(R.id.liveRouteSteps).setText(live.routeStatus());return;
         }
+        String overview="전체 "+route.legs.size()+"구간 · 도보 "+
+                TransitRoute.minutes(route.walkSeconds)+"분 · 환승 "+route.transfers+"회";
+        if(!expandedRouteDetails){
+            label(R.id.liveRouteSteps).setText(overview+" · 구간 목록 펼치기");
+            return;
+        }
         StagePositionMatcher.Match stage=live.stage();
         int focused=stage!=null&&stage.known()?stage.legIndex:-1;
-        StringBuilder steps=new StringBuilder();
-        int max=Math.min(route.legs.size(),12);
+        StringBuilder steps=new StringBuilder(overview);
+        int max=Math.min(route.legs.size(),16);
         for(int i=0;i<max;i++){
             TransitRoute.Leg leg=route.legs.get(i);
-            if(steps.length()>0)steps.append('\n');
-            String label=leg.title();
-            if("WALK".equals(leg.mode)&&leg.startName.equals(leg.endName))
-                label="환승 통로·역내 이동 "+TransitRoute.minutes(leg.seconds)+"분 · "+leg.startName;
-            steps.append(i==focused?"▶ ":"   ").append(i+1).append(". ").append(label);
+            steps.append("\n").append(i==focused?"▶ ":"   ").append(i+1)
+                    .append(". ").append(leg.title());
         }
         if(route.legs.size()>max)steps.append("\n그 외 ").append(route.legs.size()-max).append("개 구간");
-        steps.append("\n※ 현재 구간은 GPS 주변 경로 추정이며, 실제 승차는 확인하지 못해");
+        steps.append("\n구간 목록 접기");
         label(R.id.liveRouteSteps).setText(steps.toString());
     }
 
     private void renderVehicle(long now,TransitRoute route,TransitArrival arrival,boolean tracking){
+        TextView diagnostic=label(R.id.liveArrivalDiagnostic);
+        diagnostic.setVisibility(View.GONE);
         if(route==null){
             label(R.id.liveNextVehicle).setText("차량 조회 대기");
             label(R.id.liveBoarding).setText("조회 가능한 대중교통 경로가 없어");return;
@@ -330,7 +350,16 @@ public class TrackingActivity extends AppCompatActivity {
         TransitRoute.Leg leg=route.legs.get(index);
         if(arrival==null||!arrival.available){
             label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
-            label(R.id.liveBoarding).setText(live.arrivalStatus());return;
+            if(arrival==null){
+                label(R.id.liveBoarding).setText("실시간 도착정보 조회 중");
+            }else{
+                label(R.id.liveBoarding).setText(arrival.message.contains("HTTP 403")
+                        ?"실시간 도착정보 접근 거부 · 아래 연결 진단 확인"
+                        :"도착예정시간을 확인할 수 없어");
+                diagnostic.setVisibility(View.VISIBLE);
+                diagnostic.setText("연결 진단 · "+arrival.message);
+            }
+            return;
         }
         int remaining=arrival.currentSeconds(now);
         if(remaining<=0){
