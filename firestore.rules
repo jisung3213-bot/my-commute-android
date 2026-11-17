@@ -9,5 +9,14 @@ service cloud.firestore {
         && request.resource.data.payload.size() < 50000;
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
+    match /users/{userId}/settings/{settingId} {
+      allow read: if request.auth != null && request.auth.uid == userId
+        && settingId == 'commute';
+      allow create, update: if request.auth != null && request.auth.uid == userId
+        && settingId == 'commute'
+        && request.resource.data.keys().hasOnly(['payload', 'updatedAt'])
+        && request.resource.data.payload is string
+        && request.resource.data.payload.size() < 5000;
+    }
   }
 }

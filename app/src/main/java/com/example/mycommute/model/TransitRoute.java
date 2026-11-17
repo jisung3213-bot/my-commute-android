@@ -48,6 +48,69 @@ public final class TransitRoute {
         this.legs=Collections.unmodifiableList(legs);
     }
 
+    /**
+     * Concatenates separately requested TMAP A→waypoint→B itineraries.
+     * The sum is an estimate; includes no guaranteed transfer synchronization.
+     */
+    public static TransitRoute combine(List<TransitRoute> sections) {
+        if(sections==null||sections.isEmpty())throw new IllegalArgumentException("경로 구간이 없어");
+        int duration=0,walk=0,meters=0,transfers=0,fare=0;
+        List<Leg> out=new ArrayList<>();
+        for(TransitRoute section:sections){
+            duration+=section.totalSeconds;walk+=section.walkSeconds;
+            meters+=section.walkMeters;transfers+=section.transfers;
+            fare+=section.fareWon;out.addAll(section.legs);
+        }
+        return new TransitRoute(duration,walk,meters,transfers,fare,out);
+    }
+
+    /** Provider-derived cache: only allowed to be read within the local 23h TTL. */
+    public JSONObject toCacheJson() throws JSONException {
+        JSONObject object=new JSONObject();
+        object.put("duration",totalSeconds);object.put("walk",walkSeconds);
+        object.put("meters",walkMeters);object.put("transfers",transfers);object.put("fare",fareWon);
+        JSONArray array=new JSONArray();
+        for(Leg leg:legs){
+            JSONObject item=new JSONObject();
+            item.put("mode",leg.mode);item.put("line",leg.routeName);
+            item.put("start",leg.startName);item.put("end",leg.endName);
+            item.put("seconds",leg.seconds);
+            item.put("lat",Double.isFinite(leg.startLat)?leg.startLat:JSONObject.NULL);
+            item.put("lon",Double.isFinite(leg.startLon)?leg.startLon:JSONObject.NULL);
+            item.put("next",leg.nextStopName);
+            JSONArray points=new JSONArray();
+            for(Point point:leg.points) {
+                JSONArray xy=new JSONArray();xy.put(point.lat);xy.put(point.lon);points.put(xy);
+            }
+            item.put("points",points);array.put(item);
+        }
+        object.put("legs",array);
+        return object;
+    }
+
+    public static TransitRoute fromCacheJson(JSONObject object) throws JSONException {
+        JSONArray rows=object.getJSONArray("legs");
+        List<Leg> legs=new ArrayList<>();
+        for(int i=0;i<rows.length();i++){
+            JSONObject item=rows.getJSONObject(i);
+            List<Point> pts=new ArrayList<>();
+            JSONArray points=item.optJSONArray("points");
+            if(points!=null)for(int j=0;j<points.length();j++){
+                JSONArray point=points.optJSONArray(j);
+                if(point!=null&&point.length()==2)pts.add(new Point(point.getDouble(0),point.getDouble(1)));
+            }
+            legs.add(new Leg(item.optString("mode",""),item.optString("line",""),
+                    item.optString("start",""),item.optString("end",""),
+                    item.optInt("seconds",0),pts,
+                    item.optDouble("lat",Double.NaN),item.optDouble("lon",Double.NaN),
+                    item.optString("next","")));
+        }
+        if(legs.isEmpty())throw new JSONException("캐시 경로 구간 없음");
+        return new TransitRoute(object.optInt("duration",0),object.optInt("walk",0),
+                object.optInt("meters",0),object.optInt("transfers",0),
+                object.optInt("fare",0),legs);
+    }
+
     public static int minutes(int seconds) { return Math.max(0,(seconds+59)/60); }
 
     public String summary(int ordinal) {

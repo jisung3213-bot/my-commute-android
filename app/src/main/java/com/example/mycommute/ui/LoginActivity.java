@@ -19,7 +19,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextView status;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        if(Session.signedIn(this)) { openApp();return; }
+        if(Session.signedIn(this)) {syncAndOpen();return;}
         setContentView(R.layout.activity_login);
         email=findViewById(R.id.inputEmail);password=findViewById(R.id.inputPassword);
         status=findViewById(R.id.textAuthStatus);
@@ -42,28 +42,39 @@ public class LoginActivity extends AppCompatActivity {
                 : FirebaseAuth.getInstance().signInWithEmailAndPassword(e,p);
         task.addOnCompleteListener(this,result -> {
             if(result.isSuccessful()) {
-                java.util.concurrent.atomic.AtomicInteger remaining=new java.util.concurrent.atomic.AtomicInteger(RoutineStore.IDS.length);
-                for(String id:RoutineStore.IDS) {
-                    if(RoutineStore.read(this,id).isConfigured()){if(remaining.decrementAndGet()==0)openApp();continue;}
-                    FirestoreSync.fetch(id,new FirestoreSync.Result(){
-                        public void onLoaded(Routine r){r.id=id;RoutineStore.saveLocal(LoginActivity.this,r);done();}
-                        public void onFailure(String reason){done();}
-                        private void done(){if(remaining.decrementAndGet()==0&&!isFinishing())openApp();}
-                    });
-                }
+                syncAndOpen();
             } else {
                 findViewById(R.id.btnLogin).setEnabled(true);findViewById(R.id.btnRegister).setEnabled(true);
                 status.setText("인증 실패: "+(result.getException()==null?"오류":result.getException().getLocalizedMessage()));
             }
         });
     }
+    private void syncAndOpen(){
+        FirestoreSync.fetchAll(new FirestoreSync.ProfilesResult(){
+            @Override public void onLoaded(java.util.List<Routine> all){
+                for(Routine r:all)RoutineStore.saveLocal(LoginActivity.this,r);
+                readDefaults();
+            }
+            @Override public void onFailure(String why){readDefaults();}
+            private void readDefaults(){
+                FirestoreSync.fetchPreferences(new FirestoreSync.SettingsResult(){
+                    @Override public void onLoaded(org.json.JSONObject settings){
+                        RoutineStore.importPreferences(LoginActivity.this,settings);
+                        openApp();
+                    }
+                    @Override public void onFailure(String why){openApp();}
+                });
+            }
+        });
+    }
     private void openApp() {
-        for(String id:RoutineStore.IDS){Routine candidate=RoutineStore.read(this,id);
-            if(candidate.isActiveNow(Calendar.getInstance())){RoutineStore.select(this,id);break;}}
+        // Keep each direction's default selected at login.
+        RoutineStore.restoreDefaultsOnLogin(this);
         Routine routine=RoutineStore.read(this);
-        if(routine.isConfigured()) com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
-        Class<?> screen=routine.isActiveNow(Calendar.getInstance())?TrackingActivity.class:MainActivity.class;
-        Intent intent=new Intent(this,screen);intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        if(routine.isConfigured()&&!routine.apiBased)
+            com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
+        Intent intent=new Intent(this,MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);finish();
     }
 }

@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.TransitRouteMemory;
+import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.engine.CommuteWindow;
 import com.example.mycommute.engine.RouteSignature;
 import com.example.mycommute.engine.StagePositionMatcher;
@@ -102,13 +103,16 @@ final class CommuteLiveCoordinator {
             notifyChange();return;
         }
         TransitRoute cached=TransitRouteMemory.selected(userId,routine);
+        TransitRouteCache.Snapshot disk=TransitRouteCache.load(context,routine);
+        if(cached==null&&disk!=null)cached=disk.routes.get(disk.selected);
         if(cached!=null){
-            route=cached;routeFetchedAt=System.currentTimeMillis();
-            routeStatus="이번 세션의 선택 경로 미리보기 · 현재 조회 결과";
+            route=cached;
+            routeFetchedAt=disk!=null?disk.timestamp:System.currentTimeMillis();
+            routeStatus="저장된 경로 미리보기 · 새 API 호출 없음";
+            stage=null;
+            boardingLegIndex=StagePositionMatcher.boardingIndex(route,null);
         } else {
-            routeStatus=CommuteWindow.active(routine,System.currentTimeMillis())
-                    ?"이동 시간대 경로 조회 준비 중"
-                    :"지금은 등록한 이동 시간대가 아니야 · 자동 조회 대기 중";
+            routeStatus="보관 중인 경로 상세정보가 없거나 만료됐어 · 커스텀 화면에서 새 경로 검색을 눌러";
         }
         loadWeather(false);
         loadRoute(false);
@@ -176,68 +180,29 @@ final class CommuteLiveCoordinator {
         notifyChange();
     }
 
+    /**
+     * Viewing a saved profile never spends a TMAP transit route request.
+     * Only the explicit button on the Custom screen performs a new search.
+     */
     private void loadRoute(boolean manual){
-        if(!running||loadingRoute||!TmapTransitClient.enabled()) {
-            if(!TmapTransitClient.enabled())routeStatus="TMAP 대중교통 API 키가 설정되지 않았어";
+        if(!running)return;
+        TransitRouteCache.Snapshot disk=TransitRouteCache.load(context,routine);
+        if(disk==null){
+            route=null;arrival=null;stage=null;boardingLegIndex=-1;
+            routeStatus="상세 경로가 없거나 23시간이 지났어 · 커스텀 화면에서 새 경로 검색 필요";
             return;
         }
-        long now=System.currentTimeMillis();
-        if(route!=null&&now-routeFetchedAt<ROUTE_TTL_MS)return;
-        if(route!=null){
-            route=null;arrival=null;boardingLegIndex=-1;routeFetchedAt=0;
-            loadingArrival=false;loadingWalk=false;
-            walkSeconds=-1;walkingFetchedAt=0;stage=null;
-            routeStatus="기존 경로 정보가 만료되어 다시 조회해야 해";
-        }
-        long previous=context.getSharedPreferences("live_route_lookup",Context.MODE_PRIVATE)
-                .getLong(userId+"|"+routine.id,0);
-        if(now-routeRequestedAt<ROUTE_RETRY_MS ||
-                (previous>0&&now-previous<ROUTE_RETRY_MS)) {
-            routeStatus="TMAP 경로 재조회 간격 제한(2시간) · 이동 시간대에는 저장된 경로 미리보기 활용";
-            return;
-        }
-        if(!takeRouteBudget(now)){
-            routeStatus="오늘의 앱 내 TMAP 경로 조회 상한에 도달했어 (3회)";
-            notifyChange();return;
-        }
-        routeRequestedAt=now;loadingRoute=true;
-        context.getSharedPreferences("live_route_lookup",Context.MODE_PRIVATE).edit()
-                .putLong(userId+"|"+routine.id,now).apply();
-        final int token=generation;
-        routeStatus="TMAP 경로 검색 중...";
+        if(route!=null&&routeFetchedAt==disk.timestamp)return;
+        route=disk.routes.get(disk.selected);
+        routeFetchedAt=disk.timestamp;
+        routeStatus="저장된 경로 미리보기 · API 호출 없음 · 23시간 이내";
+        arrival=null;arrivalRequestedAt=0;
+        stage=StagePositionMatcher.locate(route,currentLat,currentLon,
+                currentFixTime,currentAccuracy,System.currentTimeMillis());
+        boardingLegIndex=StagePositionMatcher.boardingIndex(route,stage);
+        walkSeconds=-1;walkingFetchedAt=0;
+        loadArrival(false);
         notifyChange();
-        TmapTransitClient.search(routine,new TmapTransitClient.Callback(){
-            @Override public void success(List<TransitRoute> results){
-                if(!valid(token))return;
-                loadingRoute=false;
-                if(results.isEmpty()){routeStatus="경로 후보가 없어";notifyChange();return;}
-                int selected=choosePreference(results);
-                route=results.get(selected);
-                routeFetchedAt=System.currentTimeMillis();
-                TransitRouteMemory.put(userId,routine,results);
-                TransitRouteMemory.choose(userId,routine,selected);
-                boolean matched=routine.selectedRouteSignature.isEmpty()||
-                        RouteSignature.of(route).equals(routine.selectedRouteSignature);
-                routeStatus=(matched?"실시간 경로 조회 완료":
-                        "선택한 노선 패턴과 일치하는 후보가 없어 빠른 경로를 임시 표시 중")
-                        +" · "+(selected+1)+"번 후보 · "+TransitRoute.minutes(route.totalSeconds)+"분 (계획 기준)";
-                arrival=null;arrivalRequestedAt=0;
-                loadingArrival=false;loadingWalk=false;
-                stage=gpsTracking?StagePositionMatcher.locate(route,currentLat,currentLon,
-                        currentFixTime,currentAccuracy,System.currentTimeMillis()):null;
-                boardingLegIndex=StagePositionMatcher.boardingIndex(route,stage);
-                walkSeconds=-1;walkingFetchedAt=0;walkingRequestedAt=0;
-                loadArrival(true);
-                loadWalking(false);
-                notifyChange();
-            }
-            @Override public void error(String reason){
-                if(!valid(token))return;
-                loadingRoute=false;
-                routeStatus="경로 조회 실패: "+reason;
-                notifyChange();
-            }
-        });
     }
 
     private int choosePreference(List<TransitRoute> options){

@@ -17,11 +17,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedState);
         if(!Session.signedIn(this)) {startActivity(new Intent(this,LoginActivity.class));finish();return;}
         setContentView(R.layout.activity_main);Navigation.bind(this);
-        findViewById(R.id.btnSelectRoutine).setOnClickListener(v->new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("루틴 선택")
-            .setItems(new String[]{"출근 / 등교","퇴근 / 하교"},(d,index)->{
-                if(RoutineStore.prefs(this).getBoolean("tracking_active",false)){android.widget.Toast.makeText(this,"현재 이동을 종료한 뒤 변경하세요",android.widget.Toast.LENGTH_SHORT).show();return;}
-                RoutineStore.select(this,RoutineStore.IDS[index]);render();
-            }).show());
+        findViewById(R.id.homeOutbound).setOnClickListener(v->chooseDirection(RoutineStore.OUTBOUND));
+        findViewById(R.id.homeReturn).setOnClickListener(v->chooseDirection(RoutineStore.RETURN));
+        findViewById(R.id.btnSelectRoutine).setOnClickListener(v->showNamedRoutes());
         findViewById(R.id.btnGoCustom).setOnClickListener(v -> startActivity(new Intent(this,CustomActivity.class)));
         findViewById(R.id.btnGoMap).setOnClickListener(v -> startActivity(new Intent(this,MapActivity.class)));
         findViewById(R.id.btnGoLogs).setOnClickListener(v -> startActivity(new Intent(this,AlarmLogActivity.class)));
@@ -35,12 +33,51 @@ public class MainActivity extends AppCompatActivity {
         });
     }
     @Override protected void onResume() { super.onResume(); if(Session.signedIn(this)) render(); }
+    private void chooseDirection(String id) {
+        if(RoutineStore.prefs(this).getBoolean("tracking_active",false)){
+            android.widget.Toast.makeText(this,"이동 추적 중에는 경로를 바꿀 수 없어",
+                    android.widget.Toast.LENGTH_SHORT).show();return;
+        }
+        RoutineStore.selectDirection(this,id);
+        render();
+    }
+
+    private void showNamedRoutes(){
+        String direction=RoutineStore.activeDirection(this);
+        java.util.List<Routine> list=RoutineStore.list(this,direction);
+        if(list.isEmpty()){
+            android.widget.Toast.makeText(this,"저장된 경로가 없어. 루틴에서 등록해",
+                    android.widget.Toast.LENGTH_SHORT).show();return;
+        }
+        String[] names=new String[list.size()];
+        String defaultId=RoutineStore.defaultId(this,direction);
+        for(int i=0;i<list.size();i++){
+            Routine r=list.get(i);
+            names[i]=(r.id.equals(defaultId)?"★ 기본 · ":"")+r.name
+                    +" · "+r.startName+" → "+r.endName;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("저장된 경로")
+                .setItems(names,(d,index)->{
+                    if(RoutineStore.prefs(this).getBoolean("tracking_active",false)){
+                        android.widget.Toast.makeText(this,"이동 추적 중에는 변경할 수 없어",
+                                android.widget.Toast.LENGTH_SHORT).show();return;
+                    }
+                    RoutineStore.select(this,list.get(index).id);
+                    render();
+                }).show();
+    }
+
     private void render() {
         Routine r=RoutineStore.read(this);
-        ((TextView)findViewById(R.id.btnSelectRoutine)).setText(r.id.equals("outbound")?"현재: 출근 / 등교 · 변경":"현재: 퇴근 / 하교 · 변경");
+        String direction=RoutineStore.activeDirection(this);
+        findViewById(R.id.homeOutbound).setEnabled(!direction.equals(RoutineStore.OUTBOUND));
+        findViewById(R.id.homeReturn).setEnabled(!direction.equals(RoutineStore.RETURN));
+        ((TextView)findViewById(R.id.btnSelectRoutine)).setText("선택된 경로: "
+                +(r.name.isEmpty()?"등록된 경로 없음":r.name)
+                +" · 이름별 목록 보기");
         RoutePlanner.Plan plan=RoutePlanner.select(r);
         ((TextView)findViewById(R.id.mainGreeting)).setText("로그인된 계정 · 루틴 저장");
-        ((TextView)findViewById(R.id.mainRoute)).setText(r.isConfigured()?r.startName+" → "+r.endName:"아직 등록된 루틴이 없어");
+        ((TextView)findViewById(R.id.mainRoute)).setText(r.isConfigured()?r.name+"\n"+r.startName+" → "+r.endName:"아직 등록된 루틴이 없어");
         ((TextView)findViewById(R.id.mainTime)).setText(r.apiBased
                 ? "경로 검색 시 이동시간 갱신 · 실시간 출발 알림 미연동"
                 : r.isConfigured()

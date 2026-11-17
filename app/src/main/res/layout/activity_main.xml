@@ -6,7 +6,17 @@
             android:padding="20dp" android:orientation="vertical">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오늘의 출퇴근"
                 android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
-            <Button android:id="@+id/btnSelectRoutine" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="출근 / 퇴근 선택"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginTop="12dp">
+                <com.google.android.material.button.MaterialButton android:id="@+id/homeOutbound"
+                    android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                    android:text="출근길"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/homeReturn"
+                    android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                    android:text="퇴근길" style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            </LinearLayout>
+            <Button android:id="@+id/btnSelectRoutine" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="이름 붙인 경로 선택"/>
             <TextView android:id="@+id/mainGreeting" android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="6dp" android:text="등록된 루틴을 확인해요" android:textColor="@color/text_secondary"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

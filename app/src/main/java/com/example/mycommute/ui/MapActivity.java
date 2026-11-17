@@ -13,6 +13,7 @@ import com.example.mycommute.R;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.data.TransitRouteMemory;
+import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.Waypoint;
 import com.example.mycommute.model.TransitRoute;
@@ -55,7 +56,8 @@ public class MapActivity extends AppCompatActivity {
         show.setOnCheckedChangeListener((button,checked)-> {
             if(refreshing)return;
             routine.mapVisible=checked;
-            RoutineStore.save(this,routine);
+            RoutineStore.prefs(this).edit()
+                    .putBoolean("map_visible_"+routine.id,checked).apply();
             if(!checked)clearRoute();
             else loadRoute();
         });
@@ -122,16 +124,25 @@ public class MapActivity extends AppCompatActivity {
             Waypoint w=routine.waypoints.get(i);
             if(w.hasCoordinates())addMarker("via-"+i,w.category+": "+w.name,w.lat,w.lon);
         }
-        double latitude=(routine.startLat+routine.endLat)/2;
-        double longitude=(routine.startLon+routine.endLon)/2;
+        double minLat=Math.min(routine.startLat,routine.endLat);
+        double maxLat=Math.max(routine.startLat,routine.endLat);
+        double minLon=Math.min(routine.startLon,routine.endLon);
+        double maxLon=Math.max(routine.startLon,routine.endLon);
+        for(Waypoint w:routine.waypoints)if(w.hasCoordinates()){
+            minLat=Math.min(minLat,w.lat);maxLat=Math.max(maxLat,w.lat);
+            minLon=Math.min(minLon,w.lon);maxLon=Math.max(maxLon,w.lon);
+        }
+        double latitude=(minLat+maxLat)/2,longitude=(minLon+maxLon)/2;
+        double span=Math.max(maxLat-minLat,(maxLon-minLon)*0.8);
+        int zoom=span>0.5?9:span>0.2?10:span>0.10?11:span>0.05?12:span>0.025?13:14;
         if(tmapMap!=null) {
-            try {tmapMap.setCenter(latitude,longitude,12);}
+            try {tmapMap.setCenter(latitude,longitude,zoom);}
             catch(Exception e){Log.w(TAG,"TMAP center change failed",e);}
         } else {
             osmMap.getController().setCenter(new GeoPoint(latitude,longitude));
-            osmMap.getController().setZoom(12.0);
+            osmMap.getController().setZoom(zoom);
         }
-        showStatus("출발·도착·경유지 마커 표시. 도보 경로만 API 연결 시 선으로 표시돼.");
+        showStatus("출발·경유지·도착지 표시 · 경로 선은 저장된 임시 검색 결과에서 가져와");
     }
 
     private void clearRoute() {
@@ -148,46 +159,21 @@ public class MapActivity extends AppCompatActivity {
     }
 
     private void loadRoute() {
-        final int generation=++requestGeneration;
+        ++requestGeneration;
         if(!show.isChecked()||!routine.isConfigured()||!routine.validCoordinates())return;
         TransitRoute selected=TransitRouteMemory.selected(Session.accountId(this),routine);
-        if(selected!=null){renderTransitRoute(selected);return;}
-        if(!"도보".equals(routine.transportMode)) {
-            showStatus("대중교통·혼합 경로는 아직 연동하지 않았어. 마커만 표시돼.");return;
+        if(selected==null) {
+            TransitRouteCache.Snapshot snapshot=TransitRouteCache.load(this,routine);
+            if(snapshot!=null)selected=snapshot.routes.get(snapshot.selected);
         }
-        if(!TmapWalkingClient.enabled()) {
-            showStatus("TMAP AppKey 미설정: 보행 경로는 표시하지 않아.");return;
+        if(selected!=null){
+            renderTransitRoute(selected);
+        }else{
+            showStatus("저장된 출발·경유지·도착지 마커는 표시 중이야. "
+                    +"경로 선은 커스텀 화면의 '새 경로 검색' 버튼을 누른 뒤 표시할 수 있어. "
+                    +"지도를 여는 것만으로는 API를 호출하지 않아.");
         }
-        List<Waypoint> stops=new ArrayList<>();
-        Waypoint start=new Waypoint();start.name=routine.startName;
-        start.lat=routine.startLat;start.lon=routine.startLon;stops.add(start);
-        for(Waypoint w:routine.waypoints)if(w.hasCoordinates())stops.add(w);
-        Waypoint end=new Waypoint();end.name=routine.endName;
-        end.lat=routine.endLat;end.lon=routine.endLon;stops.add(end);
-        showStatus("TMAP 보행 경로 조회 중...");
-        TmapWalkingClient.fetchWalk(stops,new TmapWalkingClient.Callback() {
-            @Override public void success(List<GeoPoint> points) {
-                if(isFinishing()||isDestroyed()||generation!=requestGeneration)return;
-                if(tmapMap!=null) {
-                    try {tmapMap.drawRoute(points);}
-                    catch(Exception e) {showStatus("TMAP SDK 경로 선 표시 실패: "+e.getMessage());Log.e(TAG,"TMAP draw route",e);return;}
-                } else {
-                    if(osmLine!=null)osmMap.getOverlays().remove(osmLine);
-                    osmLine=new Polyline();osmLine.setPoints(points);
-                    osmLine.getOutlinePaint().setStrokeWidth(9f);
-                    osmLine.setColor(android.graphics.Color.rgb(99,87,181));
-                    osmLine.setEnabled(show.isChecked());
-                    osmMap.getOverlays().add(0,osmLine);osmMap.invalidate();
-                }
-                showStatus("TMAP 보행 경로 응답 표시. 대중교통 경로는 별도 연동 대상이야.");
-            }
-            @Override public void error(String reason) {
-                if(!isFinishing()&&!isDestroyed()&&generation==requestGeneration)
-                    showStatus("TMAP 보행 경로 조회 실패: "+reason);
-            }
-        });
     }
-
 
     private void renderTransitRoute(TransitRoute route) {
         if(tmapMap!=null) {
@@ -217,7 +203,7 @@ public class MapActivity extends AppCompatActivity {
         }
         int visible=0;
         for(TransitRoute.Leg leg:route.legs)if(leg.points.size()>=2)visible++;
-        showStatus("선택한 대중교통 경로 · "+TransitRoute.minutes(route.totalSeconds)
+        showStatus("저장된 출발→경유지→도착 구간별 대중교통 경로 · "+TransitRoute.minutes(route.totalSeconds)
                 +"분 · 환승 "+route.transfers+"회 · 선 표시 "+visible+"/"+route.legs.size()+"구간"
                 +" (좌표가 제공되지 않는 구간은 표시하지 않음)");
     }
@@ -233,6 +219,8 @@ public class MapActivity extends AppCompatActivity {
         } else if(osmMap!=null) {
             osmMap.onResume();osmMap.getOverlays().clear();osmLine=null;transitLines.clear();
         }
+        routine.mapVisible=RoutineStore.prefs(this).getBoolean(
+                "map_visible_"+routine.id,routine.mapVisible);
         if(show!=null){refreshing=true;show.setChecked(routine.mapVisible);refreshing=false;}
         renderStops();loadRoute();
     }

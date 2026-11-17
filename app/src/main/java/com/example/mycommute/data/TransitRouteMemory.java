@@ -21,7 +21,11 @@ public final class TransitRouteMemory {
     private TransitRouteMemory() {}
 
     private static String key(Routine r) {
-        return r.id+"|"+r.startLat+"|"+r.startLon+"|"+r.endLat+"|"+r.endLon;
+        StringBuilder b=new StringBuilder(r.id).append("|").append(r.startLat)
+                .append("|").append(r.startLon);
+        for(com.example.mycommute.model.Waypoint w:r.waypoints)
+            if(w.hasCoordinates())b.append("|").append(w.lat).append(",").append(w.lon);
+        return b.append("|").append(r.endLat).append("|").append(r.endLon).toString();
     }
 
     public static synchronized void put(String uid,Routine routine,List<TransitRoute> routes) {
