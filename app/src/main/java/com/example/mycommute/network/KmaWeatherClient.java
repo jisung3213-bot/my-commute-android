@@ -140,6 +140,11 @@ public final class KmaWeatherClient {
         long now=System.currentTimeMillis();
         long nearest=CommuteWindow.nearestTarget(r,now);
         if(nearest<0)throw new IllegalStateException("유효한 목표 도착시각이 없어");
+        // The dashboard is useful outside the commute window too.
+        // For distant schedules the provider has no forecast yet: show today's
+        // local forecast rather than reporting a broken API connection.
+        if(!CommuteWindow.active(r,now)&&Math.abs(nearest-now)>72*60*60_000L)
+            return Calendar.getInstance(KST);
         // Within the active travel window use today's trip, including shortly after
         // the scheduled arrival. Otherwise use the next scheduled target.
         if(!CommuteWindow.active(r,now)&&nearest<=now) {

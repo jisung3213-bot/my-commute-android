@@ -25,6 +25,10 @@ import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitArrival;
 import com.example.mycommute.model.TransitRoute;
 import com.example.mycommute.network.LiveArrivalClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
+import android.location.Location;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -35,6 +39,7 @@ public class TrackingActivity extends AppCompatActivity {
     private Routine routine;
     private CommuteLiveCoordinator live;
     private boolean listening;
+    private CancellationTokenSource locationToken;
     private double latestLat=Double.NaN,latestLon=Double.NaN;
     private long gpsTime;
     private float accuracy=Float.NaN;
@@ -86,13 +91,60 @@ public class TrackingActivity extends AppCompatActivity {
         live.start();
         live.onPosition(latestLat,latestLon,gpsTime,accuracy,
                 RoutineStore.prefs(this).getBoolean("tracking_active",false));
+        if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)
+                ==PackageManager.PERMISSION_GRANTED||
+           ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)
+                ==PackageManager.PERMISSION_GRANTED) {
+            readForegroundLocation();
+        }else if(!RoutineStore.prefs(this).getBoolean("foreground_location_asked",false)){
+            RoutineStore.prefs(this).edit().putBoolean("foreground_location_asked",true).apply();
+            ActivityCompat.requestPermissions(this,new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},309);
+        }
         render();
     }
 
     @Override protected void onPause(){
+        if(locationToken!=null){locationToken.cancel();locationToken=null;}
         if(live!=null){live.stop();live=null;}
         if(listening){unregisterReceiver(locations);listening=false;}
         super.onPause();
+    }
+
+    /**
+     * Single foreground location observation for preview; never starts the
+     * persistent GPS service and never runs after the screen is paused.
+     */
+    private void readForegroundLocation(){
+        if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)
+                !=PackageManager.PERMISSION_GRANTED&&
+           ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)
+                !=PackageManager.PERMISSION_GRANTED){
+            label(R.id.livePosition).setText("현재 위치 권한 없음 · 위치 추적과 별도로 위치 권한이 필요해");
+            return;
+        }
+        if(locationToken!=null)locationToken.cancel();
+        final CancellationTokenSource token=new CancellationTokenSource();
+        locationToken=token;
+        try{
+            LocationServices.getFusedLocationProviderClient(this)
+                    .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY,token.getToken())
+                    .addOnSuccessListener(this,fix->{
+                        if(locationToken!=token||live==null||fix==null)return;
+                        latestLat=fix.getLatitude();latestLon=fix.getLongitude();
+                        gpsTime=fix.getTime();
+                        accuracy=fix.hasAccuracy()?fix.getAccuracy():Float.NaN;
+                        live.onPosition(latestLat,latestLon,gpsTime,accuracy,
+                                RoutineStore.prefs(this).getBoolean("tracking_active",false));
+                        render();
+                    })
+                    .addOnFailureListener(this,error->{
+                        if(locationToken!=token||live==null)return;
+                        label(R.id.livePosition).setText("현재 GPS 측정 실패 · "+error.getClass().getSimpleName());
+                    });
+        }catch(SecurityException error){
+            label(R.id.livePosition).setText("현재 위치 권한이 필요해");
+        }
     }
 
     private void stopTracking(){
@@ -121,14 +173,20 @@ public class TrackingActivity extends AppCompatActivity {
         }
         try{
             ContextCompat.startForegroundService(this,new Intent(this,TrackingService.class));
+            readForegroundLocation();
             toast("위치 추적을 시작했어");
         }catch(Exception e){toast("위치 추적 실패: "+e.getMessage());}
     }
     @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){
         super.onRequestPermissionsResult(code,permissions,grants);
-        if(code==308&&grants.length>0&&
+        boolean granted=grants.length>0&&
                 (grants[0]==PackageManager.PERMISSION_GRANTED||
-                 grants.length>1&&grants[1]==PackageManager.PERMISSION_GRANTED))startTracking();
+                 grants.length>1&&grants[1]==PackageManager.PERMISSION_GRANTED);
+        if(code==309&&granted)readForegroundLocation();
+        if(code==308&&granted){
+            readForegroundLocation();
+            startTracking();
+        }
     }
 
     private String clock(long timestamp){
@@ -168,9 +226,12 @@ public class TrackingActivity extends AppCompatActivity {
         renderVehicle(now,route,vehicle,tracking);
         String gpsState=tracking?"GPS 추적 중":"GPS 추적 중지됨";
         if(gpsTime>0){
+            gpsState=tracking?"GPS 추적 중":"현재 위치 1회 확인 · 추적은 꺼짐";
             String detail=Float.isFinite(accuracy)
                     ?String.format(Locale.KOREA," · 정확도 약 %.0fm",accuracy):" · 정확도 미확인";
-            gpsState+=" · 마지막 측정 "+clock(gpsTime)+detail;
+            long elapsed=Math.max(0,(now-gpsTime)/1000L);
+            gpsState+=" · 마지막 측정 "+clock(gpsTime)+" ("+elapsed+"초 전)"+detail;
+            if(elapsed>90)gpsState+=" · 오래된 위치: 현재 단계는 판단 보류";
         }
         label(R.id.livePosition).setText(gpsState);
     }

@@ -36,6 +36,16 @@ final class CommuteLiveCoordinator {
     private static final long WEATHER_RETRY_MS=60*60_000L;
     private static final int MAX_LOCAL_TMAP_CALLS_PER_DAY=3;
     private static final long WALK_RETRY_MS=5*60_000L;
+    // Process-local cache prevents repeated weather calls when moving between tabs.
+    private static final class WeatherCache {
+        final String key;
+        final KmaWeatherClient.Report report;
+        final long fetchedAt;
+        WeatherCache(String key,KmaWeatherClient.Report report,long at){
+            this.key=key;this.report=report;this.fetchedAt=at;
+        }
+    }
+    private static WeatherCache cachedWeather;
 
     private final Context context;
     private final Routine routine;
@@ -67,12 +77,12 @@ final class CommuteLiveCoordinator {
         @Override public void run(){
             if(!running)return;
             long now=System.currentTimeMillis();
-            if(CommuteWindow.active(routine,now)){
-                loadRoute(false);
-                loadArrival(false);
-                loadWeather(false);
-                loadWalking(false);
-            }
+            // The dashboard itself is a valid reason to display weather and
+            // next-vehicle information, even before the commute window starts.
+            loadRoute(false);
+            loadArrival(false);
+            loadWeather(false);
+            if(CommuteWindow.active(routine,now))loadWalking(false);
             notifyChange();
             handler.postDelayed(this,TICK_MS);
         }
@@ -100,9 +110,10 @@ final class CommuteLiveCoordinator {
                     ?"이동 시간대 경로 조회 준비 중"
                     :"지금은 등록한 이동 시간대가 아니야 · 자동 조회 대기 중";
         }
-        if(CommuteWindow.active(routine,System.currentTimeMillis())){
-            loadRoute(false);loadArrival(false);loadWeather(false);loadWalking(false);
-        }
+        loadWeather(false);
+        loadRoute(false);
+        loadArrival(false);
+        if(CommuteWindow.active(routine,System.currentTimeMillis()))loadWalking(false);
         handler.removeCallbacks(ticker);
         handler.postDelayed(ticker,TICK_MS);
         notifyChange();
@@ -150,8 +161,10 @@ final class CommuteLiveCoordinator {
         currentLat=lat;currentLon=lon;currentFixTime=fixTime;
         currentAccuracy=accuracy;gpsTracking=tracking;
         if(route==null){stage=null;return;}
-        stage=tracking?StagePositionMatcher.locate(route,lat,lon,fixTime,accuracy,
-                System.currentTimeMillis()):null;
+        // A fresh foreground fix can identify the nearby route segment without
+        // enabling continuous background GPS tracking.
+        stage=StagePositionMatcher.locate(route,lat,lon,fixTime,accuracy,
+                System.currentTimeMillis());
         int newLeg=StagePositionMatcher.boardingIndex(route,stage);
         if(newLeg!=boardingLegIndex){
             boardingLegIndex=newLeg;arrival=null;arrivalRequestedAt=0;
@@ -176,13 +189,20 @@ final class CommuteLiveCoordinator {
             walkSeconds=-1;walkingFetchedAt=0;stage=null;
             routeStatus="기존 경로 정보가 만료되어 다시 조회해야 해";
         }
-        if(!manual&&!activeWindow())return;
-        if(now-routeRequestedAt<ROUTE_RETRY_MS)return;
+        long previous=context.getSharedPreferences("live_route_lookup",Context.MODE_PRIVATE)
+                .getLong(userId+"|"+routine.id,0);
+        if(now-routeRequestedAt<ROUTE_RETRY_MS ||
+                (previous>0&&now-previous<ROUTE_RETRY_MS)) {
+            routeStatus="TMAP 경로 재조회 간격 제한(2시간) · 이동 시간대에는 저장된 경로 미리보기 활용";
+            return;
+        }
         if(!takeRouteBudget(now)){
             routeStatus="오늘의 앱 내 TMAP 경로 조회 상한에 도달했어 (3회)";
             notifyChange();return;
         }
         routeRequestedAt=now;loadingRoute=true;
+        context.getSharedPreferences("live_route_lookup",Context.MODE_PRIVATE).edit()
+                .putLong(userId+"|"+routine.id,now).apply();
         final int token=generation;
         routeStatus="TMAP 경로 검색 중...";
         notifyChange();
@@ -237,7 +257,6 @@ final class CommuteLiveCoordinator {
         if(boardingLegIndex<0)boardingLegIndex=StagePositionMatcher.boardingIndex(route,stage);
         if(boardingLegIndex<0)return;
         long now=System.currentTimeMillis();
-        if(!manual&&!activeWindow())return;
         if(now-arrivalRequestedAt<ARRIVAL_RETRY_MS)return;
         arrivalRequestedAt=now;loadingArrival=true;
         final int token=generation;
@@ -257,7 +276,15 @@ final class CommuteLiveCoordinator {
     private void loadWeather(boolean manual){
         if(!running||loadingWeather)return;
         long now=System.currentTimeMillis();
-        if(!manual&&!activeWindow())return;
+        String key=userId+"|"+routine.id+"|"+routine.startLat+"|"
+                +routine.startLon+"|"+routine.arrivalTime+"|"+routine.days;
+        if(cachedWeather!=null&&cachedWeather.key.equals(key)
+                &&now-cachedWeather.fetchedAt<WEATHER_RETRY_MS){
+            weather=cachedWeather.report;
+            weatherStatus=weather.label+" · 최근 조회 캐시";
+            notifyChange();
+            return;
+        }
         if(now-weatherRequestedAt<WEATHER_RETRY_MS)return;
         weather=null;
         weatherRequestedAt=now;loadingWeather=true;
@@ -268,6 +295,7 @@ final class CommuteLiveCoordinator {
             @Override public void success(KmaWeatherClient.Report report){
                 if(!valid(token))return;
                 loadingWeather=false;weather=report;
+                cachedWeather=new WeatherCache(key,report,System.currentTimeMillis());
                 weatherStatus=report.label;
                 notifyChange();
             }

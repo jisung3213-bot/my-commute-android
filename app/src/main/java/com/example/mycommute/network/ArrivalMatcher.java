@@ -149,8 +149,8 @@ public final class ArrivalMatcher {
         String next=normalizeStation(leg.nextStopName);
         if(line.isEmpty())return TransitArrival.unavailable(
                 "지하철 호선 식별 실패 · "+leg.routeName,now);
-        if(target.isEmpty()||next.isEmpty())return TransitArrival.unavailable(
-                "승차역 또는 다음역 정보가 없어 진행 방향을 확인할 수 없어",now);
+        if(target.isEmpty())return TransitArrival.unavailable(
+                "TMAP 승차역 정보가 없어 도착정보를 검색할 수 없어",now);
         JSONObject root=new JSONObject(json);
         JSONObject error=root.optJSONObject("errorMessage");
         if(error!=null&&!error.optString("status","").equals("200"))
@@ -160,15 +160,22 @@ public final class ArrivalMatcher {
         if(list==null)return TransitArrival.unavailable("해당 역의 실시간 열차 정보가 없어",now);
         java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         String direction="";
+        int sameStationAndLine=0, freshButDirectionUnconfirmed=0;
         for(int i=0;i<list.length();i++){
             JSONObject item=list.optJSONObject(i);if(item==null)continue;
             if(!line.equals(item.optString("subwayId","")))continue;
             if(!normalizeStation(item.optString("statnNm","")).equals(target))continue;
             String text=normalizeStation(item.optString("trainLineNm",""));
-            if(!text.contains(next))continue; // Do not show an opposite-direction train.
+            sameStationAndLine++;
             long generated=timestamp(item.optString("recptnDt",""));
             long age=now-generated;
             if(generated<=0||age< -30000L||age>5*60000L)continue;
+            if(next.isEmpty()||!text.contains(next)) {
+                // A destination may be a later stop. Never label the wrong
+                // direction as a confirmed incoming train.
+                freshButDirectionUnconfirmed++;
+                continue;
+            }
             int raw=item.optInt("barvlDt",-1);
             if(raw<0)continue;
             int corrected=Math.max(0,raw-(int)Math.max(0,age/1000));
@@ -179,11 +186,15 @@ public final class ArrivalMatcher {
         }
         if(arrivals.isEmpty())
             return TransitArrival.unavailable(
-                    leg.startName+" · "+leg.routeName+" · 진행 방향이 일치하는 최신 열차 정보가 없어",now);
+                    leg.startName+" · "+leg.routeName+" 조회: "+sameStationAndLine+"건"
+                    +" · 방향 미검증 "+freshButDirectionUnconfirmed+"건"
+                    +(next.isEmpty()?" · TMAP 다음역 정보 없음":
+                            " · 기대 방면 "+next)
+                    +" · 잘못된 반대방향 정보 표시 방지",now);
         int first=arrivals.first();
-        Integer next=arrivals.higher(first);
+        Integer nextArrival=arrivals.higher(first);
         return TransitArrival.found(leg.startName,leg.routeName,direction,first,-1,
-                next==null?-1:next,now);
+                nextArrival==null?-1:nextArrival,now);
     }
 
     private static long timestamp(String text) {
