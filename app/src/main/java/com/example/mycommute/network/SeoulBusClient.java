@@ -115,8 +115,8 @@ public final class SeoulBusClient {
                 "서울 버스 API 키가 없어. local.properties의 SEOUL_BUS_SERVICE_KEY를 설정해야 해",now);
         if(!Double.isFinite(leg.startLat)||!Double.isFinite(leg.startLon))
             return TransitArrival.unavailable("서울 버스 승차 정류소 좌표 없음",now);
-        Document stops=request("stationinfo/getStationByPos?serviceKey="+key()
-                +"&tmX="+leg.startLon+"&tmY="+leg.startLat+"&radius=100");
+        Document stops=request("stationinfo/getStationByName?serviceKey="+key()
+                +"&stSrch="+URLEncoder.encode(leg.startName,"UTF-8"));
         NodeList list=stops.getElementsByTagName("itemList");
         String expected=normalize(leg.startName);
         String stopId="",stopName="";
@@ -139,6 +139,11 @@ public final class SeoulBusClient {
         }
         if(stopId.isEmpty()||second-best<20)return TransitArrival.unavailable(
                 "서울 버스 정류소 이름·위치가 불일치하거나 방향별 정류소가 겹쳐 확정 불가",now);
+        // Arrival-by-stop endpoint was not part of the approved arrival-service guide.
+        // Route-ID and station order are needed for its documented alternative.
+        return TransitArrival.unavailable(
+                "서울 버스 정류소는 확인했지만 공식 도착정보 조회에 노선 ID·정류소 순번 연동이 필요해",now);
+        /* Disabled until route ID/ordinal are resolved from a documented endpoint:
         Document arrivals=request("arrive/getArrInfoByStId?serviceKey="+key()
                 +"&stId="+URLEncoder.encode(stopId,"UTF-8"));
         NodeList arrivalsList=arrivals.getElementsByTagName("itemList");
@@ -169,6 +174,6 @@ public final class SeoulBusClient {
         Integer next=seconds.higher(first);
         return TransitArrival.found(stopName,route+"번 버스",
                 "서울시 BIS 기준 · 진행 방향은 정류소/노선으로만 확인",first,-1,
-                next==null?-1:next,System.currentTimeMillis());
+                next==null?-1:next,System.currentTimeMillis()); */
     }
 }
