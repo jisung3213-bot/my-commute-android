@@ -28,7 +28,7 @@
                     android:layout_height="wrap_content" android:text="지금의 출발 판단"/>
                 <TextView android:id="@+id/liveDepartureHeadline" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:text="이동 정보 확인 중" android:textSize="27sp"
+                    android:text="이동 정보 확인 중" android:textSize="23sp"
                     android:textStyle="bold" android:textColor="@color/primary_dark"/>
                 <TextView android:id="@+id/liveDepartureDetail" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
@@ -46,7 +46,7 @@
                     android:layout_height="wrap_content" android:text="이동 시간대 날씨"/>
                 <TextView android:id="@+id/liveWeather" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="6dp"
-                    android:text="기온 확인 중" android:textSize="26sp" android:textStyle="bold"
+                    android:text="기온 확인 중" android:textSize="23sp" android:textStyle="bold"
                     android:textColor="@color/text_primary"/>
                 <TextView android:id="@+id/liveWeatherDetails" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="4dp"
