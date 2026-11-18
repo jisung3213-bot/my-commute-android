@@ -170,7 +170,12 @@ public class CustomActivity extends AppCompatActivity {
             button.setText((profile.id.equals(defaultId)?"★ 기본 · ":"")
                     +(current?"[선택] ":"")+profile.name+"\n"+
                     profile.startName+" → "+profile.endName);
-            button.setTextSize(13);
+            button.setTextSize(14);
+            button.setMinHeight((int)(56*getResources().getDisplayMetrics().density));
+            button.setPaddingRelative((int)(16*getResources().getDisplayMetrics().density),
+                    (int)(12*getResources().getDisplayMetrics().density),
+                    (int)(16*getResources().getDisplayMetrics().density),
+                    (int)(12*getResources().getDisplayMetrics().density));
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
             lp.bottomMargin=7;savedList.addView(button,lp);
             button.setOnClickListener(v->loadProfile(profile.id));
@@ -333,7 +338,12 @@ public class CustomActivity extends AppCompatActivity {
             MaterialButton button=new MaterialButton(this);
             button.setAllCaps(false);
             button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-            button.setTextSize(13);
+            button.setTextSize(14);
+            button.setMinHeight((int)(56*getResources().getDisplayMetrics().density));
+            button.setPaddingRelative((int)(16*getResources().getDisplayMetrics().density),
+                    (int)(12*getResources().getDisplayMetrics().density),
+                    (int)(16*getResources().getDisplayMetrics().density),
+                    (int)(12*getResources().getDisplayMetrics().density));
             button.setText((selected==index?"[선택된 경로] ":"")+
                     route.summary(index+1)+"\n"+route.stepsSummary());
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
