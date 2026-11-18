@@ -242,13 +242,13 @@ public final class ApiProbe {
                 .append(" SEOUL_EQUALS_KMA=")
                 .append(!seoul.isEmpty()&&seoul.equals(kma))
                 .append(" (does NOT imply equal service permissions)").append('\n');
-        String encoded;
-        try{encoded=enc(seoul);}
+        String encoded, stationQuery;
+        try{encoded=enc(seoul); stationQuery=enc("서울역");}
         catch(Exception e){failed++;log.append("SEOUL-BUS KEY_ENCODING_ERROR\n");return;}
         // The two independently approved APIs must be probed even if one fails.
         probeSeoulBusEndpoint("SEOUL-BUS-STATION-SERVICE",
                 "http://ws.bus.go.kr/api/rest/stationinfo/getStationByName"
-                +"?serviceKey="+encoded+"&stSrch="+enc("서울역"),
+                +"?serviceKey="+encoded+"&stSrch="+stationQuery,
                 "stId","stNm");
         // Fixed public documentation example ID: this checks authorization and envelope,
         // not live arrivals on the user's route (may validly return 0 records).
