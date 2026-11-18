@@ -151,11 +151,11 @@ public final class SeoulBusClient {
             Element row=(Element)arrivalsList.item(i);
             if(!route.equals(ArrivalMatcher.transitLine(get(row,"rtNm"))))continue;
             for(int n=1;n<=2;n++){
-                // exps is provider ETA seconds, traTime is a minute-level fallback.
+                // Both exps and traTime are specified in seconds in the Seoul BIS guide.
                 int eta=integer(row,"exps"+n);
                 if(eta<=0){
-                    int minutes=integer(row,"traTime"+n);
-                    eta=minutes>0?minutes*60:-1;
+                    int fallbackSeconds=integer(row,"traTime"+n);
+                    eta=fallbackSeconds>0?fallbackSeconds:-1;
                 }
                 if(eta>0&&eta<=7200){
                     seconds.add(eta);
