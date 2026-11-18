@@ -109,7 +109,7 @@ public final class ApiProbe {
             conn=(HttpURLConnection)new URL(url).openConnection();
             conn.setConnectTimeout(10000);
             conn.setReadTimeout(18000);
-            conn.setRequestProperty("Accept","application/json");
+            conn.setRequestProperty("Accept",name.startsWith("SEOUL-BUS")?"application/xml":"application/json");
             result.status=conn.getResponseCode();
             result.body=text(result.status>=200&&result.status<300
                     ?conn.getInputStream():conn.getErrorStream(),1_800_000);
@@ -237,14 +237,14 @@ public final class ApiProbe {
         catch(Exception e){failed++;log.append("SEOUL-BUS KEY_ENCODING_ERROR\n");return;}
         // The two independently approved APIs must be probed even if one fails.
         probeSeoulBusEndpoint("SEOUL-BUS-STATION-SERVICE",
-                "http://ws.bus.go.kr/api/rest/stationinfo/getStationByPos"
-                +"?serviceKey="+encoded+"&tmX=126.972&tmY=37.555&radius=100",
+                "http://ws.bus.go.kr/api/rest/stationinfo/getStationByName"
+                +"?serviceKey="+encoded+"&stSrch="+enc("서울역"),
                 "stId","stNm");
         // Fixed public documentation example ID: this checks authorization and envelope,
         // not live arrivals on the user's route (may validly return 0 records).
         probeSeoulBusEndpoint("SEOUL-BUS-ARRIVAL-SERVICE",
-                "http://ws.bus.go.kr/api/rest/arrive/getArrInfoByStId"
-                +"?serviceKey="+encoded+"&stId=112000001",
+                "http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll"
+                +"?serviceKey="+encoded+"&busRouteId=100100118",
                 "rtNm","exps1");
     }
     private void probeSeoulBusEndpoint(String name,String url,String required,String optional){
