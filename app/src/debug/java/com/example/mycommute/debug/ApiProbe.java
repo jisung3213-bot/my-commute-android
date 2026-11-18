@@ -206,6 +206,8 @@ public final class ApiProbe {
         log.append("\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
         log.append("\n\n=== SUBWAY: realtimeStationArrival ===\n");
         subway();
+        log.append("\n\n=== SEOUL BUS: dedicated BIS service ===\n");
+        seoulBus();
         log.append("\n=== TAGO BUS: nearby stops + arrival ===\n");
         bus();
         log.append("\n=== KMA: village forecast ===\n");
