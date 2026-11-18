@@ -18,7 +18,7 @@ import java.util.TreeSet;
 
 /**
  * Seoul-only bus arrivals using Seoul BIS rather than TAGO's region-dependent catalog.
- * Uses an independent, explicitly approved SEOUL_BUS_SERVICE_KEY.
+ * Uses SEOUL_BUS_SERVICE_KEY (may be the same data.go.kr key as TAGO/KMA).
  * Called on LiveArrivalClient's IO executor (never the main thread).
  * Does not persist stop IDs or provider ETA beyond LiveArrivalClient's 45s cache.
  */
@@ -66,7 +66,7 @@ public final class SeoulBusClient {
                             private long count;
                             @Override public int read()throws java.io.IOException{
                                 int b=super.read();
-                                if(b>=0&&++count>900000)throw new java.io.IOException("응답이 너무 커");
+                                if(b>=0&&++count>3200000)throw new java.io.IOException("응답이 너무 커");
                                 return b;
                             }
                             @Override public int read(byte[] data,int offset,int len)throws java.io.IOException{
@@ -139,41 +139,63 @@ public final class SeoulBusClient {
         }
         if(stopId.isEmpty()||second-best<20)return TransitArrival.unavailable(
                 "서울 버스 정류소 이름·위치가 불일치하거나 방향별 정류소가 겹쳐 확정 불가",now);
-        // Arrival-by-stop endpoint was not part of the approved arrival-service guide.
-        // Route-ID and station order are needed for its documented alternative.
-        return TransitArrival.unavailable(
-                "서울 버스 정류소는 확인했지만 공식 도착정보 조회에 노선 ID·정류소 순번 연동이 필요해",now);
-        /* Disabled until route ID/ordinal are resolved from a documented endpoint:
-        Document arrivals=request("arrive/getArrInfoByStId?serviceKey="+key()
-                +"&stId="+URLEncoder.encode(stopId,"UTF-8"));
-        NodeList arrivalsList=arrivals.getElementsByTagName("itemList");
+        // getRouteByStation is a separate station-info API and requires arsId.
+        // Use its route ID to call documented arrive/getArrInfoByRouteAll.
+        String arsId="";
+        for(int i=0;i<list.getLength();i++){
+            if(!(list.item(i) instanceof Element))continue;
+            Element row=(Element)list.item(i);
+            if(stopId.equals(get(row,"stId"))){arsId=get(row,"arsId");break;}
+        }
+        if(arsId.isEmpty())return TransitArrival.unavailable(
+                "서울 버스 정류소 ARS 번호를 확인할 수 없어",now);
         String route=ArrivalMatcher.transitLine(leg.routeName);
         if(route.isEmpty())return TransitArrival.unavailable("버스 노선명이 없어",now);
+        Document stationRoutes=request("stationinfo/getRouteByStation?serviceKey="+key()
+                +"&arsId="+URLEncoder.encode(arsId,"UTF-8"));
+        NodeList routeList=stationRoutes.getElementsByTagName("itemList");
+        String routeId="";
+        for(int i=0;i<routeList.getLength();i++){
+            if(!(routeList.item(i) instanceof Element))continue;
+            Element row=(Element)routeList.item(i);
+            String name=get(row,"busRouteNm");
+            if(name.isEmpty())name=get(row,"rtNm");
+            String id=get(row,"busRouteId");
+            if(!route.equals(ArrivalMatcher.transitLine(name))||id.isEmpty())continue;
+            if(!routeId.isEmpty()&&!routeId.equals(id))
+                return TransitArrival.unavailable("동일 버스 번호의 노선 ID가 여러 개라 방향 확정 불가",now);
+            routeId=id;
+        }
+        if(routeId.isEmpty())return TransitArrival.unavailable(
+                "서울 버스 정류소를 지나는 "+route+"번 노선 ID를 확인할 수 없어",now);
+        Document arrivals=request("arrive/getArrInfoByRouteAll?serviceKey="+key()
+                +"&busRouteId="+URLEncoder.encode(routeId,"UTF-8"));
+        NodeList arrivalsList=arrivals.getElementsByTagName("itemList");
         TreeSet<Integer> seconds=new TreeSet<>();
-        int stopsLeft=-1;
+        int matched=0;
         for(int i=0;i<arrivalsList.getLength();i++){
             if(!(arrivalsList.item(i) instanceof Element))continue;
             Element row=(Element)arrivalsList.item(i);
-            if(!route.equals(ArrivalMatcher.transitLine(get(row,"rtNm"))))continue;
+            if(!stopId.equals(get(row,"stId")))continue;
+            matched++;
+            // Repeated stId on circular routes cannot be matched to a direction
+            // without an ordinal supplied by the route planner.
+            if(matched>1)break;
             for(int n=1;n<=2;n++){
-                // Both exps and traTime are specified in seconds in the Seoul BIS guide.
                 int eta=integer(row,"exps"+n);
-                if(eta<=0){
-                    int fallbackSeconds=integer(row,"traTime"+n);
-                    eta=fallbackSeconds>0?fallbackSeconds:-1;
-                }
-                if(eta>0&&eta<=7200){
-                    seconds.add(eta);
-                    if(stopsLeft<0)stopsLeft=integer(row,"sectOrd"+n);
-                }
+                if(eta<=0)eta=integer(row,"traTime"+n);
+                if(eta>0&&eta<=7200)seconds.add(eta);
             }
         }
+        if(matched!=1)return TransitArrival.unavailable(
+                matched==0?"선택한 버스 노선의 정류소 ID가 도착정보와 일치하지 않아":
+                        "순환 노선에 동일 정류소가 중복되어 승차 방향 확정 불가",now);
         if(seconds.isEmpty())return TransitArrival.unavailable(
                 stopName+" · "+route+"번 버스의 실시간 도착정보 없음 (서울시 버스 API)",now);
         int first=seconds.first();
         Integer next=seconds.higher(first);
         return TransitArrival.found(stopName,route+"번 버스",
-                "서울시 BIS 기준 · 진행 방향은 정류소/노선으로만 확인",first,-1,
-                next==null?-1:next,System.currentTimeMillis()); */
+                "서울시 BIS 기준 · 정류장/노선 확인",first,-1,
+                next==null?-1:next,System.currentTimeMillis());
     }
 }
