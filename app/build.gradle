@@ -14,6 +14,7 @@ def tmapKey = (localConfig.getProperty('TMAP_APP_KEY') ?: '').replace('\\', '\\\
 def transitKey = (localConfig.getProperty('TMAP_TRANSIT_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 def weatherKey = (localConfig.getProperty('KMA_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 def subwayKey = (localConfig.getProperty('SEOUL_SUBWAY_API_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def seoulBusKey = (localConfig.getProperty('SEOUL_BUS_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 def busKey = (localConfig.getProperty('TAGO_BUS_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 
 android {
@@ -30,6 +31,7 @@ android {
         buildConfigField 'String', 'TMAP_TRANSIT_APP_KEY', '"' + transitKey + '"'
         buildConfigField 'String', 'KMA_SERVICE_KEY', '"' + weatherKey + '"'
         buildConfigField 'String', 'SEOUL_SUBWAY_API_KEY', '"' + subwayKey + '"'
+        buildConfigField 'String', 'SEOUL_BUS_SERVICE_KEY', '"' + seoulBusKey + '"'
         buildConfigField 'String', 'TAGO_BUS_SERVICE_KEY', '"' + busKey + '"'
     }
 
