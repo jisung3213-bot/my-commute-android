@@ -337,34 +337,47 @@ public class TrackingActivity extends AppCompatActivity {
     private void renderVehicle(long now,TransitRoute route,TransitArrival arrival,boolean tracking){
         TextView diagnostic=label(R.id.liveArrivalDiagnostic);
         diagnostic.setVisibility(View.GONE);
+        TextView station=label(R.id.liveNextVehicle);
+        TextView mode=label(R.id.liveVehicleMode);
+        TextView eta=label(R.id.liveVehicleEta);
+        TextView next=label(R.id.liveVehicleNext);
+        TextView status=label(R.id.liveBoarding);
+        TextView walkLabel=label(R.id.liveVehicleWalk);
+        TextView slackLabel=label(R.id.liveVehicleSlack);
+        mode.setText("교통"); station.setText("정보 확인 중");
+        eta.setText("—");next.setText("—");
+        status.setText("승차 가능성 확인 중");
+        walkLabel.setText("승차지 이동시간 —");slackLabel.setText("여유시간 —");
         if(route==null){
-            label(R.id.liveNextVehicle).setText("—");
-            label(R.id.liveBoarding).setText("경로 갱신 필요");return;
+            station.setText("경로 갱신 필요");
+            status.setText("경로 정보를 다시 확인해야 해");
+            return;
         }
         int index=live.boardingLegIndex();
         if(index<0||index>=route.legs.size()){
-            label(R.id.liveNextVehicle).setText("도보 이동");
-            label(R.id.liveBoarding).setText("");return;
+            mode.setText("도보");station.setText("도보 이동");
+            status.setText("다음 탑승 차량이 없어");
+            return;
         }
         TransitRoute.Leg leg=route.legs.get(index);
+        mode.setText("BUS".equals(leg.mode)?"버스":"SUBWAY".equals(leg.mode)?"지하철":"교통");
+        station.setText(leg.startName+" · "+leg.routeName);
         if(arrival!=null&&arrival.statusOnly){
-            label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
             if(arrival.hasFreshStatus(now)){
-                label(R.id.liveBoarding).setText(
-                        arrival.direction+"\n"+arrival.statusText
-                        +" · "+clock(arrival.statusObservedMillis)+" 기준"
-                        +"\n도착 예정시간 미확인");
+                status.setText(arrival.statusText+" · "+clock(arrival.statusObservedMillis)+" 기준");
+                eta.setText("시간 미제공");
+                next.setText("—");
+                if(arrival.direction!=null&&!arrival.direction.isEmpty())
+                    walkLabel.setText(arrival.direction);
             }else{
-                label(R.id.liveBoarding).setText("이전 정보 만료 · 갱신 대기");
+                status.setText("상태정보 만료 · 갱신 대기");
             }
             return;
         }
         if(arrival==null||!arrival.available){
-            label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
-            if(arrival==null){
-                label(R.id.liveBoarding).setText("도착정보 확인 중…");
-            }else{
-                label(R.id.liveBoarding).setText("도착시간 미확인");
+            eta.setText(arrival==null?"조회 중":"정보 없음");
+            status.setText(arrival==null?"도착정보를 확인하고 있어":"도착시간 미확인");
+            if(arrival!=null){
                 String display=UiNotice.error(arrival.message);
                 UiNotice.show(diagnostic,UiNotice.classify(arrival.message),display);
             }
@@ -372,37 +385,35 @@ public class TrackingActivity extends AppCompatActivity {
         }
         int remaining=arrival.currentSeconds(now);
         if(remaining<=0){
-            label(R.id.liveNextVehicle).setText("도착정보 갱신 대기");
-            label(R.id.liveBoarding).setText("이전 정보 만료");
+            eta.setText("갱신 필요");status.setText("이전 도착정보가 만료됐어");
             return;
         }
-        String primary=leg.startName+" · "+arrival.line+" · 약 "+((remaining+59)/60)+"분 후";
         int second=arrival.nextRemainingSeconds(now);
-        if(second>remaining)primary+="\n다음 차량 약 "+((second+59)/60)+"분 후";
-        label(R.id.liveNextVehicle).setText(primary);
+        eta.setText(remaining<60?"1분 이내":((remaining+59)/60)+"분 후");
+        next.setText(second>remaining?((second+59)/60)+"분 후":"정보 없음");
+        if(arrival.direction!=null&&!arrival.direction.isEmpty())
+            diagnostic.setText(arrival.direction);
         int walk=live.walkSeconds();
         if(walk>=0){
             int slack=remaining-walk-120;
-            String message=slack>=180?"승차 가능성 높음":
-                    slack>=0?"탑승 시간 촉박":
-                            "현재 차량 탑승 어려움";
-            label(R.id.liveBoarding).setText(message+"\n승차지까지 "+
-                    ((walk+59)/60)+"분 · 여유 "+(slack>=0?"+":"")+
-                    ((slack>=0?slack+59:slack-59)/60)+"분" +(tracking?"":" · 계획 기준"));
+            String message=slack>=180?"승차 여유 있음":
+                    slack>=0?"탑승 시간 촉박":"현재 차량 탑승 어려움";
+            status.setText(message+(tracking?"":" · 계획 기준"));
+            walkLabel.setText("승차지까지 "+((walk+59)/60)+"분");
+            int minute=(int)Math.ceil(Math.abs(slack)/60.0);
+            slackLabel.setText("여유 "+(slack>=0?"+":"-")+minute+"분");
             return;
         }
         if(!tracking){
-            label(R.id.liveBoarding).setText("승차지 이동시간 미확인");
+            status.setText("승차지 이동시간 미확인");
             return;
         }
         BoardingFeasibilityEngine.Assessment estimate=BoardingFeasibilityEngine.assess(
                 now,latestLat,latestLon,gpsTime,accuracy,
                 leg.startLat,leg.startLon,arrival.fetchedAtMillis,
-                // Use the ORIGINAL provider ETA at its fetch timestamp.
-                // 'remaining' has already been age-corrected and would double-decrement.
                 arrival.seconds-(int)Math.max(0,(now-arrival.fetchedAtMillis)/1000L)>0
                         ?arrival.seconds:arrival.nextSeconds);
-        label(R.id.liveBoarding).setText(estimate.describe());
+        status.setText(estimate.describe());
     }
 
 
