@@ -156,7 +156,8 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void refreshSwitchStates(){
         for(int i=0;i<list.getChildCount();i++)
-            list.getChildAt(i).setEnabled(AlarmSettingsStore.overall(this));
+            if(!(BuildConfig.DEBUG&&i<2))
+                list.getChildAt(i).setEnabled(AlarmSettingsStore.overall(this));
     }
 
     private void number(int id,int value){
