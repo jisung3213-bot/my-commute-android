@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
                     android.widget.Toast.LENGTH_SHORT).show();return;
         }
         RoutineStore.selectDirection(this,id);
+        ReminderScheduler.scheduleCurrent(this);
         render();
     }
 
@@ -66,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
                                 android.widget.Toast.LENGTH_SHORT).show();return;
                     }
                     RoutineStore.select(this,list.get(index).id);
+                    ReminderScheduler.scheduleCurrent(this);
                     render();
                 }).show();
     }

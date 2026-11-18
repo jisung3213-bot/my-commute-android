@@ -20,14 +20,18 @@ public final class TransitRoute {
         /** Boarding point and next stop in TMAP's own dataset (not TAGO nodeId). */
         public final double startLat, startLon;
         public final String nextStopName;
+        /** Coordinates of the penultimate stop, if provider supplies stop list geometry. */
+        public final double penultimateLat,penultimateLon;
         public final int seconds;
         public final List<Point> points;
 
         private Leg(String mode,String routeName,String startName,String endName,
-                    int seconds,List<Point> points,double startLat,double startLon,String nextStopName) {
+                    int seconds,List<Point> points,double startLat,double startLon,String nextStopName,
+                    double penultimateLat,double penultimateLon) {
             this.mode=mode; this.routeName=routeName; this.startName=startName; this.endName=endName;
             this.seconds=seconds; this.points=Collections.unmodifiableList(points);
             this.startLat=startLat;this.startLon=startLon;this.nextStopName=nextStopName;
+            this.penultimateLat=penultimateLat;this.penultimateLon=penultimateLon;
         }
 
         public String title() {
@@ -78,6 +82,10 @@ public final class TransitRoute {
             item.put("lat",Double.isFinite(leg.startLat)?leg.startLat:JSONObject.NULL);
             item.put("lon",Double.isFinite(leg.startLon)?leg.startLon:JSONObject.NULL);
             item.put("next",leg.nextStopName);
+            if(Double.isFinite(leg.penultimateLat)&&Double.isFinite(leg.penultimateLon)){
+                item.put("penultimateLat",leg.penultimateLat);
+                item.put("penultimateLon",leg.penultimateLon);
+            }
             JSONArray points=new JSONArray();
             for(Point point:leg.points) {
                 JSONArray xy=new JSONArray();xy.put(point.lat);xy.put(point.lon);points.put(xy);
@@ -103,7 +111,9 @@ public final class TransitRoute {
                     item.optString("start",""),item.optString("end",""),
                     item.optInt("seconds",0),pts,
                     item.optDouble("lat",Double.NaN),item.optDouble("lon",Double.NaN),
-                    item.optString("next","")));
+                    item.optString("next",""),
+                    item.optDouble("penultimateLat",Double.NaN),
+                    item.optDouble("penultimateLon",Double.NaN)));
         }
         if(legs.isEmpty())throw new JSONException("캐시 경로 구간 없음");
         return new TransitRoute(object.optInt("duration",0),object.optInt("walk",0),
@@ -160,6 +170,8 @@ public final class TransitRoute {
                 if(stationList==null&&passStopList!=null)stationList=passStopList.optJSONArray("stations");
                 JSONObject firstStation=stationList==null?null:stationList.optJSONObject(0);
                 JSONObject nextStation=stationList!=null&&stationList.length()>1?stationList.optJSONObject(1):null;
+                JSONObject penultimate=stationList!=null&&stationList.length()>2
+                        ?stationList.optJSONObject(stationList.length()-2):null;
                 String nextName=nextStation==null?"":nextStation.optString("stationName","");
                 double boardingLat=firstStation!=null?firstStation.optDouble("lat",Double.NaN):Double.NaN;
                 double boardingLon=firstStation!=null?firstStation.optDouble("lon",Double.NaN):Double.NaN;
@@ -181,7 +193,9 @@ public final class TransitRoute {
                 }
                 legs.add(new Leg(mode,line,startName,endName,
                         Math.max(0,leg.optInt("sectionTime",0)),geometry,
-                        boardingLat,boardingLon,nextName));
+                        boardingLat,boardingLon,nextName,
+                        penultimate==null?Double.NaN:penultimate.optDouble("lat",Double.NaN),
+                        penultimate==null?Double.NaN:penultimate.optDouble("lon",Double.NaN)));
             }
             if(legs.isEmpty())continue;
             JSONObject fare=item.optJSONObject("fare");

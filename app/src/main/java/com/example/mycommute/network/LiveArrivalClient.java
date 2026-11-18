@@ -29,6 +29,15 @@ public final class LiveArrivalClient {
     // All requests run on IO, so this map is accessed from one worker thread.
     private static final Map<String,Long> blockedUntil=new HashMap<>();
     private static final long AUTH_BACKOFF_MS=10*60_000L;
+    private static final class Entry {
+        final TransitArrival arrival;
+        final long at;
+        Entry(TransitArrival arrival,long at){this.arrival=arrival;this.at=at;}
+    }
+    // Accessed only by the single-thread IO executor: foreground screen and
+    // tracking service can share a recent result without duplicate API charges.
+    private static final Map<String,Entry> recent=new HashMap<>();
+    private static final long RESPONSE_REUSE_MS=45_000L;
     private LiveArrivalClient(){}
 
     public static boolean subwayEnabled(){
@@ -70,14 +79,24 @@ public final class LiveArrivalClient {
                     "TAGO_BUS_SERVICE_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
         }
         IO.execute(()->{
+            String identifier=leg.mode+"|"+leg.routeName+"|"+leg.startName+"|"+
+                    leg.startLat+"|"+leg.startLon+"|"+leg.nextStopName;
+            long now=System.currentTimeMillis();
+            Entry entry=recent.get(identifier);
             TransitArrival result;
-            try {
-                if("SUBWAY".equals(leg.mode))result=subway(leg);
-                else result=bus(leg);
-            }catch(Exception e){
-                String why=e.getMessage()==null?"알 수 없는 오류":e.getMessage();
-                result=TransitArrival.unavailable("실시간 도착정보 조회 실패: "+why,
-                        System.currentTimeMillis());
+            if(entry!=null&&now-entry.at>=0&&now-entry.at<RESPONSE_REUSE_MS){
+                result=entry.arrival;
+            }else{
+                try {
+                    if("SUBWAY".equals(leg.mode))result=subway(leg);
+                    else result=bus(leg);
+                }catch(Exception e){
+                    String why=e.getMessage()==null?"알 수 없는 오류":e.getMessage();
+                    result=TransitArrival.unavailable("실시간 도착정보 조회 실패: "+why,
+                            System.currentTimeMillis());
+                }
+                if(recent.size()>40)recent.clear();
+                recent.put(identifier,new Entry(result,System.currentTimeMillis()));
             }
             TransitArrival finalResult=result;
             UI.post(()->callback.complete(finalResult));

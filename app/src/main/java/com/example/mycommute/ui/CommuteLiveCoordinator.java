@@ -262,6 +262,13 @@ final class CommuteLiveCoordinator {
                 if(!valid(token))return;
                 loadingWeather=false;weather=report;
                 cachedWeather=new WeatherCache(key,report,System.currentTimeMillis());
+                String weatherNote=report.conditions.rain
+                        ?(report.precipitationType==2||report.precipitationType==3
+                            ?"눈·비 예보":"비 예보")
+                        :report.conditions.lowTemperature?"영하 기온":"";
+                RoutineStore.prefs(context).edit()
+                        .putString("alert_weather_text_"+routine.id,weatherNote)
+                        .putLong("alert_weather_at_"+routine.id,System.currentTimeMillis()).apply();
                 weatherStatus=report.label;
                 notifyChange();
             }

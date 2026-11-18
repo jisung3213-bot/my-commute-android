@@ -75,8 +75,7 @@ public class LoginActivity extends AppCompatActivity {
         // Keep each direction's default selected at login.
         RoutineStore.restoreDefaultsOnLogin(this);
         Routine routine=RoutineStore.read(this);
-        if(routine.isConfigured()&&!routine.apiBased)
-            com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
+        com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
         Intent intent=new Intent(this,MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);finish();

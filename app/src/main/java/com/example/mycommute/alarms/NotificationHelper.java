@@ -35,7 +35,7 @@ public final class NotificationHelper {
         return new NotificationCompat.Builder(context,TRACKING)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("나만의 출퇴근 · 이동 추적 중")
-                .setContentText("사용자가 켠 GPS 추적이 진행 중이야. 누르면 이동 화면으로 이동해.")
+                .setContentText("위치 추적 중 · 탭하여 이동 화면 열기")
                 .setContentIntent(trackingIntent(context)).setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
     }

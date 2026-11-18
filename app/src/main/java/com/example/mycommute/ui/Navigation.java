@@ -13,7 +13,7 @@ public final class Navigation {
         go(a,R.id.navCustom,CustomActivity.class);
         go(a,R.id.navMap,MapActivity.class);
         go(a,R.id.navTracking,TrackingActivity.class);
-        go(a,R.id.navLogs,AlarmLogActivity.class);
+        go(a,R.id.navSettings,SettingsActivity.class);
     }
     private static void go(Activity a,int id,Class<? extends Activity> destination) {
         View view=a.findViewById(id);

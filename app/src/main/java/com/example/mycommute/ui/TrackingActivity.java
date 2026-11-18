@@ -48,6 +48,11 @@ public class TrackingActivity extends AppCompatActivity {
     private float accuracy=Float.NaN;
     private final BroadcastReceiver locations=new BroadcastReceiver(){
         @Override public void onReceive(Context c,Intent intent){
+            if(TrackingService.ACTION_STATE.equals(intent.getAction())){
+                if(intent.getBooleanExtra("finished",false)&&live!=null)live.stop();
+                render();
+                return;
+            }
             latestLat=intent.getDoubleExtra("lat",Double.NaN);
             latestLon=intent.getDoubleExtra("lon",Double.NaN);
             gpsTime=intent.getLongExtra("timestamp",0);
@@ -85,10 +90,11 @@ public class TrackingActivity extends AppCompatActivity {
     @Override protected void onResume(){
         super.onResume();
         routine=RoutineStore.read(this);
+        IntentFilter trackingFilter=new IntentFilter(TrackingService.ACTION_LOCATION);
+        trackingFilter.addAction(TrackingService.ACTION_STATE);
         if(Build.VERSION.SDK_INT>=33)
-            registerReceiver(locations,new IntentFilter(TrackingService.ACTION_LOCATION),
-                    Context.RECEIVER_NOT_EXPORTED);
-        else registerReceiver(locations,new IntentFilter(TrackingService.ACTION_LOCATION));
+            registerReceiver(locations,trackingFilter,Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(locations,trackingFilter);
         listening=true;
         gpsTime=RoutineStore.prefs(this).getLong("lastFixTime",0);
         latestLat=RoutineStore.prefs(this).getFloat("lastLat",Float.NaN);

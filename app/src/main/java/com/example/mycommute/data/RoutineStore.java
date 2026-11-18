@@ -159,11 +159,13 @@ public final class RoutineStore {
         try{
             o.put("outbound",defaultId(c,OUTBOUND));
             o.put("return",defaultId(c,RETURN));
+            o.put("alarmSettings",AlarmSettingsStore.exportJson(c));
         }catch(Exception ignored){}
         return o;
     }
     public static void importPreferences(Context c,JSONObject o){
         if(o==null)return;
+        AlarmSettingsStore.importJson(c,o.optJSONObject("alarmSettings"));
         for(String group:IDS){
             String id=o.optString(group,"");
             for(Routine r:list(c,group))if(id.equals(r.id))

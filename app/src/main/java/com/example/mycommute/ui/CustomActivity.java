@@ -64,19 +64,20 @@ public class CustomActivity extends AppCompatActivity {
         savedList=findViewById(R.id.savedRoutineList);
         direction=RoutineStore.activeDirection(this);
         draft=RoutineStore.read(this);
-        if(!draft.isConfigured())draft=RoutineStore.newDraft(direction);
+        if(!draft.isConfigured())draft=newConfiguredDraft(direction);
         restoreDraft();
         findViewById(R.id.btnDirectionOut).setOnClickListener(v->changeDirection(RoutineStore.OUTBOUND));
         findViewById(R.id.btnDirectionBack).setOnClickListener(v->changeDirection(RoutineStore.RETURN));
         findViewById(R.id.btnNewRoutine).setOnClickListener(v->{
             if(isTracking()) {toast("위치 추적 중 · 경로 변경 불가");return;}
-            draft=RoutineStore.newDraft(direction);
+            draft=newConfiguredDraft(direction);
             invalidateRoutes();restoreDraft();
         });
         findViewById(R.id.btnMakeDefault).setOnClickListener(v->{
             if(isTracking()){toast("위치 추적 중 · 경로 변경 불가");return;}
             if(!isSaved(draft.id)){toast("경로 저장 필요");return;}
             RoutineStore.setDefault(this,draft.id);
+            ReminderScheduler.scheduleCurrent(this);
             renderSaved();
             toast("기본 "+(direction.equals(RoutineStore.OUTBOUND)?"출근길":"퇴근길")+"로 지정 완료");
         });
@@ -99,6 +100,13 @@ public class CustomActivity extends AppCompatActivity {
         });
     }
 
+    private Routine newConfiguredDraft(String kind){
+        Routine r=RoutineStore.newDraft(kind);
+        r.marginMinutes=com.example.mycommute.data.AlarmSettingsStore.defaultMargin(this);
+        r.weatherEnabled=com.example.mycommute.data.AlarmSettingsStore.defaultWeather(this);
+        return r;
+    }
+
     private boolean isTracking(){
         return RoutineStore.prefs(this).getBoolean("tracking_active",false);
     }
@@ -110,15 +118,17 @@ public class CustomActivity extends AppCompatActivity {
         if(isTracking()){toast("위치 추적 중 · 경로 변경 불가");return;}
         if(next.equals(direction))return;
         RoutineStore.selectDirection(this,next);
+        ReminderScheduler.scheduleCurrent(this);
         direction=next;
         draft=RoutineStore.read(this);
-        if(!draft.isConfigured())draft=RoutineStore.newDraft(direction);
+        if(!draft.isConfigured())draft=newConfiguredDraft(direction);
         invalidateRoutes();restoreDraft();
     }
 
     private void loadProfile(String id){
         if(isTracking()){toast("위치 추적 중 · 경로 변경 불가");return;}
         RoutineStore.select(this,id);
+        ReminderScheduler.scheduleCurrent(this);
         direction=RoutineStore.directionOf(id);
         draft=RoutineStore.read(this,id);
         invalidateRoutes();restoreDraft();
@@ -334,6 +344,7 @@ public class CustomActivity extends AppCompatActivity {
                     boolean cached=TransitRouteCache.save(this,draft,routes,selected);
                     TransitRouteMemory.put(Session.accountId(this),draft,routes);
                     TransitRouteMemory.choose(Session.accountId(this),draft,selected);
+                    com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
                     if(!cached){
                         UiNotice.show(resultStatus,UiNotice.State.ERROR,"경로 상세 저장 불가");
                         toast("기본 설정만 저장됨");
@@ -366,9 +377,14 @@ public class CustomActivity extends AppCompatActivity {
             draft.selectedRouteSignature="";
             TransitRouteCache.clear(this,draft.id);
         }
-        draft.estimatedMinutes=0;draft.normalWalkMinutes=0;
+        // Persist a user-selected PLAN duration for future offline alarms.
+        // It is never presented as a live vehicle ETA.
+        if(selected>=0&&selected<routes.size())
+            draft.estimatedMinutes=TransitRoute.minutes(routes.get(selected).totalSeconds);
+        draft.normalWalkMinutes=0;
         ReminderScheduler.cancel(this,previous);
         RoutineStore.save(this,draft);
+        com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
         renderSaved();
         toast("저장 완료");
         requestNotificationPermission();
