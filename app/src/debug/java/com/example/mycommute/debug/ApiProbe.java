@@ -25,8 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Debug-only live provider wire/schema probe. At most 7 requests per run:
- * subway 1, Seoul bus station 1 + arrival 1, TAGO stops 2 + arrival 1, KMA 1.
+ * Debug-only live provider wire/schema probe. At most 9 requests per run:
+ * subway up to 3, Seoul bus station 1 + arrival 1, TAGO stops 2 + arrival 1, KMA 1.
  * Fixed, non-personal sample parameters; no route search or device location.
  * Never reports API keys, URLs, raw responses, stop identifiers or tokens.
  */
@@ -200,7 +200,7 @@ public final class ApiProbe {
         log.append("RUN_AT=").append(timestamp.format(new java.util.Date())).append('\n');
         log.append("ENV=DEBUG SDK=").append(android.os.Build.VERSION.SDK_INT).append('\n');
         log.append("PARAMS=sample Seoul station / Seoul and Suwon bus samples / Seoul weather grid");
-        log.append("\nSAFETY=7 requests max per run; no local time cooldown; no keys/raw body/URL in report");
+        log.append("\nSAFETY=9 requests max per run; no local time cooldown; no keys/raw body/URL in report");
         log.append("\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
         log.append("\n\n=== SUBWAY: realtimeStationArrival ===\n");
         subway();
@@ -303,56 +303,87 @@ public final class ApiProbe {
 
     private void subway(){
         if(!LiveArrivalClient.subwayEnabled()){skip("SUBWAY","KEY_MISSING");return;}
-        try {
-            String url="http://swopenAPI.seoul.go.kr/api/subway/"
-                    +enc(BuildConfig.SEOUL_SUBWAY_API_KEY)
-                    +"/json/realtimeStationArrival/0/30/"+enc("서울");
-            Response r=call("SUBWAY",url);
-            if(r.status!=200)return;
-            JSONObject root=new JSONObject(r.body);
-            JSONObject error=root.optJSONObject("errorMessage");
-            JSONObject standardResult=root.optJSONObject("RESULT");
-            JSONArray rows=list(root,"realtimeArrivalList");
-            JSONObject gatewayError=root.has("status")&&root.has("code")?root:null;
-            log.append("SUBWAY ENVELOPE=").append(gatewayError!=null?"GATEWAY_ERROR":
-                    rows.length()>0?"ARRIVAL_LIST":
-                    error!=null?"SEOUL_ERROR_MESSAGE":
-                    standardResult!=null?"SEOUL_RESULT":
-                    root.has("realtimeArrivalList")?"EMPTY_ARRIVAL_LIST":"UNKNOWN")
-                    .append(" ITEM_COUNT=").append(rows.length()).append('\n');
-            appendProviderError(log,"SUBWAY-GATEWAY",gatewayError);
-            appendProviderError(log,"SUBWAY-STANDARD",standardResult);
-            appendProviderError(log,"SUBWAY-ERROR",error);
-            log.append("SUBWAY ROOT_FIELDS=").append(fields(root)).append('\n');
-            if(gatewayError!=null){
+        Calendar clock=Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"));
+        int hour=clock.get(Calendar.HOUR_OF_DAY);
+        log.append("SUBWAY QUERY_WINDOW_KST=")
+                .append(hour>=5&&hour<24?"LIKELY_SERVICE_HOURS":"LATE_NIGHT_OR_EARLY_MORNING")
+                .append(" (hint only, not a provider guarantee)").append('\n');
+        // Fixed, documented station names. Extra stations are only queried if
+        // previous stations have no live rows; never treat INFO-200 as an auth error.
+        String[] stations={"서울","강남","광운대"};
+        for(String station:stations){
+            try {
+                String url="http://swopenAPI.seoul.go.kr/api/subway/"
+                        +enc(BuildConfig.SEOUL_SUBWAY_API_KEY)
+                        +"/json/realtimeStationArrival/1/30/"+enc(station);
+                log.append("SUBWAY SAMPLE_STATION=").append(station)
+                        .append(" START_INDEX=1 END_INDEX=30\n");
+                Response r=call("SUBWAY",url);
+                if(r.status!=200)return;
+                JSONObject root=new JSONObject(r.body);
+                JSONObject error=root.optJSONObject("errorMessage");
+                JSONObject standardResult=root.optJSONObject("RESULT");
+                JSONArray rows=list(root,"realtimeArrivalList");
+                JSONObject gateway=root.has("status")&&root.has("code")?root:null;
+                log.append("SUBWAY ENVELOPE=").append(gateway!=null?"GATEWAY_MESSAGE":
+                        rows.length()>0?"ARRIVAL_LIST":
+                        error!=null?"SEOUL_ERROR_MESSAGE":
+                        standardResult!=null?"SEOUL_RESULT":
+                        root.has("realtimeArrivalList")?"EMPTY_ARRIVAL_LIST":"UNKNOWN")
+                        .append(" ITEM_COUNT=").append(rows.length()).append('\n');
+                appendProviderError(log,"SUBWAY-GATEWAY",gateway);
+                appendProviderError(log,"SUBWAY-STANDARD",standardResult);
+                appendProviderError(log,"SUBWAY-ERROR",error);
+                log.append("SUBWAY ROOT_FIELDS=").append(fields(root)).append('\n');
+                String code=gateway!=null?gateway.optString("code",""):
+                        standardResult!=null?standardResult.optString("CODE",""):
+                        error!=null?error.optString("code",""):"";
+                if("INFO-200".equalsIgnoreCase(code)){
+                    skip("SUBWAY-"+station,"PROVIDER_INFO_200_NO_LIVE_DATA");
+                    continue;
+                }
+                if(gateway!=null){
+                    failed++;
+                    log.append("SUBWAY DIAGNOSIS=PROVIDER_GATEWAY_ERROR\n");
+                    return;
+                }
+                if(standardResult!=null && !code.isEmpty() &&
+                        !"INFO-000".equalsIgnoreCase(code)){
+                    failed++;
+                    log.append("SUBWAY DIAGNOSIS=PROVIDER_RESULT_ERROR\n");
+                    return;
+                }
+                boolean envelope=error!=null||root.has("realtimeArrivalList")||standardResult!=null;
+                schema("SUBWAY",root,envelope,"expected real-time API envelope");
+                if(rows.length()==0){
+                    skip("SUBWAY-ROW","EMPTY_RESULT; cannot validate ETA schema");
+                    continue;
+                }
+                JSONObject sample=first(rows);
+                schema("SUBWAY-ROW",sample,sample!=null
+                        &&sample.has("subwayId")&&sample.has("statnNm"),
+                        "required=subwayId,statnNm; optional=trainLineNm,barvlDt,recptnDt");
+                int timed=0,statusOnly=0,hasDirection=0;
+                for(int i=0;i<rows.length();i++){
+                    JSONObject o=rows.optJSONObject(i);
+                    if(o==null)continue;
+                    if(o.optInt("barvlDt",-1)>0)timed++;
+                    else if(o.has("arvlMsg2")||o.has("arvlCd"))statusOnly++;
+                    if(o.has("trainLineNm"))hasDirection++;
+                }
+                log.append("SUBWAY ETA_ROWS=").append(timed)
+                        .append(" STATUS_ONLY_ROWS=").append(statusOnly)
+                        .append(" DIRECTION_FIELD_ROWS=").append(hasDirection).append('\n');
+                return;
+            }catch(Exception e){
                 failed++;
-                log.append("SUBWAY DIAGNOSIS=HTTP_200_WITH_PROVIDER_ERROR; NOT_VALID_ARRIVAL_JSON\n");
-                // Do not count missing row as a second distinct error.
+                log.append("SUBWAY PARSE_ERROR=").append(e.getClass().getSimpleName())
+                        .append('\n');
                 return;
             }
-            schema("SUBWAY",root,error!=null||root.has("realtimeArrivalList")
-                    ||standardResult!=null,"expected real-time API response envelope");
-            if(rows.length()==0){
-                skip("SUBWAY-ROW","EMPTY_RESULT; cannot validate ETA schema");
-                return;
-            }
-            JSONObject sample=first(rows);
-            schema("SUBWAY-ROW",sample,sample!=null
-                    &&sample.has("subwayId")&&sample.has("statnNm"),
-                    "required=subwayId,statnNm; optional=trainLineNm,barvlDt,recptnDt");
-            int timed=0,statusOnly=0,hasDirection=0;
-            for(int i=0;i<rows.length();i++){
-                JSONObject o=rows.optJSONObject(i);
-                if(o==null)continue;
-                if(o.optInt("barvlDt",-1)>0)timed++;
-                else if(o.has("arvlMsg2")||o.has("arvlCd"))statusOnly++;
-                if(o.has("trainLineNm"))hasDirection++;
-            }
-            log.append("SUBWAY ETA_ROWS=").append(timed)
-                    .append(" STATUS_ONLY_ROWS=").append(statusOnly)
-                    .append(" DIRECTION_FIELD_ROWS=").append(hasDirection).append('\n');
-        }catch(Exception e){failed++;log.append("SUBWAY PARSE_ERROR=")
-                .append(e.getClass().getSimpleName()).append('\n');}
+        }
+        log.append("SUBWAY DIAGNOSIS=NO_LIVE_DATA_AT_ALL_SAMPLE_STATIONS; ")
+                .append("KEY_OR_SERVICE_NOT_PROVEN_BROKEN\n");
     }
     private static final class StopSample {
         final String cityCode,nodeId;
