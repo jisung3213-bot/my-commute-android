@@ -1,6 +1,7 @@
 package com.example.mycommute.location;
 
 import android.Manifest;
+import com.example.mycommute.alarms.AlertLabMode;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -132,6 +133,7 @@ public class TrackingService extends Service {
         trackingPrefs=RoutineStore.prefs(this);
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
+        if(AlertLabMode.enabled(this)){stopSelf();return START_NOT_STICKY;}
         if(intent!=null&&ACTION_STOP.equals(intent.getAction())) {stopSelf();return START_NOT_STICKY;}
         if(!Session.signedIn(this)||!(allowed(Manifest.permission.ACCESS_FINE_LOCATION)||allowed(Manifest.permission.ACCESS_COARSE_LOCATION))) {
             stopSelf();return START_NOT_STICKY;

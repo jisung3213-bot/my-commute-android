@@ -1,6 +1,7 @@
 package com.example.mycommute.alarms;
 
 import android.content.BroadcastReceiver;
+import com.example.mycommute.alarms.AlertLabMode;
 import android.content.Context;
 import android.content.Intent;
 import com.example.mycommute.data.AlarmLogRepository;
@@ -14,6 +15,7 @@ import java.util.Calendar;
 /** Scheduled events must remain local, never requiring a live API on wakeup. */
 public final class ReminderReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c,Intent intent){
+        if(AlertLabMode.enabled(c))return;
         if(intent==null||!Session.signedIn(c)||!
                 Session.accountId(c).equals(intent.getStringExtra("account")))return;
         String id=intent.getStringExtra("routineId");

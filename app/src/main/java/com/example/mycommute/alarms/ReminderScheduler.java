@@ -1,6 +1,7 @@
 package com.example.mycommute.alarms;
 
 import android.app.AlarmManager;
+import com.example.mycommute.alarms.AlertLabMode;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -25,6 +26,7 @@ public final class ReminderScheduler {
     private ReminderScheduler(){}
 
     public static void scheduleCurrent(Context c){
+        if(AlertLabMode.enabled(c))return;
         if(!Session.signedIn(c))return;
         for(String direction:RoutineStore.IDS){
             for(Routine routine:RoutineStore.list(c,direction))cancel(c,routine);
@@ -74,6 +76,7 @@ public final class ReminderScheduler {
     }
     /** Reschedules only the event that just fired; preserves other same-time events. */
     public static void rescheduleEvent(Context c,String id,String type){
+        if(AlertLabMode.enabled(c))return;
         if(id==null||type==null)return;
         Routine routine=RoutineStore.read(c,id);
         if(!routine.isConfigured())return;
@@ -84,6 +87,7 @@ public final class ReminderScheduler {
     }
 
     public static void schedule(Context c,Routine routine){
+        if(AlertLabMode.enabled(c))return;
         cancel(c,routine);
         if(!Session.signedIn(c)||!AlarmSettingsStore.overall(c)
                 ||routine==null||!routine.isConfigured())return;
