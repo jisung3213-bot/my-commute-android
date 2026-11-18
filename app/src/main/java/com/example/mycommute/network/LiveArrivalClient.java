@@ -110,7 +110,7 @@ public final class LiveArrivalClient {
                 System.currentTimeMillis());
         String url="http://swopenAPI.seoul.go.kr/api/subway/"
                 +URLEncoder.encode(BuildConfig.SEOUL_SUBWAY_API_KEY,StandardCharsets.UTF_8.name())
-                +"/json/realtimeStationArrival/0/30/"
+                +"/json/realtimeStationArrival/1/30/"
                 +URLEncoder.encode(station,StandardCharsets.UTF_8.name());
         String text=request(url,"서울시 지하철 도착정보");
         return ArrivalMatcher.subwayArrival(text,leg,System.currentTimeMillis());
