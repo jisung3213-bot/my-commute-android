@@ -26,6 +26,7 @@ public final class AlertLabActivity extends AppCompatActivity {
     private TextView result;
     private int event=0;
     private String lastReport="";
+    private String lastApiReport="";
     private long virtualOffsetMs=0L;
     private final String[] names={"출발 준비","출발 권장","대중교통 도착 임박",
         "승차지 출발","환승 준비","하차 준비","도착 지연 예상",
@@ -61,6 +62,28 @@ public final class AlertLabActivity extends AppCompatActivity {
         root.addView(copy);
         copy.setOnClickListener(v->copyReport());
         addLabel(root,"실제 GPS·API·루틴 및 예약을 사용하지 않아. 모든 발송 제목은 [TEST]로 표시하고 테스트 로그로 분리해.",13);
+        addLabel(root,"실제 교통·기상 API 연결 진단 (최대 4건/15분)",18);
+        Button api=new Button(this);
+        api.setText("실제 API 양식·응답·오류 진단 실행");
+        root.addView(api);
+        api.setOnClickListener(v->{
+            api.setEnabled(false);
+            updateResult("지하철·버스·기상청 실 API 진단 실행 중...");
+            ApiProbe.run(this,report->{
+                lastApiReport=report;
+                updateResult(report);
+                api.setEnabled(true);
+                copyText("live-api-probe",lastApiReport);
+                Toast.makeText(this,"API 진단 결과가 복사됐어",Toast.LENGTH_LONG).show();
+            });
+        });
+        Button apiCopy=new Button(this);
+        apiCopy.setText("최근 API 진단 보고서 다시 복사");
+        root.addView(apiCopy);
+        apiCopy.setOnClickListener(v->{
+            if(lastApiReport.isEmpty())Toast.makeText(this,"먼저 API 진단을 실행해",Toast.LENGTH_SHORT).show();
+            else copyText("live-api-probe",lastApiReport);
+        });
         type=new Spinner(this);
         type.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names));
         root.addView(type);
@@ -164,8 +187,11 @@ public final class AlertLabActivity extends AppCompatActivity {
         if(lastReport.isEmpty()){
             Toast.makeText(this,"먼저 전체 검증을 실행해",Toast.LENGTH_SHORT).show();return;
         }
+        copyText("alert-lab-report",lastReport);
+    }
+    private void copyText(String label,String text){
         ClipboardManager manager=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
-        if(manager!=null)manager.setPrimaryClip(ClipData.newPlainText("alert-lab-report",lastReport));
+        if(manager!=null)manager.setPrimaryClip(ClipData.newPlainText(label,text));
     }
     private void updateResult(String s){if(result!=null)result.setText(s);}
 }

@@ -49,9 +49,9 @@ public final class ApiProbe {
                 "provider_probe_debug_only",Context.MODE_PRIVATE);
         long last=prefs.getLong("last_run",0);
         if(last>0&&now>=last&&now-last<COOLDOWN_MS){
-            cb.done("LIVE API PROBE\\nSTATUS=COOLDOWN\\nNEXT_IN_SEC="+
+            cb.done("LIVE API PROBE\nSTATUS=COOLDOWN\nNEXT_IN_SEC="+
                     ((COOLDOWN_MS-(now-last)+999)/1000)+
-                    "\\n실 API 호출을 제한하기 위해 15분당 한 번만 실행할 수 있어.");
+                    "\n실 API 호출을 제한하기 위해 15분당 한 번만 실행할 수 있어.");
             return;
         }
         prefs.edit().putLong("last_run",now).apply();
@@ -158,20 +158,21 @@ public final class ApiProbe {
                 .append(name).append(" FIELDS=").append(fields(object)).append('\n');
     }
     private void runAll(){
-        log.append("MY-COMMUTE LIVE API PROBE\\n");
-        log.append("RUN_AT=").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US)
-                .format(new java.util.Date())).append('\n');
+        log.append("MY-COMMUTE LIVE API PROBE\n");
+        SimpleDateFormat timestamp=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US);
+        timestamp.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
+        log.append("RUN_AT=").append(timestamp.format(new java.util.Date())).append('\n');
         log.append("ENV=DEBUG SDK=").append(android.os.Build.VERSION.SDK_INT).append('\n');
         log.append("PARAMS=sample Seoul station / Seoul Station bus transfer / Seoul weather grid");
-        log.append("\\nSAFETY=4 requests max; one run per 15min; no keys/raw body/URL in report");
-        log.append("\\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
-        log.append("\\n\n=== SUBWAY: realtimeStationArrival ===\n");
+        log.append("\nSAFETY=4 requests max; one run per 15min; no keys/raw body/URL in report");
+        log.append("\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
+        log.append("\n\n=== SUBWAY: realtimeStationArrival ===\n");
         subway();
-        log.append("\\n=== TAGO BUS: nearby stops + arrival ===\n");
+        log.append("\n=== TAGO BUS: nearby stops + arrival ===\n");
         bus();
-        log.append("\\n=== KMA: village forecast ===\n");
+        log.append("\n=== KMA: village forecast ===\n");
         weather();
-        log.append("\\n=== SUMMARY ===\n");
+        log.append("\n=== SUMMARY ===\n");
         log.append("HTTP_REQUESTS=").append(requested)
                 .append(" SCHEMA_OK=").append(success)
                 .append(" FAILED=").append(failed)
@@ -283,7 +284,9 @@ public final class ApiProbe {
             for(int h:bases)if(h<=hour)baseHour=h;
             if(baseHour<0){issued.add(Calendar.DATE,-1);baseHour=23;}
             issued.set(Calendar.HOUR_OF_DAY,baseHour);
-            String date=new SimpleDateFormat("yyyyMMdd",Locale.US).format(issued.getTime());
+            SimpleDateFormat dateFormat=new SimpleDateFormat("yyyyMMdd",Locale.US);
+            dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
+            String date=dateFormat.format(issued.getTime());
             String hh=String.format(Locale.US,"%02d00",baseHour);
             String url="https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
                     +"?serviceKey="+key(BuildConfig.KMA_SERVICE_KEY)
