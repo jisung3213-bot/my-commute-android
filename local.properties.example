@@ -1,16 +1,8 @@
-# Android Studio will generate sdk.dir on your computer. Keep this file out of version control.
-# sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk
-# TMAP app key for local development; do not put production secrets into APK.
-TMAP_APP_KEY=YOUR_TMAP_APP_KEY_HERE
+# Android Studio creates sdk.dir. Keep local.properties out of Git.
+# Server URL must be HTTPS and omit the trailing slash.
+API_BASE_URL=https://YOUR_SERVER_URL
 
-# Transit route API key: must have the TMAP public transit API product enabled.
-TMAP_TRANSIT_APP_KEY=YOUR_TMAP_TRANSIT_APP_KEY_HERE
-
-# Optional: decoded (not percent-encoded) public data portal service key for KMA village forecast.
-KMA_SERVICE_KEY=YOUR_DECODED_KMA_SERVICE_KEY_HERE
-
-# Seoul subway real-time arrival key (Seoul Open Data Plaza)
-SEOUL_SUBWAY_API_KEY=YOUR_SEOUL_SUBWAY_API_KEY_HERE
-
-# Data.go.kr Decoding service key, TAGO bus arrivals AND bus stop lookup APIs
-TAGO_BUS_SERVICE_KEY=YOUR_TAGO_BUS_SERVICE_KEY_HERE
+# Optional: Android map SDK only. This is an extractable client key, NOT a secret.
+# Restrict it to the package/signing certificate/provider-side controls when supported.
+TMAP_MAP_SDK_KEY=YOUR_MAP_SDK_KEY
+# NEVER include KMA/TAGO/Seoul subway/transit/POI/pedestrian keys in the APK.

@@ -58,8 +58,7 @@ public final class KmaWeatherClient {
     private KmaWeatherClient(){}
 
     public static boolean enabled() {
-        String key=BuildConfig.KMA_SERVICE_KEY.trim();
-        return !key.isEmpty()&&!"YOUR_DECODED_KMA_SERVICE_KEY_HERE".equals(key);
+        return GatewayClient.enabled();
     }
 
     public static void forecast(final Routine r,final Callback cb) {
@@ -77,28 +76,10 @@ public final class KmaWeatherClient {
                 issued.set(Calendar.HOUR_OF_DAY,baseHour);
                 issued.set(Calendar.MINUTE,0);issued.set(Calendar.SECOND,0);
                 int[] grid=toGrid(r.startLat,r.startLon);
-                String url="https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
-                        +"?serviceKey="+URLEncoder.encode(BuildConfig.KMA_SERVICE_KEY,StandardCharsets.UTF_8.name())
-                        +"&pageNo=1&numOfRows=1000&dataType=JSON"
-                        +"&base_date="+date(issued)+"&base_time="+clock(issued)
-                        +"&nx="+grid[0]+"&ny="+grid[1];
-                HttpURLConnection connection=(HttpURLConnection)new URL(url).openConnection();
-                String text;
-                try {
-                    connection.setConnectTimeout(10000);connection.setReadTimeout(18000);
-                    int code=connection.getResponseCode();
-                    if(code!=200)throw new IllegalStateException("기상청 HTTP "+code);
-                    try(BufferedReader reader=new BufferedReader(
-                            new InputStreamReader(connection.getInputStream(),StandardCharsets.UTF_8))) {
-                        StringBuilder builder=new StringBuilder();
-                        char[] data=new char[4096];int n;
-                        while((n=reader.read(data))!=-1){
-                            if(builder.length()+n>2_000_000)throw new IllegalStateException("기상 응답이 너무 커");
-                            builder.append(data,0,n);
-                        }
-                        text=builder.toString();
-                    }
-                } finally{connection.disconnect();}
+                String text=GatewayClient.request("GET","/v1/weather"
+                        +"?base_date="+date(issued)
+                        +"&base_time="+clock(issued)
+                        +"&nx="+grid[0]+"&ny="+grid[1],null);
                 Report report=parse(text,at);
                 MAIN.post(()->cb.success(report));
             }catch(Exception e) {

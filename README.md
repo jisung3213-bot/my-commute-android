@@ -205,3 +205,16 @@ TAGO_BUS_SERVICE_KEY=발급받은_공공데이터포털_디코딩_인증키
 - **실시간 이동 화면:** 상단 긴 동기화 상태 문구와 개발 공지 제거, 작은 로딩 진행 표시 추가. 출발시간은 출발 권장/목표 도착 등 짧은 계산 결과 중심, 날씨·주의사항은 수치와 요약, GPS 상태는 간단한 추적 상태, 차량 오류는 별도 작은 상태 영역으로 분리. 열차 상태가 도착예정시간이 아닐 경우 기존 안전한 구분은 유지합니다.
 - **지도/장소 검색:** 지도 공급자·SDK 설정 등 기술 정보는 Logcat에 남기고 사용자 화면에는 '경로 갱신 필요', '경로 표시 불가' 등 상태만 보여줍니다. 장소 자동검색은 조용히 진행하고 수동검색 실패 시에만 토스트를 띄웁니다.
 - **미검증:** Android 기기/에뮬레이터 실구동, 접근성·다양한 화면 크기 실측, Gradle 빌드 및 JUnit 실행은 이 환경에서 수행하지 않았습니다.
+
+
+## Server gateway migration
+
+All secret-backed data requests (TMAP places/transit/walking, KMA, Seoul subway,
+TAGO stop/arrival) now go through an authenticated Cloud Run-compatible backend.
+The Android app uses Firebase ID tokens and an HTTPS \`API_BASE_URL\`; it does
+not embed provider API data keys. A separately restricted client-side map SDK key
+may remain when required by the SDK.
+
+See [backend/README.md](backend/README.md) for environment variables, Secret
+Manager setup, IAM and deployment verification. **Without a deployed server URL,
+data requests intentionally fail rather than falling back to APK-embedded keys.**

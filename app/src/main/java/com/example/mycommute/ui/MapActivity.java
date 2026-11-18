@@ -64,7 +64,7 @@ public class MapActivity extends AppCompatActivity {
     }
 
     private void initializeMap() {
-        if(TmapRasterMapAdapter.isAvailable() && TmapWalkingClient.enabled()) {
+        if(TmapRasterMapAdapter.isAvailable() && !BuildConfig.TMAP_APP_KEY.trim().isEmpty()) {
             try {
                 tmapMap=new TmapRasterMapAdapter(this,BuildConfig.TMAP_APP_KEY);
                 container.addView(tmapMap.view(),new FrameLayout.LayoutParams(
