@@ -17,7 +17,8 @@ public final class SeoulXmlParser {
         if(bytes==null || bytes.length==0 || bytes.length>MAX_XML_BYTES)
             throw new IllegalArgumentException("Seoul XML response size invalid");
         String xml = new String(bytes, StandardCharsets.UTF_8);
-        if(xml.contains("<!DOCTYPE") || xml.contains("<!ENTITY"))
+        if(java.util.regex.Pattern.compile("<!\\s*(?:DOCTYPE|ENTITY)\\b",
+                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(xml).find())
             throw new IllegalArgumentException("DTD/entities are prohibited");
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(false);
