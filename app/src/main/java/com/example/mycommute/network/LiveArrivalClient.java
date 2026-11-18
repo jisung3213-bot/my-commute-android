@@ -32,10 +32,10 @@ public final class LiveArrivalClient {
     private LiveArrivalClient(){}
 
     public static boolean subwayEnabled(){
-        return GatewayClient.enabled();
+        return valid(BuildConfig.SEOUL_SUBWAY_API_KEY,"YOUR_SEOUL_SUBWAY_API_KEY_HERE");
     }
     public static boolean busEnabled(){
-        return GatewayClient.enabled();
+        return valid(BuildConfig.TAGO_BUS_SERVICE_KEY,"YOUR_TAGO_BUS_SERVICE_KEY_HERE");
     }
     private static boolean valid(String value,String placeholder){
         return value!=null&&!value.trim().isEmpty()&&!placeholder.equals(value.trim());
@@ -63,11 +63,11 @@ public final class LiveArrivalClient {
                 "이 경로에는 버스·지하철 탑승 구간이 없어",System.currentTimeMillis())));return;}
         if("SUBWAY".equals(leg.mode)&&!subwayEnabled()){
             UI.post(()->callback.complete(TransitArrival.unavailable(
-                    "서버 연결 필요",System.currentTimeMillis())));return;
+                    "SEOUL_SUBWAY_API_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
         }
         if("BUS".equals(leg.mode)&&!busEnabled()){
             UI.post(()->callback.complete(TransitArrival.unavailable(
-                    "서버 연결 필요",System.currentTimeMillis())));return;
+                    "TAGO_BUS_SERVICE_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
         }
         IO.execute(()->{
             TransitArrival result;
@@ -88,8 +88,11 @@ public final class LiveArrivalClient {
         String station=leg.startName.replaceAll("역$","").trim();
         if(station.isEmpty())return TransitArrival.unavailable("승차역 정보가 없어",
                 System.currentTimeMillis());
-        String text=GatewayClient.request("GET","/v1/subway?station="
-                +encode(station),null);
+        String url="http://swopenAPI.seoul.go.kr/api/subway/"
+                +URLEncoder.encode(BuildConfig.SEOUL_SUBWAY_API_KEY,StandardCharsets.UTF_8.name())
+                +"/json/realtimeStationArrival/0/30/"
+                +URLEncoder.encode(station,StandardCharsets.UTF_8.name());
+        String text=request(url,"서울시 지하철 도착정보");
         return ArrivalMatcher.subwayArrival(text,leg,System.currentTimeMillis());
     }
 
@@ -97,15 +100,20 @@ public final class LiveArrivalClient {
         if(!Double.isFinite(leg.startLat)||!Double.isFinite(leg.startLon))
             return TransitArrival.unavailable("버스 승차 정류장 좌표가 없어",
                     System.currentTimeMillis());
-        String location="/v1/bus/stops?lat="+leg.startLat+"&lon="+leg.startLon;
-        ArrivalMatcher.Stop stop=ArrivalMatcher.chooseNearbyStop(
-                GatewayClient.request("GET",location,null),leg);
+        String base="https://apis.data.go.kr/1613000/";
+        String location="BusSttnInfoInqireService/getCrdntPrxmtSttnList"
+                +"?serviceKey="+encode(BuildConfig.TAGO_BUS_SERVICE_KEY)
+                +"&_type=json&pageNo=1&numOfRows=100"
+                +"&gpsLati="+leg.startLat+"&gpsLong="+leg.startLon;
+        ArrivalMatcher.Stop stop=ArrivalMatcher.chooseNearbyStop(request(base+location,"TAGO 정류소정보"),leg);
         if(stop==null)return TransitArrival.unavailable(
-                "승차 정류장 확인 불가",System.currentTimeMillis());
-        String arrivals="/v1/bus/arrivals?cityCode="+encode(stop.cityCode)
-                +"&nodeId="+encode(stop.nodeId);
-        return ArrivalMatcher.busArrival(
-                GatewayClient.request("GET",arrivals,null),leg,stop,System.currentTimeMillis());
+                "가까운 TAGO 정류장 중 이름과 위치를 유일하게 확인할 수 없어",
+                System.currentTimeMillis());
+        String arrivals="ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList"
+                +"?serviceKey="+encode(BuildConfig.TAGO_BUS_SERVICE_KEY)
+                +"&_type=json&pageNo=1&numOfRows=100"
+                +"&cityCode="+encode(stop.cityCode)+"&nodeId="+encode(stop.nodeId);
+        return ArrivalMatcher.busArrival(request(base+arrivals,"TAGO 버스도착정보"),leg,stop,System.currentTimeMillis());
     }
 
     private static String encode(String text) throws Exception {
@@ -118,4 +126,40 @@ public final class LiveArrivalClient {
         return URLEncoder.encode(key,StandardCharsets.UTF_8.name());
     }
 
+    private static String request(String address,String provider) throws Exception {
+        long now=System.currentTimeMillis();
+        Long blocked=blockedUntil.get(provider);
+        if(blocked!=null&&blocked>now)
+            throw new IllegalStateException(provider+" · 인증/호출 제한 오류 후 재조회 대기 (최대 10분)");
+        HttpURLConnection conn=(HttpURLConnection)new URL(address).openConnection();
+        try{
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(14000);
+            conn.setRequestProperty("Accept","application/json");
+            int status=conn.getResponseCode();
+            if(status!=200){
+                String response=readLimited(conn.getErrorStream(),4096);
+                if(status==401||status==403||status==429)
+                    blockedUntil.put(provider,now+AUTH_BACKOFF_MS);
+                throw new IllegalStateException(ArrivalApiError.describe(provider,status,response));
+            }
+            return readLimited(conn.getInputStream(),1_500_000);
+        }finally{conn.disconnect();}
+    }
+
+    private static String readLimited(InputStream stream,int limit) throws Exception {
+        if(stream==null)return "";
+        try(InputStream input=stream;
+            BufferedReader reader=new BufferedReader(
+                    new InputStreamReader(input,StandardCharsets.UTF_8))){
+            StringBuilder sb=new StringBuilder();
+            char[] chars=new char[4096];int count;
+            while((count=reader.read(chars))!=-1){
+                if(sb.length()+count>limit)
+                    throw new IllegalStateException("API 응답 크기 초과");
+                sb.append(chars,0,count);
+            }
+            return sb.toString();
+        }
+    }
 }

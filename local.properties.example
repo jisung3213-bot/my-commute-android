@@ -1,10 +1,16 @@
-# Android Studio에서 sdk.dir은 자동 생성돼.
-# 데이터 API 인증키는 이 파일이나 앱에 입력하지 않아.
-#
-# 앱은 Firebase 프로젝트 ID로 Cloud Functions 주소를 자동 구성해.
-# 보통 API_BASE_URL 설정은 필요하지 않아.
-# API_BASE_URL=https://별도-테스트-서버-주소
-#
-# 지도 SDK를 설치한 경우에만 별도 발급한 클라이언트용 키 사용.
-# 실제 APK에서 추출할 수 있으므로 공급자 측 앱 제한 설정을 적용해야 해.
-TMAP_MAP_SDK_KEY=YOUR_MAP_SDK_KEY
+# Android Studio will generate sdk.dir on your computer. Keep this file out of version control.
+# sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk
+# TMAP app key for local development; do not put production secrets into APK.
+TMAP_APP_KEY=YOUR_TMAP_APP_KEY_HERE
+
+# Transit route API key: must have the TMAP public transit API product enabled.
+TMAP_TRANSIT_APP_KEY=YOUR_TMAP_TRANSIT_APP_KEY_HERE
+
+# Optional: decoded (not percent-encoded) public data portal service key for KMA village forecast.
+KMA_SERVICE_KEY=YOUR_DECODED_KMA_SERVICE_KEY_HERE
+
+# Seoul subway real-time arrival key (Seoul Open Data Plaza)
+SEOUL_SUBWAY_API_KEY=YOUR_SEOUL_SUBWAY_API_KEY_HERE
+
+# Data.go.kr Decoding service key, TAGO bus arrivals AND bus stop lookup APIs
+TAGO_BUS_SERVICE_KEY=YOUR_TAGO_BUS_SERVICE_KEY_HERE

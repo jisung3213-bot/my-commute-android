@@ -10,8 +10,11 @@ if (file('google-services.json').exists()) {
 def localConfig = new Properties()
 def localFile = rootProject.file('local.properties')
 if (localFile.exists()) localFile.withInputStream { localConfig.load(it) }
-def tmapKey = (localConfig.getProperty('TMAP_MAP_SDK_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
-def apiBaseUrl = (localConfig.getProperty('API_BASE_URL') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def tmapKey = (localConfig.getProperty('TMAP_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def transitKey = (localConfig.getProperty('TMAP_TRANSIT_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def weatherKey = (localConfig.getProperty('KMA_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def subwayKey = (localConfig.getProperty('SEOUL_SUBWAY_API_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def busKey = (localConfig.getProperty('TAGO_BUS_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 
 android {
     namespace 'com.example.mycommute'
@@ -24,7 +27,10 @@ android {
         versionCode 2
         versionName '0.2.0'
         buildConfigField 'String', 'TMAP_APP_KEY', '"' + tmapKey + '"'
-        buildConfigField 'String', 'API_BASE_URL', '"' + apiBaseUrl + '"'
+        buildConfigField 'String', 'TMAP_TRANSIT_APP_KEY', '"' + transitKey + '"'
+        buildConfigField 'String', 'KMA_SERVICE_KEY', '"' + weatherKey + '"'
+        buildConfigField 'String', 'SEOUL_SUBWAY_API_KEY', '"' + subwayKey + '"'
+        buildConfigField 'String', 'TAGO_BUS_SERVICE_KEY', '"' + busKey + '"'
     }
 
     buildFeatures { buildConfig true }
