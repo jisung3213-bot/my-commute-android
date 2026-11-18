@@ -33,3 +33,31 @@
 
 - GitHub에 저장된 변경 레이아웃 XML 5개의 태그 중첩·종결·중복 ID를 정적 검사했고 이상을 발견하지 못함.
 - **Android Studio에서 APK를 빌드하거나 에뮬레이터에 실행해 시각적 레이아웃을 확인한 것은 아님.**
+
+## 3개 주요 화면 정보구조 재설계 (2026-11-19)
+
+사용자 제공 Android 화면 캡처 기준으로 다음 문제를 수정했다.
+
+### 실시간 이동: 다음 대중교통
+- 기존 한 문장에 섞인 **정류장명·노선·도착시간·다음 차량·탑승 여유**를 분리했다.
+- 노선 유형 배지, 탑승 정류장/역, **현재 차량 ETA / 다음 차량 ETA 2열**, 탑승 가능성, 승차지까지 소요시간, 여유시간을 독립 TextView로 구성.
+- 실제 TMAP/GPS/API 계산과 `live.arrival()`, `live.walkSeconds()`는 유지하고 **표시부만 재구성**했다. 정보 미확인/만료는 숫자를 추정하지 않고 대시 또는 보류 텍스트로 표시한다.
+- `activity_tracking.xml`, `TrackingActivity.java`.
+
+### 루틴 등록: 이동 장소
+- 경로 이름, 출발지, 도착지, 경유지 설정을 **하얀 카드형 입력 패널**에 묶고 설명·입력 레이블 분리.
+- 경유지 목록을 **제거 가능한 Material ChipGroup**으로 제공. X 버튼 클릭 시 임시 경유지 삭제 및 현재 경로 검색 결과 무효화. 이동 중 편집 제한은 유지.
+- 실제 좌표 검색은 이전 `PlaceSearchActivity` 기반이며 임의의 자유 텍스트 좌표를 사용하지 않는다.
+- `activity_custom.xml`, `CustomActivity.java`.
+
+### 경로 검색 결과
+- 기존 보라색 MaterialButton 한 개에 전체 구간 텍스트를 넣던 구성을 제거.
+- **하얀 카드 + 경로 번호 + 총 이동시간 + 도보/환승/운임 요약 + 개별 구간**으로 분할.
+- `구간 상세 보기 / 구간 접기` 기능 및 `이 경로 선택` 기능을 분리. 선택되면 보라색 테두리 및 `선택됨` 표시.
+- 기존 API 결과 `TransitRoute`, 경로 선택 시 루틴 저장·서명 캐시·지도 미리보기 활성화 로직은 유지.
+- `item_route_result.xml`, `bg_route_selected.xml`, `CustomActivity.java`.
+
+### 검증 상태
+- 수정 XML `activity_tracking.xml`, `activity_custom.xml`, `item_route_result.xml`, `bg_route_selected.xml`의 태그 중첩 및 ID 중복을 정적으로 확인했고 문제를 발견하지 못함.
+- 변경 Java의 중괄호 균형 및 신규 ID 참조를 정적으로 확인함.
+- **Android Studio에서 실제 빌드, API 호출 및 화면 스크린샷 검증은 하지 못했음**. 시각적 완성도를 보증하는 것이 아닌 사용자 화면 기준 리팩터링.
