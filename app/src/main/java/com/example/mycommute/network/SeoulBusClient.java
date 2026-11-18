@@ -12,7 +12,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.Locale;
 import java.util.TreeSet;
 
@@ -53,28 +52,16 @@ public final class SeoulBusClient {
             int status=connection.getResponseCode();
             if(status!=200)throw new IllegalStateException(
                     "서울 버스 HTTP "+status+" (정류소 API 이용승인·키 확인 필요)");
-            DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
-            factory.setNamespaceAware(false);
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
-            factory.setFeature("http://xml.org/sax/features/external-general-entities",false);
-            factory.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
-            factory.setXIncludeAware(false);
-            factory.setExpandEntityReferences(false);
             try(InputStream input=new java.io.BufferedInputStream(connection.getInputStream())){
-                Document xml=factory.newDocumentBuilder().parse(
-                        new java.io.FilterInputStream(input){
-                            private long count;
-                            @Override public int read()throws java.io.IOException{
-                                int b=super.read();
-                                if(b>=0&&++count>3200000)throw new java.io.IOException("응답이 너무 커");
-                                return b;
-                            }
-                            @Override public int read(byte[] data,int offset,int len)throws java.io.IOException{
-                                int n=super.read(data,offset,Math.min(len,8192));
-                                if(n>0&&(count+=n)>900000)throw new java.io.IOException("응답이 너무 커");
-                                return n;
-                            }
-                        });
+                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+                byte[] chunk=new byte[8192];
+                int count;
+                while((count=input.read(chunk))!=-1){
+                    if(buffer.size()+count>3_200_000)
+                        throw new java.io.IOException("서울 버스 XML 응답이 너무 커");
+                    buffer.write(chunk,0,count);
+                }
+                Document xml=SeoulXmlParser.parse(buffer.toByteArray());
                 NodeList headers=xml.getElementsByTagName("headerCd");
                 if(headers.getLength()>0){
                     String code=headers.item(0).getTextContent().trim();
