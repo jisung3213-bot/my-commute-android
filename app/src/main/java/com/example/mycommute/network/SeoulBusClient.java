@@ -183,7 +183,7 @@ public final class SeoulBusClient {
             if(matched>1)break;
             for(int n=1;n<=2;n++){
                 int eta=integer(row,"exps"+n);
-                if(eta<=0)eta=integer(row,"traTime"+n);
+                // The documented exps field is in seconds; avoid ambiguous traTime units.
                 if(eta>0&&eta<=7200)seconds.add(eta);
             }
         }
