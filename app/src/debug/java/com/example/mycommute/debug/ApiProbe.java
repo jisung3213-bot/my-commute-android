@@ -25,8 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Debug-only live provider wire/schema probe. At most 4 network requests per run:
- * subway 1, TAGO nearby stops 1 + station arrival 1, KMA forecast 1.
+ * Debug-only live provider wire/schema probe. At most 7 requests per run:
+ * subway 1, Seoul bus station 1 + arrival 1, TAGO stops 2 + arrival 1, KMA 1.
  * Fixed, non-personal sample parameters; no route search or device location.
  * Never reports API keys, URLs, raw responses, stop identifiers or tokens.
  */
@@ -190,7 +190,7 @@ public final class ApiProbe {
         log.append("RUN_AT=").append(timestamp.format(new java.util.Date())).append('\n');
         log.append("ENV=DEBUG SDK=").append(android.os.Build.VERSION.SDK_INT).append('\n');
         log.append("PARAMS=sample Seoul station / Seoul and Suwon bus samples / Seoul weather grid");
-        log.append("\nSAFETY=6 requests max per run; no local time cooldown; no keys/raw body/URL in report");
+        log.append("\nSAFETY=7 requests max per run; no local time cooldown; no keys/raw body/URL in report");
         log.append("\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
         log.append("\n\n=== SUBWAY: realtimeStationArrival ===\n");
         subway();
@@ -209,51 +209,92 @@ public final class ApiProbe {
         log.append("NOTE=This probe does not exercise matching to saved user commute routes.\n");
         log.append("END LIVE API PROBE\n");
     }
+    private static String normalizedKey(String raw){
+        if(raw==null)return "";
+        String v=raw.trim();
+        if(v.matches(".*%[0-9a-fA-F]{2}.*")){
+            try{v=URLDecoder.decode(v,"UTF-8");}
+            catch(Exception ignored){}
+        }
+        return v;
+    }
     private void seoulBus(){
         if(!com.example.mycommute.network.SeoulBusClient.enabled()){
-            skip("SEOUL-BUS","SEOUL_BUS_SERVICE_KEY_MISSING; separate approval required");
+            skip("SEOUL-BUS","NO_SHARED_OR_SEOUL_KEY_CONFIGURED");
+            return;
+        }
+        // Equality flag only: no key contents, hashes, URLs, or response payloads.
+        String seoul=normalizedKey(BuildConfig.SEOUL_BUS_SERVICE_KEY);
+        String tago=normalizedKey(BuildConfig.TAGO_BUS_SERVICE_KEY);
+        String kma=normalizedKey(BuildConfig.KMA_SERVICE_KEY);
+        log.append("PORTAL_KEY_SHARED SEOUL_EQUALS_TAGO=")
+                .append(!seoul.isEmpty()&&seoul.equals(tago))
+                .append(" SEOUL_EQUALS_KMA=")
+                .append(!seoul.isEmpty()&&seoul.equals(kma))
+                .append(" (does NOT imply equal service permissions)").append('\n');
+        String encoded;
+        try{encoded=enc(seoul);}
+        catch(Exception e){failed++;log.append("SEOUL-BUS KEY_ENCODING_ERROR\n");return;}
+        // The two independently approved APIs must be probed even if one fails.
+        probeSeoulBusEndpoint("SEOUL-BUS-STATION-SERVICE",
+                "http://ws.bus.go.kr/api/rest/stationinfo/getStationByPos"
+                +"?serviceKey="+encoded+"&tmX=126.972&tmY=37.555&radius=100",
+                "stId","stNm");
+        // Fixed public documentation example ID: this checks authorization and envelope,
+        // not live arrivals on the user's route (may validly return 0 records).
+        probeSeoulBusEndpoint("SEOUL-BUS-ARRIVAL-SERVICE",
+                "http://ws.bus.go.kr/api/rest/arrive/getArrInfoByStId"
+                +"?serviceKey="+encoded+"&stId=112000001",
+                "rtNm","exps1");
+    }
+    private void probeSeoulBusEndpoint(String name,String url,String required,String optional){
+        Response r=call(name,url);
+        if(r.status!=200){
+            log.append(name).append(" AUTH_OR_GATEWAY_STATUS=")
+                    .append(r.status==401?"UNAUTHORIZED":r.status==403?"FORBIDDEN":
+                            r.status==429?"RATE_LIMIT":"HTTP_OR_TRANSPORT_FAILURE")
+                    .append(" (HTTP status alone cannot distinguish key format vs approval)").append('\n');
+            return;
+        }
+        if(!r.body.trim().startsWith("<")){
+            failed++;
+            log.append(name).append(" NON_XML_RESPONSE_CLASS=")
+                    .append(r.body.trim().startsWith("{")?"JSON":"OTHER").append('\n');
             return;
         }
         try{
-            String raw=BuildConfig.SEOUL_BUS_SERVICE_KEY.trim();
-            if(raw.matches(".*%[0-9a-fA-F]{2}.*"))raw=URLDecoder.decode(raw,"UTF-8");
-            String url="http://ws.bus.go.kr/api/rest/stationinfo/getStationByPos"
-                    +"?serviceKey="+enc(raw)+"&tmX=126.972&tmY=37.555&radius=100";
-            Response r=call("SEOUL-BUS-STOPS",url);
-            if(r.status!=200)return;
-            if(!r.body.trim().startsWith("<")){
-                failed++;
-                log.append("SEOUL-BUS DIAGNOSIS=NON_XML_RESPONSE; class=")
-                        .append(r.body.trim().startsWith("{")?"JSON":"OTHER").append('\n');
-                return;
-            }
             javax.xml.parsers.DocumentBuilderFactory f=javax.xml.parsers.DocumentBuilderFactory.newInstance();
             f.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
             f.setFeature("http://xml.org/sax/features/external-general-entities",false);
             f.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
+            f.setXIncludeAware(false);
+            f.setExpandEntityReferences(false);
             org.w3c.dom.Document doc=f.newDocumentBuilder().parse(
                     new java.io.ByteArrayInputStream(r.body.getBytes(StandardCharsets.UTF_8)));
             org.w3c.dom.NodeList headers=doc.getElementsByTagName("headerCd");
             String code=headers.getLength()>0?headers.item(0).getTextContent().trim():"MISSING";
             org.w3c.dom.NodeList rows=doc.getElementsByTagName("itemList");
-            log.append("SEOUL-BUS PROVIDER_CODE=").append(safeCode(code))
-                    .append(" ITEM_COUNT=").append(rows.getLength())
-                    .append(" ROOT_TAG=").append(doc.getDocumentElement().getTagName()
-                            .replaceAll("[^A-Za-z0-9_-]","")).append('\n');
+            log.append(name).append(" PROVIDER_CODE=").append(safeCode(code))
+                    .append(" ITEM_COUNT=").append(rows.getLength()).append('\n');
             if(!"0".equals(code)&&!"00".equals(code)){
                 failed++;
-                log.append("SEOUL-BUS DIAGNOSIS=PROVIDER_ERROR_OR_KEY_APPROVAL\n");
-            }else if(rows.getLength()==0){
-                skip("SEOUL-BUS-ROW","VALID_ENVELOPE_EMPTY_RESULT");
-            }else{
-                org.w3c.dom.Element row=(org.w3c.dom.Element)rows.item(0);
-                schema("SEOUL-BUS-ROW",null,
-                        row.getElementsByTagName("stId").getLength()>0
-                        &&row.getElementsByTagName("stNm").getLength()>0,
-                        "required=stId,stNm; XML content intentionally not printed");
+                log.append(name).append(" PROVIDER_REJECTED_OR_ERROR\n");
+                return;
             }
-        }catch(Exception e){failed++;log.append("SEOUL-BUS PARSE_ERROR=")
-                .append(e.getClass().getSimpleName()).append('\n');}
+            if(rows.getLength()==0){
+                skip(name+"-ROW","PROVIDER_ACCEPTED_EMPTY_SAMPLE");
+                return;
+            }
+            org.w3c.dom.Element row=(org.w3c.dom.Element)rows.item(0);
+            boolean has=row.getElementsByTagName(required).getLength()>0;
+            schema(name+"-ROW",null,has,
+                    "XML required="+required+" present; optional="+optional+
+                            "; contents redacted");
+        }catch(Exception ex){
+            failed++;
+            log.append(name).append(" XML_ERROR=").append(ex.getClass().getSimpleName())
+                    .append('\n');
+        }
     }
 
     private void subway(){
