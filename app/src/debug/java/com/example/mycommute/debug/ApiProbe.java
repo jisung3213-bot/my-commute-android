@@ -97,6 +97,7 @@ public final class ApiProbe {
     }
     private static final class Response {
         int status,size;
+        String mediaType="UNKNOWN";
         long elapsed;
         String body;
     }
@@ -111,6 +112,11 @@ public final class ApiProbe {
             conn.setReadTimeout(18000);
             conn.setRequestProperty("Accept",name.startsWith("SEOUL-BUS")?"application/xml":"application/json");
             result.status=conn.getResponseCode();
+            String mt=conn.getContentType();
+            if(mt!=null){
+                String m=mt.toLowerCase(Locale.ROOT);
+                result.mediaType=m.contains("json")?"JSON":m.contains("xml")?"XML":m.contains("html")?"HTML":"OTHER";
+            }
             result.body=text(result.status>=200&&result.status<300
                     ?conn.getInputStream():conn.getErrorStream(),1_800_000);
             result.size=result.body.length();
@@ -126,11 +132,15 @@ public final class ApiProbe {
         }
         log.append(name).append(" HTTP=").append(result.status)
                 .append(" ELAPSED_MS=").append(result.elapsed)
-                .append(" CHARS=").append(result.size).append('\n');
+                .append(" CHARS=").append(result.size)
+                .append(" MEDIA_TYPE=").append(result.mediaType).append('\n');
         if(result.status!=200){
             failed++;
             if(result.status>0)log.append(name).append(" ERROR_CLASS=")
                     .append(ArrivalApiError.describe(name,result.status,result.body))
+                    .append('\n');
+            if(name.startsWith("SEOUL-BUS"))log.append(name)
+                    .append(" ERROR_BODY_CLASS=").append(classifyMessage(result.body))
                     .append('\n');
         }
         return result;
