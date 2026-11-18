@@ -34,7 +34,6 @@ public final class ApiProbe {
     public interface Callback { void done(String report); }
     private static final ExecutorService IO=Executors.newSingleThreadExecutor();
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
-    private static final long COOLDOWN_MS=15*60_000L;
     private final StringBuilder log=new StringBuilder();
     private final Context context;
     private int requested;
@@ -44,17 +43,6 @@ public final class ApiProbe {
     private ApiProbe(Context context){this.context=context.getApplicationContext();}
     public static void run(Context c,Callback cb){
         ApiProbe probe=new ApiProbe(c);
-        long now=System.currentTimeMillis();
-        android.content.SharedPreferences prefs=c.getSharedPreferences(
-                "provider_probe_debug_only",Context.MODE_PRIVATE);
-        long last=prefs.getLong("last_run",0);
-        if(last>0&&now>=last&&now-last<COOLDOWN_MS){
-            cb.done("LIVE API PROBE\nSTATUS=COOLDOWN\nNEXT_IN_SEC="+
-                    ((COOLDOWN_MS-(now-last)+999)/1000)+
-                    "\n실 API 호출을 제한하기 위해 15분당 한 번만 실행할 수 있어.");
-            return;
-        }
-        prefs.edit().putLong("last_run",now).apply();
         IO.execute(()->{
             try{probe.runAll();}
             catch(Exception e){probe.log.append("INTERNAL_ERROR=")
@@ -202,7 +190,7 @@ public final class ApiProbe {
         log.append("RUN_AT=").append(timestamp.format(new java.util.Date())).append('\n');
         log.append("ENV=DEBUG SDK=").append(android.os.Build.VERSION.SDK_INT).append('\n');
         log.append("PARAMS=sample Seoul station / Seoul and Suwon bus samples / Seoul weather grid");
-        log.append("\nSAFETY=6 requests max; one run per 15min; no keys/raw body/URL in report");
+        log.append("\nSAFETY=6 requests max per run; no local time cooldown; no keys/raw body/URL in report");
         log.append("\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
         log.append("\n\n=== SUBWAY: realtimeStationArrival ===\n");
         subway();
