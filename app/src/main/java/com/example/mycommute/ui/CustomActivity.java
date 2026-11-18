@@ -44,6 +44,7 @@ public class CustomActivity extends AppCompatActivity {
     private Routine draft;
     private List<TransitRoute> routes=Collections.emptyList();
     private final List<Integer> order=new ArrayList<>();
+    private final java.util.Set<Integer> expandedRoutes=new java.util.HashSet<>();
     private int selected=-1;
     private boolean searching,restoring,weatherKnown;
     private int requestGeneration,weatherGeneration;
@@ -249,7 +250,7 @@ public class CustomActivity extends AppCompatActivity {
         ++requestGeneration;++weatherGeneration;
         searching=false;
         findViewById(R.id.btnSearchTransit).setEnabled(true);
-        routes=Collections.emptyList();selected=-1;order.clear();
+        routes=Collections.emptyList();selected=-1;order.clear();expandedRoutes.clear();
         cards.removeAllViews();
         UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
         findViewById(R.id.btnPreviewMap).setEnabled(false);
@@ -326,6 +327,25 @@ public class CustomActivity extends AppCompatActivity {
         });
     }
 
+    private int dp(int value){
+        return (int)(value*getResources().getDisplayMetrics().density+0.5f);
+    }
+
+    private void chooseCandidate(int index){
+        selected=index;
+        if(saveDraft(true)) {
+            boolean cached=TransitRouteCache.save(this,draft,routes,selected);
+            TransitRouteMemory.put(Session.accountId(this),draft,routes);
+            TransitRouteMemory.choose(Session.accountId(this),draft,selected);
+            com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
+            if(!cached){
+                UiNotice.show(resultStatus,UiNotice.State.ERROR,"경로 상세 저장 불가");
+                toast("기본 설정만 저장됨");
+            }else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
+        }
+        renderCandidates();
+    }
+
     private void renderCandidates(){
         cards.removeAllViews();order.clear();
         if(routes.isEmpty())return;
@@ -335,33 +355,61 @@ public class CustomActivity extends AppCompatActivity {
         else order.sort(Comparator.comparingInt(i->routes.get(i).totalSeconds));
         for(int index:order){
             TransitRoute route=routes.get(index);
-            MaterialButton button=new MaterialButton(this);
-            button.setAllCaps(false);
-            button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-            button.setTextSize(14);
-            button.setMinHeight((int)(56*getResources().getDisplayMetrics().density));
-            button.setPaddingRelative((int)(16*getResources().getDisplayMetrics().density),
-                    (int)(12*getResources().getDisplayMetrics().density),
-                    (int)(16*getResources().getDisplayMetrics().density),
-                    (int)(12*getResources().getDisplayMetrics().density));
-            button.setText((selected==index?"[선택된 경로] ":"")+
-                    route.summary(index+1)+"\n"+route.stepsSummary());
-            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
-            lp.bottomMargin=8;cards.addView(button,lp);
-            button.setOnClickListener(v->{
-                selected=index;
-                if(saveDraft(true)) {
-                    boolean cached=TransitRouteCache.save(this,draft,routes,selected);
-                    TransitRouteMemory.put(Session.accountId(this),draft,routes);
-                    TransitRouteMemory.choose(Session.accountId(this),draft,selected);
-                    com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
-                    if(!cached){
-                        UiNotice.show(resultStatus,UiNotice.State.ERROR,"경로 상세 저장 불가");
-                        toast("기본 설정만 저장됨");
-                    }else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
+            View card=getLayoutInflater().inflate(R.layout.item_route_result,cards,false);
+            TextView rank=card.findViewById(R.id.routeCardIndex);
+            TextView flag=card.findViewById(R.id.routeCardSelected);
+            TextView duration=card.findViewById(R.id.routeCardTime);
+            TextView meta=card.findViewById(R.id.routeCardMeta);
+            LinearLayout segments=card.findViewById(R.id.routeCardLegs);
+            MaterialButton expand=card.findViewById(R.id.routeCardExpand);
+            MaterialButton choose=card.findViewById(R.id.routeCardChoose);
+            rank.setText((index+1)+"번 경로");
+            flag.setVisibility(selected==index?View.VISIBLE:View.GONE);
+            duration.setText(TransitRoute.minutes(route.totalSeconds)+"분");
+            String info="도보 "+TransitRoute.minutes(route.walkSeconds)+"분 ("+route.walkMeters+"m)"
+                    +" · 환승 "+route.transfers+"회";
+            if(route.fareWon>0)
+                info+=" · "+String.format(java.util.Locale.KOREA,"%,d원",route.fareWon);
+            meta.setText(info);
+            boolean expanded=expandedRoutes.contains(index);
+            segments.setVisibility(expanded?View.VISIBLE:View.GONE);
+            expand.setText(expanded?"구간 접기":"구간 상세 보기");
+            if(expanded){
+                for(TransitRoute.Leg leg:route.legs){
+                    LinearLayout entry=new LinearLayout(this);
+                    entry.setOrientation(LinearLayout.HORIZONTAL);
+                    entry.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                    entry.setPadding(0,dp(8),0,dp(8));
+                    TextView icon=new TextView(this);
+                    icon.setGravity(android.view.Gravity.CENTER);
+                    icon.setText("BUS".equals(leg.mode)?"버스":
+                            "SUBWAY".equals(leg.mode)?"철도":"도보");
+                    icon.setTextSize(12);
+                    icon.setTextColor(getColor(R.color.primary_dark));
+                    icon.setBackgroundResource(R.drawable.bg_route_selected);
+                    icon.setPadding(dp(9),dp(7),dp(9),dp(7));
+                    entry.addView(icon,new LinearLayout.LayoutParams(dp(55),-2));
+                    TextView detail=new TextView(this);
+                    detail.setText((leg.routeName.isEmpty()?"":leg.routeName+" · ")
+                            +TransitRoute.minutes(leg.seconds)+"분\n"
+                            +leg.startName+" → "+leg.endName);
+                    detail.setTextSize(14);
+                    detail.setTextColor(getColor(R.color.text_primary));
+                    LinearLayout.LayoutParams infoParams=new LinearLayout.LayoutParams(0,-2,1f);
+                    infoParams.leftMargin=dp(12);
+                    entry.addView(detail,infoParams);
+                    segments.addView(entry,new LinearLayout.LayoutParams(-1,-2));
                 }
+            }
+            expand.setOnClickListener(v->{
+                if(expandedRoutes.contains(index))expandedRoutes.remove(index);
+                else expandedRoutes.add(index);
                 renderCandidates();
             });
+            choose.setText(selected==index?"선택된 경로":"이 경로 선택");
+            choose.setOnClickListener(v->chooseCandidate(index));
+            card.setOnClickListener(v->chooseCandidate(index));
+            cards.addView(card,new LinearLayout.LayoutParams(-1,-2));
         }
         findViewById(R.id.btnPreviewMap).setEnabled(selected>=0&&selected<routes.size());
     }
