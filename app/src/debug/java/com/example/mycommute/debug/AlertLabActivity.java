@@ -1,6 +1,9 @@
 package com.example.mycommute.debug;
 
 import android.os.Bundle;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.view.View;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,6 +25,7 @@ public final class AlertLabActivity extends AppCompatActivity {
     private EditText eta,walking,distance,accuracy,elapsed,delay,offset;
     private TextView result;
     private int event=0;
+    private String lastReport="";
     private long virtualOffsetMs=0L;
     private final String[] names={"출발 준비","출발 권장","대중교통 도착 임박",
         "승차지 출발","환승 준비","하차 준비","도착 지연 예상",
@@ -38,6 +42,24 @@ public final class AlertLabActivity extends AppCompatActivity {
         scroll.addView(root);
         setContentView(scroll);
         addLabel(root,"알림 시뮬레이터 · DEBUG",22);
+        Button full=new Button(this);
+        full.setText("전체 알림 자동 검증 시작 (한 번 실행)");
+        root.addView(full);
+        full.setOnClickListener(v->{
+            full.setEnabled(false);
+            updateResult("검증 실행 중...");
+            AlertLabSuite.run(this,report->{
+                lastReport=report;
+                updateResult(report);
+                full.setEnabled(true);
+                copyReport();
+                Toast.makeText(this,"전체 결과를 클립보드에 복사했어",Toast.LENGTH_LONG).show();
+            });
+        });
+        Button copy=new Button(this);
+        copy.setText("최근 전체 검증 결과 다시 복사");
+        root.addView(copy);
+        copy.setOnClickListener(v->copyReport());
         addLabel(root,"실제 GPS·API·루틴 및 예약을 사용하지 않아. 모든 발송 제목은 [TEST]로 표시하고 테스트 로그로 분리해.",13);
         type=new Spinner(this);
         type.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names));
@@ -137,6 +159,13 @@ public final class AlertLabActivity extends AppCompatActivity {
         AlarmLogRepository.write(this,"test:"+types[id],
                 sent?"[TEST] "+names[id]:"[TEST] 알림 차단됨",body,true,null);
         updateResult(trace+"\n판정: "+(sent?"알림 요청 성공":"기기 알림 권한 차단")+"\n로그 유형: test:"+types[id]);
+    }
+    private void copyReport(){
+        if(lastReport.isEmpty()){
+            Toast.makeText(this,"먼저 전체 검증을 실행해",Toast.LENGTH_SHORT).show();return;
+        }
+        ClipboardManager manager=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+        if(manager!=null)manager.setPrimaryClip(ClipData.newPlainText("alert-lab-report",lastReport));
     }
     private void updateResult(String s){if(result!=null)result.setText(s);}
 }
