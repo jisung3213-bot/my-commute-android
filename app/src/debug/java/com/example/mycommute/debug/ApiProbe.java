@@ -273,14 +273,8 @@ public final class ApiProbe {
             return;
         }
         try{
-            javax.xml.parsers.DocumentBuilderFactory f=javax.xml.parsers.DocumentBuilderFactory.newInstance();
-            f.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
-            f.setFeature("http://xml.org/sax/features/external-general-entities",false);
-            f.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
-            f.setXIncludeAware(false);
-            f.setExpandEntityReferences(false);
-            org.w3c.dom.Document doc=f.newDocumentBuilder().parse(
-                    new java.io.ByteArrayInputStream(r.body.getBytes(StandardCharsets.UTF_8)));
+            org.w3c.dom.Document doc=com.example.mycommute.network.SeoulXmlParser.parse(
+                    r.body.getBytes(StandardCharsets.UTF_8));
             org.w3c.dom.NodeList headers=doc.getElementsByTagName("headerCd");
             String code=headers.getLength()>0?headers.item(0).getTextContent().trim():"MISSING";
             org.w3c.dom.NodeList rows=doc.getElementsByTagName("itemList");
