@@ -232,7 +232,8 @@ final class CommuteLiveCoordinator {
         LiveArrivalClient.fetchLeg(forRoute.legs.get(legIndex),result->{
             if(!valid(token)||forRoute!=route||legIndex!=boardingLegIndex)return;
             loadingArrival=false;arrival=result;
-            arrivalStatus=result.available?"현재 선택 구간 도착정보 갱신 완료":
+            arrivalStatus=result.available?"현재 선택 구간 도착예정시간 갱신 완료":
+                    result.statusOnly?"도착예정시간 미제공 · 열차 상태 기록 확인":
                     "차량 도착정보 미확인 · "+result.message;
             notifyChange();
         });

@@ -56,6 +56,11 @@ public final class ArrivalMatcher {
         return n.replaceAll("역$","");
     }
 
+    /** Train-line text can contain the only direction cue inside parentheses. */
+    private static String normalizeDirection(String value) {
+        return value==null?"":value.replaceAll("[^가-힣A-Za-z0-9]","");
+    }
+
     private static String commonError(JSONObject response) {
         JSONObject header=response.optJSONObject("response");
         JSONObject inner=header==null?null:header.optJSONObject("header");
@@ -160,41 +165,87 @@ public final class ArrivalMatcher {
         if(list==null)return TransitArrival.unavailable("해당 역의 실시간 열차 정보가 없어",now);
         java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         String direction="";
+        long latestStatusAt=0;
+        String statusText="",statusDirection="";
         int sameStationAndLine=0, freshButDirectionUnconfirmed=0;
+        int missingEta=0,staleRecords=0;
         for(int i=0;i<list.length();i++){
             JSONObject item=list.optJSONObject(i);if(item==null)continue;
             if(!line.equals(item.optString("subwayId","")))continue;
             if(!normalizeStation(item.optString("statnNm","")).equals(target))continue;
-            String text=normalizeStation(item.optString("trainLineNm",""));
             sameStationAndLine++;
             long generated=timestamp(item.optString("recptnDt",""));
             long age=now-generated;
-            if(generated<=0||age< -30000L||age>5*60000L)continue;
-            if(next.isEmpty()||!text.contains(next)) {
-                // A destination may be a later stop. Never label the wrong
-                // direction as a confirmed incoming train.
+            if(generated<=0||age< -30_000L||age>5*60000L){
+                staleRecords++;
+                continue;
+            }
+
+            // Preserve parentheses in the destination/direction field:
+            // "구로행 (석계방면)" must keep the word 석계.
+            String trainDirection=item.optString("trainLineNm","");
+            String directionText=normalizeDirection(trainDirection);
+            if(next.isEmpty()||!directionText.contains(next)) {
                 freshButDirectionUnconfirmed++;
                 continue;
             }
+            // A train whose terminus is the boarding station is not a verified
+            // onward train, even when the approach direction mentions next.
+            String terminus=normalizeStation(item.optString("bstatnNm",""));
+            if(!terminus.isEmpty()&&terminus.equals(target)){
+                freshButDirectionUnconfirmed++;
+                continue;
+            }
+
             int raw=item.optInt("barvlDt",-1);
-            if(raw<0)continue;
-            int corrected=Math.max(0,raw-(int)Math.max(0,age/1000));
-            // Arrival and at-platform signals are not a future incoming train.
-            if(corrected<=0)continue;
-            arrivals.add(corrected);
-            if(direction.isEmpty())direction=item.optString("trainLineNm","");
+            if(raw>0){
+                int corrected=raw-(int)Math.max(0,age/1000L);
+                if(corrected>0){
+                    arrivals.add(corrected);
+                    if(direction.isEmpty())direction=trainDirection;
+                    continue;
+                }
+            }
+
+            // No usable future ETA. Only expose an observed state when the
+            // provider timestamp is fresh and a direction has been verified.
+            missingEta++;
+            if(age>120_000L)continue;
+            String state=item.optString("arvlCd","");
+            String message=item.optString("arvlMsg2","").replace('\n',' ')
+                    .replace('\r',' ').trim();
+            if(message.length()>70)message=message.substring(0,70);
+            if(message.isEmpty()){
+                if("1".equals(state))message="역 도착";
+                else if("5".equals(state))message="전역 도착";
+                else if("99".equals(state))message="운행 중";
+                else if("0".equals(state))message="역 진입";
+                else if("2".equals(state))message="역 출발";
+                else continue;
+            }
+            if(generated>latestStatusAt){
+                latestStatusAt=generated;
+                statusText=message;
+                statusDirection=trainDirection;
+            }
         }
-        if(arrivals.isEmpty())
-            return TransitArrival.unavailable(
-                    leg.startName+" · "+leg.routeName+" 조회: "+sameStationAndLine+"건"
-                    +" · 방향 미검증 "+freshButDirectionUnconfirmed+"건"
-                    +(next.isEmpty()?" · TMAP 다음역 정보 없음":
-                            " · 기대 방면 "+next)
-                    +" · 잘못된 반대방향 정보 표시 방지",now);
-        int first=arrivals.first();
-        Integer nextArrival=arrivals.higher(first);
-        return TransitArrival.found(leg.startName,leg.routeName,direction,first,-1,
-                nextArrival==null?-1:nextArrival,now);
+        if(!arrivals.isEmpty()){
+            int first=arrivals.first();
+            Integer nextArrival=arrivals.higher(first);
+            return TransitArrival.found(leg.startName,leg.routeName,direction,first,-1,
+                    nextArrival==null?-1:nextArrival,now);
+        }
+        if(latestStatusAt>0) {
+            return TransitArrival.status(leg.startName,leg.routeName,statusDirection,
+                    statusText,latestStatusAt,now);
+        }
+        return TransitArrival.unavailable(
+                leg.startName+" · "+leg.routeName+" 조회: "+sameStationAndLine+"건"
+                +" · 방향 미검증 "+freshButDirectionUnconfirmed+"건"
+                +" · 예상시간 없음 "+missingEta+"건"
+                +" · 오래된 정보 "+staleRecords+"건"
+                +(next.isEmpty()?" · TMAP 다음역 정보 없음":" · 기대 방면 "+next),
+                now);
     }
 
     private static long timestamp(String text) {

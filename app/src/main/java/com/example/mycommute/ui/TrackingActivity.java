@@ -296,7 +296,11 @@ public class TrackingActivity extends AppCompatActivity {
             if(report.conditions.lowTemperature)notices.add("영하 기온 예상 · 보온에 주의");
         }
         TransitArrival vehicle=live.arrival();
-        if(vehicle!=null&&!vehicle.available){
+        if(vehicle!=null&&vehicle.statusOnly){
+            if(vehicle.hasFreshStatus(System.currentTimeMillis()))
+                notices.add("열차 도착예정시간 미제공 · 최신 상태만 확인");
+            else notices.add("열차 상태정보 만료 · 새 조회 대기");
+        }else if(vehicle!=null&&!vehicle.available){
             if(vehicle.message.contains("HTTP 403")||
                     vehicle.message.contains("HTTP 401"))
                 notices.add("버스·지하철 도착정보 접근 오류");
@@ -348,6 +352,20 @@ public class TrackingActivity extends AppCompatActivity {
             label(R.id.liveBoarding).setText("도보 중심 경로야");return;
         }
         TransitRoute.Leg leg=route.legs.get(index);
+        if(arrival!=null&&arrival.statusOnly){
+            label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
+            if(arrival.hasFreshStatus(now)){
+                label(R.id.liveBoarding).setText(
+                        arrival.direction+"\n조회 당시 "+arrival.statusText
+                        +" · "+clock(arrival.statusObservedMillis)+" 기준"
+                        +"\n도착예정시간 미제공 · 현재 상태·탑승 가능 여부는 확인되지 않아");
+            }else{
+                label(R.id.liveBoarding).setText(
+                        "열차 상태정보가 오래됐어 · 최신 조회 대기"
+                        +"\n마지막 기록 "+clock(arrival.statusObservedMillis));
+            }
+            return;
+        }
         if(arrival==null||!arrival.available){
             label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
             if(arrival==null){
