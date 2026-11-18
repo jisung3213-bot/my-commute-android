@@ -370,6 +370,10 @@ public class CustomActivity extends AppCompatActivity {
         for(int index:order){
             TransitRoute route=routes.get(index);
             View card=getLayoutInflater().inflate(R.layout.item_route_result,cards,false);
+            com.google.android.material.card.MaterialCardView surface=
+                    (com.google.android.material.card.MaterialCardView)card;
+            surface.setStrokeColor(getColor(selected==index?R.color.primary:R.color.border));
+            surface.setStrokeWidth(dp(selected==index?2:1));
             TextView rank=card.findViewById(R.id.routeCardIndex);
             TextView flag=card.findViewById(R.id.routeCardSelected);
             TextView duration=card.findViewById(R.id.routeCardTime);
