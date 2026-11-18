@@ -91,8 +91,12 @@ public final class AlertLabSuite {
                     "next Monday="+new Date(next));
             long overnight=PlanSchedule.nextAlert(date(2026,11,16,23,0),
                     "00:30",90,15,0,"3");
-            check("OVERNIGHT-NEXT",overnight==date(2026,11,16,22,45).getTimeInMillis(),
-                    "arrival Tue 00:30 / departure Mon 22:45");
+            check("OVERNIGHT-AFTER-DEPARTURE",
+                    overnight==date(2026,11,23,22,45).getTimeInMillis(),
+                    "Mon 23:00 is AFTER Mon 22:45 departure; next is Mon Nov 23 22:45");
+            check("OVERNIGHT-EXCLUDES-PAST",
+                    overnight>date(2026,11,16,23,0).getTimeInMillis(),
+                    "nextAlert must not return a past departure");
             long overnightFuture=PlanSchedule.nextAlert(date(2026,11,16,20,0),
                     "00:30",90,15,0,"3");
             check("OVERNIGHT-LOOKAHEAD",overnightFuture==date(2026,11,16,22,45).getTimeInMillis(),
