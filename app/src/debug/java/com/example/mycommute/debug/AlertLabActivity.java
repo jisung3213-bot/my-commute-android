@@ -62,7 +62,7 @@ public final class AlertLabActivity extends AppCompatActivity {
         root.addView(copy);
         copy.setOnClickListener(v->copyReport());
         addLabel(root,"실제 GPS·API·루틴 및 예약을 사용하지 않아. 모든 발송 제목은 [TEST]로 표시하고 테스트 로그로 분리해.",13);
-        addLabel(root,"실제 교통·기상 API 연결 진단 (실행당 최대 6건)",18);
+        addLabel(root,"실제 교통·기상 API 연결 진단 (실행당 최대 7건)",18);
         Button api=new Button(this);
         api.setText("실제 API 양식·응답·오류 진단 실행");
         root.addView(api);
