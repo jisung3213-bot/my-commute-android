@@ -27,9 +27,9 @@ public final class BoardingFeasibilityEngine {
         }
         public String describe() {
             if(!hasEstimate())return "탑승 판단 보류 · "+reason;
-            String judgement=state==State.TIME_AVAILABLE?"첫 차량까지 시간 여유 추정":
-                    state==State.TIME_TIGHT?"첫 차량 탑승이 촉박할 수 있어":
-                    "첫 차량 탑승이 어려울 수 있어";
+            String judgement=state==State.TIME_AVAILABLE?"탑승 여유 예상":
+                    state==State.TIME_TIGHT?"탑승 임박":
+                    "탑승 어려움";
             String left=slackSeconds>=0?"약 "+((slackSeconds+59)/60)+"분 여유":
                     "약 "+((-slackSeconds+59)/60)+"분 부족";
             return String.format(Locale.KOREA,
@@ -49,22 +49,22 @@ public final class BoardingFeasibilityEngine {
                                     double stopLat,double stopLon,
                                     long arrivalFetchedMillis,int arrivalSeconds) {
         if(!valid(gpsLat,gpsLon)||gpsTimeMillis<=0)
-            return missing(State.NO_POSITION,"GPS 위치가 없어. 위치 추적을 시작해");
+            return missing(State.NO_POSITION,"위치 정보 없음");
         if(!Float.isFinite(gpsAccuracyMeters)||gpsAccuracyMeters<0||gpsAccuracyMeters>MAX_ACCURACY_METERS)
-            return missing(State.INACCURATE_POSITION,"GPS 정확도가 낮아. 위치가 안정될 때 다시 확인해");
+            return missing(State.INACCURATE_POSITION,"위치 정확도 부족");
         long gpsAge=nowMillis-gpsTimeMillis;
         if(gpsAge< -30_000L||gpsAge>MAX_GPS_AGE_MS)
-            return missing(State.STALE_POSITION,"GPS 위치가 오래됐어. 최신 위치를 기다려");
+            return missing(State.STALE_POSITION,"위치 정보 만료");
         if(!valid(stopLat,stopLon))
-            return missing(State.NO_STOP,"TMAP 경로에 승차 정류장 좌표가 없어");
+            return missing(State.NO_STOP,"승차 위치 미확인");
         if(arrivalFetchedMillis<=0||arrivalSeconds<0)
-            return missing(State.NO_ARRIVAL,"첫 탑승 차량의 확인된 도착정보가 없어");
+            return missing(State.NO_ARRIVAL,"차량 도착시간 미확인");
         long age=nowMillis-arrivalFetchedMillis;
         if(age< -30_000L||age>MAX_ARRIVAL_AGE_MS)
-            return missing(State.STALE_ARRIVAL,"도착정보가 오래됐어. 새로고침해");
+            return missing(State.STALE_ARRIVAL,"도착정보 만료");
         int secondsLeft=arrivalSeconds-(int)Math.max(0,age/1000L);
         if(secondsLeft<=0)
-            return missing(State.EXPIRED_VEHICLE,"조회했던 차량의 도착예정시간이 지났어. 새로고침해");
+            return missing(State.EXPIRED_VEHICLE,"다음 차량 확인 필요");
 
         int meters=(int)Math.round(distanceMeters(gpsLat,gpsLon,stopLat,stopLon));
         // Routing is not connected: rough detour factor 1.45, nominal walk speed 1.15m/s.

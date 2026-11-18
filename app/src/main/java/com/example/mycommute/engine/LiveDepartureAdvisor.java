@@ -23,7 +23,7 @@ public final class LiveDepartureAdvisor {
                                  TransitRoute route,int walkToStopSeconds,
                                  TransitArrival arrival) {
         if(route==null||route.totalSeconds<=0||targetMillis<=0)
-            return new Advice(-1,-1,Integer.MIN_VALUE,false,"경로 확인 대기","TMAP 계획이 필요해");
+            return new Advice(-1,-1,Integer.MIN_VALUE,false,"경로 확인 대기","상세 경로 미확인");
         long depart=targetMillis-marginMinutes*60000L-route.totalSeconds*1000L;
         long ifNow=now+route.totalSeconds*1000L;
         long delta=depart-now;
@@ -38,13 +38,13 @@ public final class LiveDepartureAdvisor {
                 verified=true;
                 slack=remaining-walkToStopSeconds-120;
                 if(slack<0){
-                    headline="예정 차량 탑승이 어려울 수 있어";
-                    note="첫 차량까지 보행시간과 탑승 여유가 부족해 · 다음 차량 확인 필요";
+                    headline="예정 차량 탑승 어려움";
+                    note="도보 소요시간 부족 · 다음 차량 확인 필요";
                 }else if(delta<=0){
-                    headline="지금 출발 권장 (계획 기준)";
-                    note="현재 조회된 첫 차량까지 접근 가능성 추정 · 도착 보장 아님";
+                    headline="지금 출발 권장";
+                    note="차량 접근 가능성 추정";
                 }else{
-                    note="첫 차량 접근 가능성 추정 · 계획 출발시각과 다를 수 있어";
+                    note="차량 접근시간 참고";
                 }
             }
         }

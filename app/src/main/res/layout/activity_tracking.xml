@@ -11,11 +11,16 @@
                 android:textStyle="bold" android:textSize="26sp"/>
             <TextView android:id="@+id/liveRouteTitle" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="3dp"
-                android:text="등록된 출퇴근 루틴 확인 중" android:textColor="@color/text_secondary"/>
+                android:text="" android:textColor="@color/text_secondary"/>
             <TextView android:id="@+id/liveSyncStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="6dp"
-                android:text="현재 정보 확인 중" android:textColor="@color/text_secondary" android:textSize="12sp"/>
+                android:text="" android:visibility="gone" android:textColor="@color/text_secondary" android:textSize="12sp"/>
 
+            <ProgressBar android:id="@+id/liveLoading"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent" android:layout_height="2dp"
+                android:layout_marginTop="5dp" android:indeterminate="true"
+                android:visibility="gone"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="15dp" android:padding="18dp"
                 android:background="@drawable/bg_card" android:orientation="vertical">
@@ -27,7 +32,7 @@
                     android:textStyle="bold" android:textColor="@color/primary_dark"/>
                 <TextView android:id="@+id/liveDepartureDetail" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:textColor="@color/text_primary" android:text="현재 경로를 확인하고 있어"/>
+                    android:textColor="@color/text_primary" android:text="이동 정보 확인 중"/>
                 <TextView android:id="@+id/liveArrivalPlan" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
                     android:textColor="@color/text_secondary"/>
@@ -61,12 +66,8 @@
                     android:layout_height="wrap_content" android:text="이동 특이사항"/>
                 <TextView android:id="@+id/liveAlerts" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:text="연결된 정보를 확인하고 있어" android:textSize="14sp"
+                    android:text="주의사항 없음" android:textSize="14sp"
                     android:textColor="@color/text_primary"/>
-                <TextView android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="5dp"
-                    android:text="공식 운행 장애·기상특보는 현재 조회 대상이 아니야"
-                    android:textSize="11sp" android:textColor="@color/text_secondary"/>
             </LinearLayout>
 
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
@@ -79,11 +80,11 @@
                 android:background="@drawable/bg_card"/>
             <TextView android:id="@+id/liveCurrentStage" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:padding="8dp"
-                android:text="현재 이동 단계: GPS 추적을 켜면 경로 주변 위치를 추정해"
+                android:text="" android:visibility="gone"
                 android:textColor="@color/text_primary"/>
             <TextView android:id="@+id/liveRouteSteps" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:padding="10dp"
-                android:text="현재 경로를 확인하고 있어"
+                android:text="경로 요약"
                 android:textColor="@color/text_secondary"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/liveOpenMap" android:layout_width="match_parent"
@@ -102,7 +103,7 @@
                     android:textStyle="bold" android:textSize="18sp"/>
                 <TextView android:id="@+id/liveBoarding" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:text="GPS 위치 확인 후 탑승 가능성 추정"
+                    android:text=""
                     android:textColor="@color/text_secondary"/>
                 <TextView android:id="@+id/liveArrivalDiagnostic" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="6dp"
@@ -111,7 +112,7 @@
             </LinearLayout>
             <TextView android:id="@+id/livePosition" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                android:text="GPS 추적은 사용자가 켜야 활성화돼"
+                android:text="위치 추적 꺼짐"
                 android:textColor="@color/text_secondary" android:textSize="12sp"/>
 
             <com.google.android.material.button.MaterialButton android:id="@+id/liveStartTracking"
@@ -125,10 +126,6 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="현재 정보 확인"
                 style="@style/Widget.MaterialComponents.Button.TextButton"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="12dp" android:padding="6dp"
-                android:text="출발시간과 전체 도착시간은 계획 추정값이야. 첫 차량 도착정보와 GPS는 별도로 검증하며, 정확한 탑승 여부와 공식 운행장애·기상특보는 아직 확인할 수 없어."
-                android:textColor="@color/text_secondary" android:textSize="12sp"/>
         </LinearLayout>
     </ScrollView>
     <include layout="@layout/view_bottom_nav"/>

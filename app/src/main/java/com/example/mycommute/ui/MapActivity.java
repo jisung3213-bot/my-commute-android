@@ -69,7 +69,7 @@ public class MapActivity extends AppCompatActivity {
                 tmapMap=new TmapRasterMapAdapter(this,BuildConfig.TMAP_APP_KEY);
                 container.addView(tmapMap.view(),new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
-                status.setText("TMAP Raster SDK 지도를 로딩하고 있어.");
+                UiNotice.show(status,UiNotice.State.LOADING,"지도 준비 중…");
                 return;
             } catch(Throwable error) {
                 Log.e(TAG,"TMAP map initialization failed",error);
@@ -87,16 +87,7 @@ public class MapActivity extends AppCompatActivity {
     }
 
     private void showStatus(String message) {
-        String provider=tmapMap!=null?"TMAP SDK": "OSM 임시 지도";
-        String action="";
-        if(tmapMap==null) {
-            action=!TmapRasterMapAdapter.isAvailable()
-                ?" · TMAP Raster SDK JAR/AAR를 app/libs/에 설치해야 해"
-                :(!TmapWalkingClient.enabled()
-                    ?" · local.properties의 TMAP_APP_KEY를 설정해야 해"
-                    :" · TMAP SDK 초기화 실패: Logcat의 CommuteMap 확인");
-        }
-        status.setText(provider+action+"\n"+message);
+        UiNotice.show(status,UiNotice.State.UNAVAILABLE,message);
     }
 
     private void addMarker(String id,String name,double lat,double lon) {
@@ -113,10 +104,10 @@ public class MapActivity extends AppCompatActivity {
 
     private void renderStops() {
         if(!routine.isConfigured()) {
-            showStatus("루틴 미등록: 커스텀 화면에서 설정하면 경로가 표시돼.");return;
+            showStatus("등록된 경로 없음");return;
         }
         if(!routine.validCoordinates()) {
-            showStatus("출발지·도착지의 좌표를 등록하면 마커를 표시해.");return;
+            showStatus("출발지·도착지 미설정");return;
         }
         addMarker("start","출발: "+routine.startName,routine.startLat,routine.startLon);
         addMarker("end","도착: "+routine.endName,routine.endLat,routine.endLon);
@@ -142,7 +133,7 @@ public class MapActivity extends AppCompatActivity {
             osmMap.getController().setCenter(new GeoPoint(latitude,longitude));
             osmMap.getController().setZoom(zoom);
         }
-        showStatus("출발·경유지·도착지 표시 · 경로 선은 저장된 임시 검색 결과에서 가져와");
+        UiNotice.show(status,UiNotice.State.IDLE,"");
     }
 
     private void clearRoute() {
@@ -169,9 +160,7 @@ public class MapActivity extends AppCompatActivity {
         if(selected!=null){
             renderTransitRoute(selected);
         }else{
-            showStatus("저장된 출발·경유지·도착지 마커는 표시 중이야. "
-                    +"경로 선은 커스텀 화면의 '새 경로 검색' 버튼을 누른 뒤 표시할 수 있어. "
-                    +"지도를 여는 것만으로는 API를 호출하지 않아.");
+            showStatus("상세 경로 없음 · 경로 검색 필요");
         }
     }
 
@@ -180,7 +169,7 @@ public class MapActivity extends AppCompatActivity {
             try {tmapMap.drawTransit(route.legs);}
             catch(Exception e) {
                 Log.e(TAG,"TMAP transit drawing failed",e);
-                showStatus("대중교통 경로 표시 실패: "+e.getMessage());return;
+                showStatus("경로 표시 불가");return;
             }
         } else if(osmMap!=null) {
             for(Polyline line:transitLines)osmMap.getOverlays().remove(line);
@@ -203,9 +192,8 @@ public class MapActivity extends AppCompatActivity {
         }
         int visible=0;
         for(TransitRoute.Leg leg:route.legs)if(leg.points.size()>=2)visible++;
-        showStatus("저장된 출발→경유지→도착 구간별 대중교통 경로 · "+TransitRoute.minutes(route.totalSeconds)
-                +"분 · 환승 "+route.transfers+"회 · 선 표시 "+visible+"/"+route.legs.size()+"구간"
-                +" (좌표가 제공되지 않는 구간은 표시하지 않음)");
+        if(visible==0)showStatus("경로 선 미제공");
+        else UiNotice.show(status,UiNotice.State.IDLE,"");
     }
 
     @Override protected void onResume() {

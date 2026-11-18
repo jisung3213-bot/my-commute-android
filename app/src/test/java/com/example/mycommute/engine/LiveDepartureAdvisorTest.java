@@ -18,7 +18,7 @@ public class LiveDepartureAdvisorTest {
         LiveDepartureAdvisor.Advice d=LiveDepartureAdvisor.compute(now,now+40*60000,5,route(),600,a);
         assertTrue(d.vehicleVerified);
         assertTrue(d.firstBoardingSlackSeconds<0);
-        assertTrue(d.headline.contains("어려울"));
+        assertTrue(d.headline.contains("어려움"));
     }
     @Test public void doesNotClaimVerifiedWithoutArrival() throws Exception {
         long now=1_000_000L;

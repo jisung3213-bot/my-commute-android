@@ -32,7 +32,7 @@ public class AlarmLogActivity extends AppCompatActivity {
     private void load() {AlarmLogRepository.list(this,this::render);}
     private void render(List<AlarmLogEntity> rows) {
         list.removeAllViews();
-        if(rows.isEmpty()) {TextView empty=text("발송된 알림이 없어. 예약 알림이 발생하면 여기에 표시돼.",15);empty.setPadding(14,32,14,0);list.addView(empty);return;}
+        if(rows.isEmpty()) {TextView empty=text("알림 내역 없음",15);empty.setPadding(14,32,14,0);list.addView(empty);return;}
         SimpleDateFormat fmt=new SimpleDateFormat("yyyy.MM.dd E HH:mm",Locale.KOREA);
         for(AlarmLogEntity e:rows) {
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);

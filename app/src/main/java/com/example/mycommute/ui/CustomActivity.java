@@ -69,16 +69,16 @@ public class CustomActivity extends AppCompatActivity {
         findViewById(R.id.btnDirectionOut).setOnClickListener(v->changeDirection(RoutineStore.OUTBOUND));
         findViewById(R.id.btnDirectionBack).setOnClickListener(v->changeDirection(RoutineStore.RETURN));
         findViewById(R.id.btnNewRoutine).setOnClickListener(v->{
-            if(isTracking()) {toast("이동 추적 중에는 변경할 수 없어");return;}
+            if(isTracking()) {toast("위치 추적 중 · 경로 변경 불가");return;}
             draft=RoutineStore.newDraft(direction);
             invalidateRoutes();restoreDraft();
         });
         findViewById(R.id.btnMakeDefault).setOnClickListener(v->{
-            if(isTracking()){toast("이동 추적 중에는 변경할 수 없어");return;}
-            if(!isSaved(draft.id)){toast("먼저 경로 설정을 저장해");return;}
+            if(isTracking()){toast("위치 추적 중 · 경로 변경 불가");return;}
+            if(!isSaved(draft.id)){toast("경로 저장 필요");return;}
             RoutineStore.setDefault(this,draft.id);
             renderSaved();
-            toast("기본 "+(direction.equals(RoutineStore.OUTBOUND)?"출근길":"퇴근길")+"로 지정했어");
+            toast("기본 "+(direction.equals(RoutineStore.OUTBOUND)?"출근길":"퇴근길")+"로 지정 완료");
         });
         findViewById(R.id.btnStartPlace).setOnClickListener(v->startPlace(START));
         findViewById(R.id.btnEndPlace).setOnClickListener(v->startPlace(END));
@@ -94,8 +94,7 @@ public class CustomActivity extends AppCompatActivity {
             draft.weatherEnabled=checked;
             weatherKnown=false;weather=new WeatherRouteRanker.Conditions(false,false,false);
             weatherGeneration++;
-            weatherStatus.setText(checked?"날씨 반영 선택됨 · 검색 시 기상정보를 확인해":
-                    "날씨 미반영 · 이동시간 우선");
+            UiNotice.show(weatherStatus,UiNotice.State.IDLE,"");
             if(checked&&!routes.isEmpty())refreshWeather();else renderCandidates();
         });
     }
@@ -108,7 +107,7 @@ public class CustomActivity extends AppCompatActivity {
         return false;
     }
     private void changeDirection(String next){
-        if(isTracking()){toast("이동 추적 중에는 변경할 수 없어");return;}
+        if(isTracking()){toast("위치 추적 중 · 경로 변경 불가");return;}
         if(next.equals(direction))return;
         RoutineStore.selectDirection(this,next);
         direction=next;
@@ -118,7 +117,7 @@ public class CustomActivity extends AppCompatActivity {
     }
 
     private void loadProfile(String id){
-        if(isTracking()){toast("이동 추적 중에는 변경할 수 없어");return;}
+        if(isTracking()){toast("위치 추적 중 · 경로 변경 불가");return;}
         RoutineStore.select(this,id);
         direction=RoutineStore.directionOf(id);
         draft=RoutineStore.read(this,id);
@@ -148,7 +147,7 @@ public class CustomActivity extends AppCompatActivity {
         List<Routine> profiles=RoutineStore.list(this,direction);
         if(profiles.isEmpty()){
             TextView text=new TextView(this);
-            text.setText("저장된 경로가 없어. 이름과 장소를 입력해 새 경로를 만들어");
+            text.setText("저장된 경로 없음");
             text.setPadding(12,12,12,12);
             savedList.addView(text);
         }
@@ -183,7 +182,7 @@ public class CustomActivity extends AppCompatActivity {
     }
 
     private void startPlace(int request){
-        if(isTracking()){toast("이동 추적 중에는 경로를 변경할 수 없어");return;}
+        if(isTracking()){toast("위치 추적 중 · 경로 변경 불가");return;}
         startActivityForResult(new Intent(this,PlaceSearchActivity.class),request);
     }
 
@@ -197,7 +196,7 @@ public class CustomActivity extends AppCompatActivity {
         if(request==START){draft.startName=name;draft.startLat=lat;draft.startLon=lon;}
         else if(request==END){draft.endName=name;draft.endLat=lat;draft.endLon=lon;}
         else if(request==VIA){
-            if(draft.waypoints.size()>=2){toast("대중교통 경유지는 최대 2개야");return;}
+            if(draft.waypoints.size()>=2){toast("경유지는 최대 2개");return;}
             Waypoint w=new Waypoint();w.name=name;w.category="경유";w.lat=lat;w.lon=lon;
             draft.waypoints.add(w);
         }else return;
@@ -206,23 +205,23 @@ public class CustomActivity extends AppCompatActivity {
 
     private boolean readInputs(){
         String name=((EditText)findViewById(R.id.editRouteName)).getText().toString().trim();
-        if(name.isEmpty()){toast("경로 이름을 입력해");return false;}
+        if(name.isEmpty()){toast("경로 이름을 입력하세요");return false;}
         String time=((EditText)findViewById(R.id.editDeparture)).getText().toString().trim();
         if(!time.matches("(?:[01]\\d|2[0-3]):[0-5]\\d")){
-            toast("목표 도착시각은 HH:mm 형식으로 입력해");return false;
+            toast("도착시각은 HH:mm 형식");return false;
         }
         int margin;
         try{margin=Integer.parseInt(((EditText)findViewById(R.id.editMargin)).getText().toString().trim());}
-        catch(Exception e){toast("도착 여유시간은 숫자로 입력해");return false;}
-        if(margin<0||margin>180){toast("여유시간은 0~180분으로 설정해");return false;}
+        catch(Exception e){toast("여유시간은 숫자로 입력");return false;}
+        if(margin<0||margin>180){toast("여유시간은 0~180분");return false;}
         StringBuilder days=new StringBuilder();
         for(int i=0;i<DAYS.length;i++)if(((CheckBox)findViewById(DAYS[i])).isChecked()){
             if(days.length()>0)days.append(",");
             days.append(CAL_DAYS[i]);
         }
-        if(days.length()==0){toast("반복 요일을 선택해");return false;}
+        if(days.length()==0){toast("반복 요일 선택 필요");return false;}
         if(!draft.validCoordinates()||draft.startName.isEmpty()||draft.endName.isEmpty()){
-            toast("출발지와 도착지를 선택해");return false;
+            toast("출발지·도착지 선택 필요");return false;
         }
         draft.name=name;draft.arrivalTime=time;draft.marginMinutes=margin;
         draft.days=days.toString();
@@ -237,7 +236,7 @@ public class CustomActivity extends AppCompatActivity {
         findViewById(R.id.btnSearchTransit).setEnabled(true);
         routes=Collections.emptyList();selected=-1;order.clear();
         cards.removeAllViews();
-        resultStatus.setText("저장된 경로가 있으면 불러오고, 신규 경로는 검색 버튼으로 조회해");
+        UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
         findViewById(R.id.btnPreviewMap).setEnabled(false);
         TransitRouteMemory.clear();
         weatherKnown=false;
@@ -249,12 +248,12 @@ public class CustomActivity extends AppCompatActivity {
         TransitRouteCache.Snapshot snap=TransitRouteCache.load(this,draft);
         if(snap==null){
             if(expired)
-                resultStatus.setText("저장된 경로 형상의 23시간 보관 기간이 지났어. 새 경로 검색이 필요해");
-            else resultStatus.setText("루틴 설정은 저장돼 있어. 경로 형상은 새 경로 검색을 눌러 조회해");
+                UiNotice.show(resultStatus,UiNotice.State.UNAVAILABLE,"경로 갱신 필요");
+            else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
             return;
         }
         routes=snap.routes;selected=snap.selected;
-        resultStatus.setText("저장된 경로 미리보기 · API 호출 없음 · 23시간 내 임시 데이터");
+        UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
         renderCandidates();
     }
 
@@ -262,27 +261,30 @@ public class CustomActivity extends AppCompatActivity {
         if(searching)return;
         if(!readInputs())return;
         if(!TmapTransitClient.enabled()){
-            resultStatus.setText("TMAP 대중교통 AppKey가 필요해");return;
+            UiNotice.show(resultStatus,UiNotice.State.UNAVAILABLE,"경로 검색 불가");
+            toast("경로 검색 불가");
+            return;
         }
         invalidateRoutes();
         searching=true;
         findViewById(R.id.btnSearchTransit).setEnabled(false);
-        resultStatus.setText("TMAP 구간별 경로 검색 중 · 경유지에 따라 API 호출 횟수가 증가해");
+        UiNotice.show(resultStatus,UiNotice.State.LOADING,"경로 검색 중…");
         final int token=++requestGeneration;
         TmapWaypointRouteClient.search(draft,new TmapWaypointRouteClient.Callback(){
             @Override public void success(List<TransitRoute> candidates,int calls){
                 if(token!=requestGeneration||isFinishing()||isDestroyed())return;
                 searching=false;findViewById(R.id.btnSearchTransit).setEnabled(true);
                 routes=candidates;
-                resultStatus.setText(calls+"회 API 조회 · 후보 "+routes.size()
-                        +"개 · 원하는 후보를 누르면 이름 있는 루틴과 23시간 캐시로 저장해");
+                UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
                 renderCandidates();
                 if(draft.weatherEnabled)refreshWeather();
             }
             @Override public void error(String why){
                 if(token!=requestGeneration||isFinishing()||isDestroyed())return;
                 searching=false;findViewById(R.id.btnSearchTransit).setEnabled(true);
-                resultStatus.setText("경로 조회 실패: "+why);
+                String message=UiNotice.error(why);
+                UiNotice.show(resultStatus,UiNotice.classify(why),message);
+                toast(message);
             }
         });
     }
@@ -291,19 +293,20 @@ public class CustomActivity extends AppCompatActivity {
         int generation=++weatherGeneration;
         weatherKnown=false;
         if(!KmaWeatherClient.enabled()){
-            weatherStatus.setText("기상청 API 키 미설정 · 이동시간 기준");
+            UiNotice.show(weatherStatus,UiNotice.State.UNAVAILABLE,"날씨 반영 불가");
             return;
         }
         KmaWeatherClient.forecast(draft,new KmaWeatherClient.Callback(){
             @Override public void success(KmaWeatherClient.Report report){
                 if(generation!=weatherGeneration||isFinishing()||isDestroyed())return;
                 weather=report.conditions;weatherKnown=true;
-                weatherStatus.setText(report.label+" · 후보 정렬에 반영");
+                UiNotice.show(weatherStatus,UiNotice.State.IDLE,"");
                 renderCandidates();
             }
             @Override public void error(String why){
                 if(generation!=weatherGeneration||isFinishing()||isDestroyed())return;
-                weatherStatus.setText("날씨 확인 실패 · 이동시간 기준: "+why);
+                UiNotice.show(weatherStatus,UiNotice.classify(why),
+                        "날씨 반영 불가 · 이동시간순 정렬");
             }
         });
     }
@@ -331,9 +334,10 @@ public class CustomActivity extends AppCompatActivity {
                     boolean cached=TransitRouteCache.save(this,draft,routes,selected);
                     TransitRouteMemory.put(Session.accountId(this),draft,routes);
                     TransitRouteMemory.choose(Session.accountId(this),draft,selected);
-                    resultStatus.setText(cached
-                            ?"선택한 경로를 저장했어 · 23시간 이내 다시 API 호출 없이 확인 가능"
-                            :"루틴 설정은 저장했지만 상세 경로 캐시 저장 실패 · 현재 세션에서만 지도 확인 가능");
+                    if(!cached){
+                        UiNotice.show(resultStatus,UiNotice.State.ERROR,"경로 상세 저장 불가");
+                        toast("기본 설정만 저장됨");
+                    }else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
                 }
                 renderCandidates();
             });
@@ -351,7 +355,7 @@ public class CustomActivity extends AppCompatActivity {
 
     /** Save human-authored settings independently from any paid API request. */
     private boolean saveDraft(boolean withSelectedRoute){
-        if(isTracking()){toast("이동 추적 중에는 저장할 수 없어");return false;}
+        if(isTracking()){toast("위치 추적 중 · 저장 불가");return false;}
         if(!readInputs())return false;
         Routine previous=RoutineStore.read(this,draft.id);
         if(withSelectedRoute&&selected>=0&&selected<routes.size()){
@@ -366,7 +370,7 @@ public class CustomActivity extends AppCompatActivity {
         ReminderScheduler.cancel(this,previous);
         RoutineStore.save(this,draft);
         renderSaved();
-        toast(withSelectedRoute?"이름 붙인 경로와 검색 결과를 저장했어":"경로 설정 저장 완료");
+        toast("저장 완료");
         requestNotificationPermission();
         return true;
     }

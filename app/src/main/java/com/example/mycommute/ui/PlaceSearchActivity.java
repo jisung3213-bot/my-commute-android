@@ -39,30 +39,31 @@ public class PlaceSearchActivity extends AppCompatActivity {
                 generation++;results.removeAllViews();
                 String text=s.toString().trim();
                 if(text.length()<2) {
-                    status.setText("장소명을 2글자 이상 입력해");
+                    UiNotice.show(status,UiNotice.State.IDLE,"");
                     return;
                 }
                 int token=generation;
-                pending=()->lookup(text,token);
+                pending=()->lookup(text,token,false);
                 handler.postDelayed(pending,650);
-                status.setText("검색어 입력 완료 시 자동으로 검색해");
+                UiNotice.show(status,UiNotice.State.IDLE,"");
             }
             @Override public void afterTextChanged(Editable s){}
         });
         findViewById(R.id.btnPlaceSearch).setOnClickListener(v-> {
             if(pending!=null)handler.removeCallbacks(pending);
-            ++generation;results.removeAllViews();lookup(query.getText().toString().trim(),generation);
+            ++generation;results.removeAllViews();lookup(query.getText().toString().trim(),generation,true);
         });
     }
 
-    private void lookup(String text,int token) {
-        if(text.length()<2){status.setText("장소명을 2글자 이상 입력해");return;}
-        status.setText("TMAP에서 장소 검색 중...");
+    private void lookup(String text,int token,boolean manual) {
+        if(text.length()<2){UiNotice.show(status,UiNotice.State.EMPTY,"두 글자 이상 입력");return;}
+        UiNotice.show(status,UiNotice.State.LOADING,"검색 중…");
         TmapPoiClient.search(text,new TmapPoiClient.Callback(){
             @Override public void success(List<Place> places) {
                 if(isFinishing()||isDestroyed()||token!=generation)return;
                 results.removeAllViews();
-                status.setText(places.isEmpty()?"검색 결과가 없어. 다른 장소명을 입력해":places.size()+"개 장소가 검색됐어");
+                UiNotice.show(status,places.isEmpty()?UiNotice.State.EMPTY:UiNotice.State.IDLE,
+                        "검색 결과 없음");
                 for(Place place:places) {
                     TextView item=new TextView(PlaceSearchActivity.this);
                     item.setText(place.name+"\n"+place.address);
@@ -83,7 +84,10 @@ public class PlaceSearchActivity extends AppCompatActivity {
             }
             @Override public void error(String message) {
                 if(isFinishing()||isDestroyed()||token!=generation)return;
-                results.removeAllViews();status.setText("장소 검색 실패: "+message);
+                results.removeAllViews();
+                String display=UiNotice.error(message);
+                UiNotice.show(status,UiNotice.classify(message),display);
+                if(manual)UiNotice.toast(PlaceSearchActivity.this,display);
             }
         });
     }

@@ -16,7 +16,7 @@ public class BoardingFeasibilityEngineTest {
         Assessment a=assess(37.5664,126.9778,2000,8,1000,900);
         assertEquals(State.TIME_AVAILABLE,a.state);
         assertEquals(0,a.directMeters);
-        assertTrue(a.describe().contains("추정"));
+        assertTrue(a.describe().contains("예상"));
     }
     @Test public void approachingVehicleIsNotReachableFromFarAway() {
         Assessment a=assess(37.5700,126.9810,2000,8,1000,120);

@@ -20,7 +20,7 @@
             </LinearLayout>
             <TextView android:id="@+id/textActiveRoutine" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:paddingTop="6dp"
-                android:textColor="@color/text_secondary" android:text="현재: 출근 / 등교"/>
+                android:textColor="@color/text_secondary" android:text=""/>
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="14dp"
                 android:text="저장된 경로"/>
@@ -64,7 +64,7 @@
                 android:text="추가한 장소 지우기"
                 style="@style/Widget.MaterialComponents.Button.TextButton"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="경유지는 입력 순서대로 출발→경유지→도착 경로에 포함돼. 대중교통 API는 구간마다 1회씩 호출되며 경유지 최대 2개를 지원해."
+                android:text="경유지 최대 2개 · 순서대로 경로에 반영"
                 android:textColor="@color/text_secondary" android:textSize="12sp"/>
 
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
@@ -111,15 +111,15 @@
                 android:padding="10dp"/>
             <TextView android:id="@+id/textWeatherStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:padding="8dp"
-                android:text="날씨 미적용 · 이동시간이 짧은 경로 우선"
+                android:text="" android:visibility="gone"
                 android:textColor="@color/text_secondary"/>
 
             <com.google.android.material.button.MaterialButton android:id="@+id/btnSearchTransit"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="18dp" android:text="새 경로 검색 (API 사용)"/>
+                android:layout_marginTop="18dp" android:text="경로 검색"/>
             <TextView android:id="@+id/textTransitResult" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:textColor="@color/text_secondary"
-                android:padding="8dp" android:text="장소와 시간을 설정한 뒤 경로를 검색해"/>
+                android:padding="8dp" android:text="" android:visibility="gone"/>
             <LinearLayout android:id="@+id/transitCards" android:orientation="vertical"
                 android:layout_width="match_parent" android:layout_height="wrap_content"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnPreviewMap"
@@ -130,7 +130,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="경로 설정 저장" android:enabled="true"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="이름·설정은 계속 저장돼. 경로 검색은 버튼을 누를 때만 실행되며 검색 결과의 상세 선형은 최대 23시간 임시 보관해. 만료 후에는 다시 검색해야 해."
+                android:text="" android:visibility="gone"
                 android:textColor="@color/text_secondary" android:textSize="12sp" android:padding="10dp"/>
         </LinearLayout>
     </ScrollView>

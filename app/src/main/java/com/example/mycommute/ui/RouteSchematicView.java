@@ -63,7 +63,7 @@ public final class RouteSchematicView extends View {
         if(route==null||route.legs.isEmpty()){
             text(canvas,"저장된 상세 경로가 없어",dp(18),dp(46),
                     getWidth()-dp(36),14,muted,false);
-            text(canvas,"루틴에서 경로 검색 후 선택해",dp(18),dp(73),
+            text(canvas,"경로 검색 필요",dp(18),dp(73),
                     getWidth()-dp(36),12,muted,false);
             return;
         }
