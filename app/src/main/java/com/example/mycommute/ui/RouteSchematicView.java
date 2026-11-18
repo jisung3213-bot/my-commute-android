@@ -32,6 +32,10 @@ public final class RouteSchematicView extends View {
     public void setCurrentLeg(int leg){if(currentLeg!=leg){currentLeg=leg;invalidate();}}
 
     private float dp(float value){return value*getResources().getDisplayMetrics().density;}
+    private float rowHeight(){
+        // Keep adjacent labels separated when the user increases system font size.
+        return dp(47)*Math.max(1f,getResources().getConfiguration().fontScale);
+    }
     private int color(String mode){
         if("BUS".equals(mode))return Color.rgb(44,117,195);
         if("SUBWAY".equals(mode))return Color.rgb(207,71,87);
@@ -52,8 +56,9 @@ public final class RouteSchematicView extends View {
 
     @Override protected void onMeasure(int widthSpec,int heightSpec){
         int count=route==null?0:Math.min(MAX_VISIBLE,route.legs.size());
-        int desired=(int)dp(count==0?106:58+count*47+
-                (route.legs.size()>MAX_VISIBLE?22:0));
+        int desired=(int)(count==0?dp(106)*Math.max(1f,getResources().getConfiguration().fontScale)
+                :dp(58)+count*rowHeight()+
+                (route.legs.size()>MAX_VISIBLE?dp(30):0));
         setMeasuredDimension(resolveSize((int)dp(280),widthSpec),
                 resolveSize(desired,heightSpec));
     }
@@ -71,10 +76,11 @@ public final class RouteSchematicView extends View {
         float x=dp(25),labelX=dp(51),right=getWidth()-dp(18);
         text(canvas,"출발 · "+route.legs.get(0).startName,labelX,dp(30),
                 right-labelX,13,dark,true);
+        float step=rowHeight();
         for(int i=0;i<count;i++){
             TransitRoute.Leg leg=route.legs.get(i);
             int tint=color(leg.mode);
-            float startY=dp(27+i*47),endY=startY+dp(47);
+            float startY=dp(27)+i*step,endY=startY+step;
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(dp(i==currentLeg?5:3));
             paint.setStrokeCap(Paint.Cap.ROUND);
@@ -94,7 +100,7 @@ public final class RouteSchematicView extends View {
             text(canvas,leg.endName,labelX,endY+dp(4),right-labelX,13,
                     dark,true);
         }
-        float last=dp(27+count*47);
+        float last=dp(27)+count*step;
         paint.setStyle(Paint.Style.FILL);paint.setColor(Color.WHITE);
         canvas.drawCircle(x,last,dp(5),paint);
         paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(dp(2));
