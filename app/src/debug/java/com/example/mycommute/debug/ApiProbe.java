@@ -202,7 +202,7 @@ public final class ApiProbe {
         log.append("RUN_AT=").append(timestamp.format(new java.util.Date())).append('\n');
         log.append("ENV=DEBUG SDK=").append(android.os.Build.VERSION.SDK_INT).append('\n');
         log.append("PARAMS=sample Seoul station / Seoul and Suwon bus samples / Seoul weather grid");
-        log.append("\nSAFETY=5 requests max; one run per 15min; no keys/raw body/URL in report");
+        log.append("\nSAFETY=6 requests max; one run per 15min; no keys/raw body/URL in report");
         log.append("\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
         log.append("\n\n=== SUBWAY: realtimeStationArrival ===\n");
         subway();
@@ -219,6 +219,53 @@ public final class ApiProbe {
         log.append("NOTE=This probe does not exercise matching to saved user commute routes.\n");
         log.append("END LIVE API PROBE\n");
     }
+    private void seoulBus(){
+        if(!com.example.mycommute.network.SeoulBusClient.enabled()){
+            skip("SEOUL-BUS","SEOUL_BUS_SERVICE_KEY_MISSING; separate approval required");
+            return;
+        }
+        try{
+            String raw=BuildConfig.SEOUL_BUS_SERVICE_KEY.trim();
+            if(raw.matches(".*%[0-9a-fA-F]{2}.*"))raw=URLDecoder.decode(raw,"UTF-8");
+            String url="http://ws.bus.go.kr/api/rest/stationinfo/getStationByPos"
+                    +"?serviceKey="+enc(raw)+"&tmX=126.972&tmY=37.555&radius=100";
+            Response r=call("SEOUL-BUS-STOPS",url);
+            if(r.status!=200)return;
+            if(!r.body.trim().startsWith("<")){
+                failed++;
+                log.append("SEOUL-BUS DIAGNOSIS=NON_XML_RESPONSE; class=")
+                        .append(r.body.trim().startsWith("{")?"JSON":"OTHER").append('\n');
+                return;
+            }
+            javax.xml.parsers.DocumentBuilderFactory f=javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            f.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
+            f.setFeature("http://xml.org/sax/features/external-general-entities",false);
+            f.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
+            org.w3c.dom.Document doc=f.newDocumentBuilder().parse(
+                    new java.io.ByteArrayInputStream(r.body.getBytes(StandardCharsets.UTF_8)));
+            org.w3c.dom.NodeList headers=doc.getElementsByTagName("headerCd");
+            String code=headers.getLength()>0?headers.item(0).getTextContent().trim():"MISSING";
+            org.w3c.dom.NodeList rows=doc.getElementsByTagName("itemList");
+            log.append("SEOUL-BUS PROVIDER_CODE=").append(safeCode(code))
+                    .append(" ITEM_COUNT=").append(rows.getLength())
+                    .append(" ROOT_TAG=").append(doc.getDocumentElement().getTagName()
+                            .replaceAll("[^A-Za-z0-9_-]","")).append('\n');
+            if(!"0".equals(code)&&!"00".equals(code)){
+                failed++;
+                log.append("SEOUL-BUS DIAGNOSIS=PROVIDER_ERROR_OR_KEY_APPROVAL\n");
+            }else if(rows.getLength()==0){
+                skip("SEOUL-BUS-ROW","VALID_ENVELOPE_EMPTY_RESULT");
+            }else{
+                org.w3c.dom.Element row=(org.w3c.dom.Element)rows.item(0);
+                schema("SEOUL-BUS-ROW",null,
+                        row.getElementsByTagName("stId").getLength()>0
+                        &&row.getElementsByTagName("stNm").getLength()>0,
+                        "required=stId,stNm; XML content intentionally not printed");
+            }
+        }catch(Exception e){failed++;log.append("SEOUL-BUS PARSE_ERROR=")
+                .append(e.getClass().getSimpleName()).append('\n');}
+    }
+
     private void subway(){
         if(!LiveArrivalClient.subwayEnabled()){skip("SUBWAY","KEY_MISSING");return;}
         try {
