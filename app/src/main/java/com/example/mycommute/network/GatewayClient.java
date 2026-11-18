@@ -1,6 +1,7 @@
 package com.example.mycommute.network;
 
 import com.example.mycommute.BuildConfig;
+import com.google.firebase.FirebaseApp;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -17,11 +18,24 @@ import java.util.concurrent.TimeUnit;
 public final class GatewayClient {
     private GatewayClient(){}
 
-    public static boolean enabled(){
-        String base=BuildConfig.API_BASE_URL.trim();
-        return base.startsWith("https://") && !base.contains("YOUR_SERVER_URL")
-                && !base.contains("?") && !base.contains("#") && !base.contains("@");
+    /**
+     * 별도 서버 주소를 입력하지 않으면 현재 Firebase 프로젝트의 Functions 주소를 사용.
+     * 개발 중인 로컬/별도 게이트웨이만 API_BASE_URL로 재정의.
+     */
+    public static String baseUrl(){
+        String custom=BuildConfig.API_BASE_URL.trim();
+        if(custom.startsWith("https://")&&!custom.contains("YOUR_SERVER_URL")
+                &&!custom.contains("?")&&!custom.contains("#")&&!custom.contains("@"))
+            return custom.replaceAll("/+$","");
+        try{
+            String project=FirebaseApp.getInstance().getOptions().getProjectId();
+            if(project!=null&&project.matches("[a-z][a-z0-9-]{4,29}"))
+                return "https://asia-northeast3-"+project+".cloudfunctions.net/commuteApi";
+        }catch(IllegalStateException ignored){}
+        return "";
     }
+
+    public static boolean enabled(){return !baseUrl().isEmpty();}
 
     /** Worker thread only. Returns native provider JSON for the existing parsers. */
     public static String request(String method,String path,String json) throws Exception {
@@ -32,7 +46,7 @@ public final class GatewayClient {
         if(user==null)throw new IllegalStateException("로그인 필요");
         String token=Tasks.await(user.getIdToken(false),12,TimeUnit.SECONDS).getToken();
         if(token==null||token.isEmpty())throw new IllegalStateException("로그인 유효기간 만료");
-        String origin=BuildConfig.API_BASE_URL.trim().replaceAll("/+$","");
+        String origin=baseUrl();
         HttpURLConnection connection=(HttpURLConnection)new URL(origin+path).openConnection();
         try {
             connection.setInstanceFollowRedirects(false);

@@ -1,8 +1,10 @@
-# Android Studio creates sdk.dir. Keep local.properties out of Git.
-# Server URL must be HTTPS and omit the trailing slash.
-API_BASE_URL=https://YOUR_SERVER_URL
-
-# Optional: Android map SDK only. This is an extractable client key, NOT a secret.
-# Restrict it to the package/signing certificate/provider-side controls when supported.
+# Android Studio에서 sdk.dir은 자동 생성돼.
+# 데이터 API 인증키는 이 파일이나 앱에 입력하지 않아.
+#
+# 앱은 Firebase 프로젝트 ID로 Cloud Functions 주소를 자동 구성해.
+# 보통 API_BASE_URL 설정은 필요하지 않아.
+# API_BASE_URL=https://별도-테스트-서버-주소
+#
+# 지도 SDK를 설치한 경우에만 별도 발급한 클라이언트용 키 사용.
+# 실제 APK에서 추출할 수 있으므로 공급자 측 앱 제한 설정을 적용해야 해.
 TMAP_MAP_SDK_KEY=YOUR_MAP_SDK_KEY
-# NEVER include KMA/TAGO/Seoul subway/transit/POI/pedestrian keys in the APK.

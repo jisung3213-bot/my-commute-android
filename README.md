@@ -207,14 +207,8 @@ TAGO_BUS_SERVICE_KEY=발급받은_공공데이터포털_디코딩_인증키
 - **미검증:** Android 기기/에뮬레이터 실구동, 접근성·다양한 화면 크기 실측, Gradle 빌드 및 JUnit 실행은 이 환경에서 수행하지 않았습니다.
 
 
-## Server gateway migration
+## Firebase API 서버 구조
 
-All secret-backed data requests (TMAP places/transit/walking, KMA, Seoul subway,
-TAGO stop/arrival) now go through an authenticated Cloud Run-compatible backend.
-The Android app uses Firebase ID tokens and an HTTPS \`API_BASE_URL\`; it does
-not embed provider API data keys. A separately restricted client-side map SDK key
-may remain when required by the SDK.
+Firebase Authentication으로 로그인한 Android 앱은 `functions/index.js`의 Cloud Functions 서버를 통해 외부 데이터 API를 조회해. 외부 API 인증키는 Firebase Functions Secrets에서만 관리해. 기존 Firestore에는 사용자 루틴과 설정이 저장되고 API 요청 횟수도 서버에서 기록해.
 
-See [backend/README.md](backend/README.md) for environment variables, Secret
-Manager setup, IAM and deployment verification. **Without a deployed server URL,
-data requests intentionally fail rather than falling back to APK-embedded keys.**
+**별도 Cloud Run 배포는 필요하지 않아.** Android 앱은 같은 Firebase 프로젝트의 Functions URL을 자동 사용해. 배포 및 키 등록 절차는 [한국어 설정 문서](functions/README.md)를 확인해.
