@@ -157,14 +157,52 @@ public final class ApiProbe {
                 .append(" ").append(desc).append('\n')
                 .append(name).append(" FIELDS=").append(fields(object)).append('\n');
     }
+    // Diagnostics redact credentials and response payloads, but classify provider error semantics.
+    private static String safeCode(String raw){
+        if(raw==null)return "MISSING";
+        String trimmed=raw.trim();
+        if(trimmed.length()>48)return "UNSAFE_LONG_CODE";
+        return trimmed.matches("[A-Za-z0-9_-]{1,48}")?trimmed:"UNRECOGNIZED_CODE";
+    }
+    private static String classifyMessage(String message){
+        if(message==null||message.trim().isEmpty())return "NO_MESSAGE";
+        String s=message.toLowerCase(Locale.ROOT);
+        if(s.contains("limit")||s.contains("quota")||s.contains("한도")||s.contains("초과"))
+            return "QUOTA_OR_RATE_LIMIT";
+        if(s.contains("key")||s.contains("인증")||s.contains("auth")||
+                s.contains("token")||s.contains("access denied"))
+            return "AUTH_OR_KEY_REJECTED";
+        if(s.contains("permission")||s.contains("승인")||s.contains("권한"))
+            return "SERVICE_APPROVAL_REQUIRED";
+        if(s.contains("not found")||s.contains("no data")||s.contains("데이터가 없")||
+                s.contains("검색 결과")||s.contains("조회 결과"))
+            return "NO_DATA";
+        if(s.contains("parameter")||s.contains("invalid")||s.contains("요청")||
+                s.contains("입력")||s.contains("파라미터"))
+            return "PARAMETER_OR_REQUEST_ERROR";
+        if(s.contains("maintenance")||s.contains("점검")||s.contains("internal")||
+                s.contains("server"))return "PROVIDER_SERVER_OR_MAINTENANCE";
+        return "OTHER_PROVIDER_MESSAGE";
+    }
+    private static void appendProviderError(StringBuilder output,String prefix,JSONObject object){
+        if(object==null)return;
+        String code=object.optString("code",object.optString("resultCode",
+                object.optString("status","")));
+        String message=object.optString("message",object.optString("resultMsg",""));
+        String developer=object.optString("developerMessage","");
+        output.append(prefix).append(" CODE=").append(safeCode(code))
+                .append(" MESSAGE_CLASS=").append(classifyMessage(message))
+                .append(" DEVELOPER_MESSAGE_CLASS=").append(classifyMessage(developer))
+                .append('\n');
+    }
     private void runAll(){
         log.append("MY-COMMUTE LIVE API PROBE\n");
         SimpleDateFormat timestamp=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z",Locale.US);
         timestamp.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
         log.append("RUN_AT=").append(timestamp.format(new java.util.Date())).append('\n');
         log.append("ENV=DEBUG SDK=").append(android.os.Build.VERSION.SDK_INT).append('\n');
-        log.append("PARAMS=sample Seoul station / Seoul Station bus transfer / Seoul weather grid");
-        log.append("\nSAFETY=4 requests max; one run per 15min; no keys/raw body/URL in report");
+        log.append("PARAMS=sample Seoul station / Seoul and Suwon bus samples / Seoul weather grid");
+        log.append("\nSAFETY=5 requests max; one run per 15min; no keys/raw body/URL in report");
         log.append("\nRESULT_SCOPE=HTTP, envelope schema, field presence, provider response codes, timing");
         log.append("\n\n=== SUBWAY: realtimeStationArrival ===\n");
         subway();
@@ -191,67 +229,109 @@ public final class ApiProbe {
             if(r.status!=200)return;
             JSONObject root=new JSONObject(r.body);
             JSONObject error=root.optJSONObject("errorMessage");
+            JSONObject standardResult=root.optJSONObject("RESULT");
             JSONArray rows=list(root,"realtimeArrivalList");
-            String code=error==null?"NOT_PRESENT":error.optString("status","EMPTY");
-            log.append("SUBWAY PROVIDER_STATUS=").append(code.replaceAll("[^a-zA-Z0-9_-]",""))
+            JSONObject gatewayError=root.has("status")&&root.has("code")?root:null;
+            log.append("SUBWAY ENVELOPE=").append(gatewayError!=null?"GATEWAY_ERROR":
+                    rows.length()>0?"ARRIVAL_LIST":
+                    error!=null?"SEOUL_ERROR_MESSAGE":
+                    standardResult!=null?"SEOUL_RESULT":
+                    root.has("realtimeArrivalList")?"EMPTY_ARRIVAL_LIST":"UNKNOWN")
                     .append(" ITEM_COUNT=").append(rows.length()).append('\n');
+            appendProviderError(log,"SUBWAY-GATEWAY",gatewayError);
+            appendProviderError(log,"SUBWAY-STANDARD",standardResult);
+            appendProviderError(log,"SUBWAY-ERROR",error);
+            log.append("SUBWAY ROOT_FIELDS=").append(fields(root)).append('\n');
+            if(gatewayError!=null){
+                failed++;
+                log.append("SUBWAY DIAGNOSIS=HTTP_200_WITH_PROVIDER_ERROR; NOT_VALID_ARRIVAL_JSON\n");
+                // Do not count missing row as a second distinct error.
+                return;
+            }
+            schema("SUBWAY",root,error!=null||root.has("realtimeArrivalList")
+                    ||standardResult!=null,"expected real-time API response envelope");
+            if(rows.length()==0){
+                skip("SUBWAY-ROW","EMPTY_RESULT; cannot validate ETA schema");
+                return;
+            }
             JSONObject sample=first(rows);
-            schema("SUBWAY",root,error!=null||root.has("realtimeArrivalList"),
-                    "envelope errorMessage/realtimeArrivalList");
             schema("SUBWAY-ROW",sample,sample!=null
                     &&sample.has("subwayId")&&sample.has("statnNm"),
                     "required=subwayId,statnNm; optional=trainLineNm,barvlDt,recptnDt");
-            if(sample!=null){
-                int timed=0,statusOnly=0,hasDirection=0;
-                for(int i=0;i<rows.length();i++){
-                    JSONObject o=rows.optJSONObject(i);
-                    if(o==null)continue;
-                    if(o.optInt("barvlDt",-1)>0)timed++;
-                    else if(o.has("arvlMsg2")||o.has("arvlCd"))statusOnly++;
-                    if(o.has("trainLineNm"))hasDirection++;
-                }
-                log.append("SUBWAY ETA_ROWS=").append(timed)
-                        .append(" STATUS_ONLY_ROWS=").append(statusOnly)
-                        .append(" DIRECTION_FIELD_ROWS=").append(hasDirection).append('\n');
+            int timed=0,statusOnly=0,hasDirection=0;
+            for(int i=0;i<rows.length();i++){
+                JSONObject o=rows.optJSONObject(i);
+                if(o==null)continue;
+                if(o.optInt("barvlDt",-1)>0)timed++;
+                else if(o.has("arvlMsg2")||o.has("arvlCd"))statusOnly++;
+                if(o.has("trainLineNm"))hasDirection++;
             }
+            log.append("SUBWAY ETA_ROWS=").append(timed)
+                    .append(" STATUS_ONLY_ROWS=").append(statusOnly)
+                    .append(" DIRECTION_FIELD_ROWS=").append(hasDirection).append('\n');
         }catch(Exception e){failed++;log.append("SUBWAY PARSE_ERROR=")
                 .append(e.getClass().getSimpleName()).append('\n');}
     }
+    private static final class StopSample {
+        final String cityCode,nodeId;
+        StopSample(String cityCode,String nodeId){this.cityCode=cityCode;this.nodeId=nodeId;}
+    }
+    private StopSample sampleNearbyStop(String label,String latitude,String longitude) throws Exception {
+        String base="https://apis.data.go.kr/1613000/";
+        String query="BusSttnInfoInqireService/getCrdntPrxmtSttnList"
+                +"?serviceKey="+key(BuildConfig.TAGO_BUS_SERVICE_KEY)
+                +"&_type=json&pageNo=1&numOfRows=100&gpsLati="+latitude+"&gpsLong="+longitude;
+        Response r=call("TAGO-"+label,base+query);
+        if(r.status!=200)return null;
+        JSONObject root=new JSONObject(r.body);
+        JSONObject response=root.optJSONObject("response");
+        JSONObject header=response==null?null:response.optJSONObject("header");
+        JSONObject body=response==null?null:response.optJSONObject("body");
+        JSONArray stops=list(body==null?null:body.optJSONObject("items"),"item");
+        String code=header==null?"MISSING":header.optString("resultCode","MISSING");
+        int total=body==null?-1:body.optInt("totalCount",-1);
+        log.append("TAGO-").append(label).append(" PROVIDER_CODE=").append(safeCode(code))
+                .append(" TOTAL_COUNT=").append(total)
+                .append(" ITEM_COUNT=").append(stops.length())
+                .append(" HAS_ITEMS=").append(body!=null&&body.has("items"))
+                .append(" BODY_FIELDS=").append(fields(body)).append('\n');
+        appendProviderError(log,"TAGO-"+label+"-HEADER",header);
+        if(!"00".equals(code)){
+            failed++;
+            log.append("TAGO-").append(label).append(" DIAGNOSIS=PROVIDER_ERROR\n");
+            return null;
+        }
+        if(stops.length()==0){
+            log.append("TAGO-").append(label)
+                    .append(" STATUS=EMPTY_RESULT (provider accepted query; no stop record)\n");
+            skip("TAGO-"+label+"-ROW","EMPTY_RESULT is not malformed schema");
+            return null;
+        }
+        JSONObject first=first(stops);
+        schema("TAGO-"+label+"-ROW",first,first!=null
+                &&first.has("nodeid")&&first.has("citycode"),
+                "required=nodeid,citycode; sample IDs not shown");
+        return first!=null&&!first.optString("nodeid","").isEmpty()
+                &&!first.optString("citycode","").isEmpty()
+                ?new StopSample(first.optString("citycode"),first.optString("nodeid")):null;
+    }
     private void bus(){
         if(!LiveArrivalClient.busEnabled()){skip("TAGO","KEY_MISSING");return;}
-        try{
+        try {
+            // Two independent areas prevent interpreting an empty Seoul query as general TAGO failure.
+            StopSample seoul=sampleNearbyStop("SEOUL","37.555","126.972");
+            StopSample suwon=sampleNearbyStop("SUWON","37.2655","127.0000");
+            StopSample selected=seoul!=null?seoul:suwon;
+            if(seoul==null&&suwon!=null)
+                log.append("TAGO COMPARISON=SEOUL_EMPTY_OR_UNUSABLE_BUT_SUWON_HAS_STOPS\n");
+            if(seoul==null&&suwon==null)
+                log.append("TAGO COMPARISON=BOTH_SAMPLES_NO_USABLE_STOP; coverage or coordinates unresolved\n");
+            if(selected==null){skip("TAGO-ARRIVALS","NO_USABLE_STOP_IN_EITHER_SAMPLE");return;}
             String base="https://apis.data.go.kr/1613000/";
-            String query="BusSttnInfoInqireService/getCrdntPrxmtSttnList"
-                    +"?serviceKey="+key(BuildConfig.TAGO_BUS_SERVICE_KEY)
-                    +"&_type=json&pageNo=1&numOfRows=100&gpsLati=37.555&gpsLong=126.972";
-            Response stopsResponse=call("TAGO-STOPS",base+query);
-            if(stopsResponse.status!=200){skip("TAGO-ARRIVALS","UPSTREAM_STOP_HTTP_ERROR");return;}
-            JSONObject root=new JSONObject(stopsResponse.body);
-            JSONObject response=root.optJSONObject("response");
-            JSONObject header=response==null?null:response.optJSONObject("header");
-            JSONObject body=response==null?null:response.optJSONObject("body");
-            JSONArray stops=list(body==null?null:body.optJSONObject("items"),"item");
-            String code=header==null?"MISSING":header.optString("resultCode","MISSING");
-            log.append("TAGO-STOPS PROVIDER_CODE=").append(code.replaceAll("[^a-zA-Z0-9_-]",""))
-                    .append(" ITEM_COUNT=").append(stops.length()).append('\n');
-            if(!"00".equals(code)){
-                schema("TAGO-STOPS",header,false,"provider resultCode != 00");
-                skip("TAGO-ARRIVALS","UPSTREAM_PROVIDER_ERROR");
-                return;
-            }
-            schema("TAGO-STOPS",first(stops),first(stops)!=null
-                    &&first(stops).has("nodeid")&&first(stops).has("citycode"),
-                    "required=nodeid,citycode; sample stop IDs NOT printed");
-            JSONObject first=first(stops);
-            if(first==null||first.optString("nodeid","").isEmpty()
-                    ||first.optString("citycode","").isEmpty()){
-                skip("TAGO-ARRIVALS","NO_USABLE_STOP_ID");return;
-            }
             String arrivals="ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList"
                     +"?serviceKey="+key(BuildConfig.TAGO_BUS_SERVICE_KEY)
                     +"&_type=json&pageNo=1&numOfRows=100"
-                    +"&cityCode="+enc(first.optString("citycode"))
-                    +"&nodeId="+enc(first.optString("nodeid"));
+                    +"&cityCode="+enc(selected.cityCode)+"&nodeId="+enc(selected.nodeId);
             Response r=call("TAGO-ARRIVALS",base+arrivals);
             if(r.status!=200)return;
             JSONObject incoming=new JSONObject(r.body);
@@ -260,10 +340,23 @@ public final class ApiProbe {
             JSONObject b=resp==null?null:resp.optJSONObject("body");
             JSONArray rows=list(b==null?null:b.optJSONObject("items"),"item");
             String arrivalCode=h==null?"MISSING":h.optString("resultCode","MISSING");
-            log.append("TAGO-ARRIVALS PROVIDER_CODE=").append(arrivalCode.replaceAll("[^a-zA-Z0-9_-]",""))
-                    .append(" ITEM_COUNT=").append(rows.length()).append('\n');
-            schema("TAGO-ARRIVALS",first(rows),"00".equals(arrivalCode)
-                    &&first(rows)!=null&&first(rows).has("routeno"),
+            int total=b==null?-1:b.optInt("totalCount",-1);
+            log.append("TAGO-ARRIVALS PROVIDER_CODE=").append(safeCode(arrivalCode))
+                    .append(" TOTAL_COUNT=").append(total)
+                    .append(" ITEM_COUNT=").append(rows.length())
+                    .append(" BODY_FIELDS=").append(fields(b)).append('\n');
+            appendProviderError(log,"TAGO-ARRIVALS-HEADER",h);
+            if(!"00".equals(arrivalCode)){
+                failed++;
+                log.append("TAGO-ARRIVALS DIAGNOSIS=PROVIDER_ERROR\n");
+                return;
+            }
+            if(rows.length()==0){
+                skip("TAGO-ARRIVALS-ROW","VALID_ENVELOPE_EMPTY_DATA");
+                return;
+            }
+            JSONObject sample=first(rows);
+            schema("TAGO-ARRIVALS",sample,sample!=null&&sample.has("routeno"),
                     "required=routeno; optional=arrtime,arrtime2,arrprevstationcnt");
             int eta=0;
             for(int i=0;i<rows.length();i++){
