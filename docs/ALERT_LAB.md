@@ -43,7 +43,7 @@
 
 - 진단은 실제 호출을 수행하므로 인터넷과 `local.properties`의 `SEOUL_SUBWAY_API_KEY`, `TAGO_BUS_SERVICE_KEY`, `KMA_SERVICE_KEY`가 필요함. 누락되면 `SKIP=KEY_MISSING`으로 보고함.
 - 경로 검색/추천 TMAP API는 호출하지 않음. 사용자 저장 루틴이나 현재 GPS도 사용하지 않고 샘플 위치로 호출함.
-- **1회 최대 4요청**: 서울 지하철 '서울'역 도착 1건, TAGO 서울역 부근 정류장 검색 1건 + 해당 정류장 도착정보 1건, 기상청 서울 격자(nx=60,ny=127) 단기예보 1건.
+- **1회 최대 5요청**: 서울 지하철 '서울'역 도착 1건, TAGO 서울역·수원 지역 정류장 검색 각 1건 + 데이터가 있으면 해당 정류장 도착정보 1건, 기상청 서울 격자(nx=60,ny=127) 단기예보 1건.
 - **15분 쿨다운**을 기기 내부 debug SharedPreferences에 저장해 반복 호출을 차단. 버튼 중복 탭도 비활성화함.
 - 응답 HTTP 상태, 처리시간(ms), 응답 글자 수, 제공기관 결과 코드, item 개수, 최상위 필드 이름, 핵심 필드 유무, ETA 필드 수, 기상청 TMP/PTY/POP 항목 수 및 예보 범위를 보고함.
 - API 키, 원본 URL, 응답 본문, 제공기관 정류장 식별자는 보고서에 출력하지 않음. 단, `FIEL​​DS`는 필드 *이름*만 출력하며 개인 데이터 값은 출력하지 않음.
@@ -54,3 +54,19 @@
 - 전체 검증 버튼의 기존 가상 데이터 검사와 실 API 진단 버튼은 독립적으로 실행됨.
 
 테스트 소스: `app/src/debug/java/com/example/mycommute/debug/ApiProbe.java`. 삭제하려면 해당 파일과 `AlertLabActivity.java`의 진입 버튼·호출을 함께 제거.
+
+## 지하철·TAGO 세부 원인 검사 (2026-11-19)
+
+이전 결과: 서울 지하철 HTTP 200 / 102자 / `status,code,message,link,developerMessage,total` (정규 도착 JSON 아님); TAGO 서울역 부근 HTTP 200 / providerCode 00 / 정류장 0건. 기상청 정상.
+
+진단 개선 사항:
+- 지하철 응답에 `status/code/message/developerMessage`가 있으면 `GATEWAY_ERROR`로 구분. 오류 메시지 원문 대신 `MESSAGE_CLASS`를 출력하며, 안전한 영숫자 오류 코드만 출력.
+- 지하철 정상 `realtimeArrivalList`, `errorMessage`, `RESULT` 구조와 기타 예상 밖 구조를 각각 구분.
+- TAGO `body.totalCount`, `body.items`, `body` 필드 목록과 빈 목록을 구분. 정상 빈 목록을 JSON 파싱 오류로 취급하지 않음.
+- TAGO 샘플 검색을 서울역(37.555, 126.972)과 수원(37.2655, 127.0000) 두 지역에서 수행해 지역별 데이터 존재 여부를 확인.
+- 두 샘플에서 어느 쪽이든 유효한 정류소 ID를 찾으면 도착정보 요청 1회 수행.
+- 지하철 1 + TAGO 정류장 2 + TAGO 도착 1 + 기상청 1 = 최대 **5회 호출**, 15분 쿨다운 유지.
+- 네트워크가 실행되지 않은 항목은 `SKIP`, 정상 처리지만 검색결과가 비어 있으면 `EMPTY_RESULT`, 제공기관 오류는 `PROVIDER_ERROR`로 표기.
+- 요청 URL, 인증키, 전체 응답 원문은 출력하지 않음. 제공기관 오류 메시지도 분류 레이블만 출력.
+
+**한계:** 이 도구는 제공기관에 직접 접속해 원인을 추적하는 검사 도구이며, 검사 전에는 지하철 인증 문제인지 API 게이트웨이 문제인지 확정할 수 없음. 두 지역에서 정류장 결과가 비었다고 전국 전체 데이터가 없음을 뜻하지 않음.
