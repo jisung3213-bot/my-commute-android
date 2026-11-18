@@ -74,9 +74,9 @@ public final class LiveArrivalClient {
             UI.post(()->callback.complete(TransitArrival.unavailable(
                     "SEOUL_SUBWAY_API_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
         }
-        if("BUS".equals(leg.mode)&&!busEnabled()){
+        if("BUS".equals(leg.mode)&&!(SeoulBusClient.likelySeoul(leg.startLat,leg.startLon) ? SeoulBusClient.enabled() : busEnabled())){
             UI.post(()->callback.complete(TransitArrival.unavailable(
-                    "TAGO_BUS_SERVICE_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
+                    SeoulBusClient.likelySeoul(leg.startLat,leg.startLon)?"SEOUL_BUS_SERVICE_KEY가 설정되지 않았어":"TAGO_BUS_SERVICE_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
         }
         IO.execute(()->{
             String identifier=leg.mode+"|"+leg.routeName+"|"+leg.startName+"|"+
@@ -89,6 +89,7 @@ public final class LiveArrivalClient {
             }else{
                 try {
                     if("SUBWAY".equals(leg.mode))result=subway(leg);
+                    else if(SeoulBusClient.likelySeoul(leg.startLat,leg.startLon))result=SeoulBusClient.fetch(leg);
                     else result=bus(leg);
                 }catch(Exception e){
                     String why=e.getMessage()==null?"알 수 없는 오류":e.getMessage();
