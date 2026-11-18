@@ -185,16 +185,30 @@ public class CustomActivity extends AppCompatActivity {
 
     private void renderStops(){
         ((MaterialButton)findViewById(R.id.btnStartPlace)).setText(
-                draft.startName.isEmpty()?"출발지 검색":"출발 · "+draft.startName);
+                draft.startName.isEmpty()?"출발지 선택":draft.startName);
         ((MaterialButton)findViewById(R.id.btnEndPlace)).setText(
-                draft.endName.isEmpty()?"도착지 검색":"도착 · "+draft.endName);
-        StringBuilder text=new StringBuilder();
-        for(Waypoint w:draft.waypoints)if(w.hasCoordinates()){
-            if(text.length()>0)text.append(" → ");
-            text.append(w.name);
+                draft.endName.isEmpty()?"도착지 선택":draft.endName);
+        com.google.android.material.chip.ChipGroup group=findViewById(R.id.waypointChips);
+        group.removeAllViews();
+        boolean any=false;
+        for(int i=0;i<draft.waypoints.size();i++){
+            Waypoint w=draft.waypoints.get(i);
+            if(!w.hasCoordinates())continue;
+            any=true;
+            final int position=i;
+            com.google.android.material.chip.Chip chip=new com.google.android.material.chip.Chip(this);
+            chip.setText((i+1)+". "+w.name);
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v->{
+                if(isTracking()){toast("위치 추적 중 · 경유지 변경 불가");return;}
+                draft.waypoints.remove(position);
+                invalidateRoutes();
+                renderStops();
+            });
+            group.addView(chip);
         }
         ((TextView)findViewById(R.id.textWaypoints)).setText(
-                text.length()==0?"경유지 없음":"경유 순서: "+text);
+                any?"선택한 순서대로 이동해":"등록한 경유 장소가 없어");
     }
 
     private void startPlace(int request){
