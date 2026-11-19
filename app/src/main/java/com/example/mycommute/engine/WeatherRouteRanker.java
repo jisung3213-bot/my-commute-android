@@ -24,6 +24,20 @@ public final class WeatherRouteRanker {
         else if(w.known&&w.lowTemperature){walk+=1;wait+=1.5;}
         return r.durationMinutes+walk*r.walkingMinutes+wait*r.outdoorWaitMinutes+3*r.transfers;
     }
+    /**
+     * Commute preference score. More schedule buffer increases transfer avoidance;
+     * adverse forecasts increase walking penalty. Not an ETA prediction.
+     */
+    public static double commuteScore(Candidate route,Conditions weather,int marginMinutes){
+        int margin=Math.max(0,Math.min(180,marginMinutes));
+        double transferPenalty=margin>=15?8:margin>=8?6:3;
+        return score(route,weather)+(transferPenalty-3)*route.transfers;
+    }
+
+    /** Do not recommend an arbitrarily slower route just to save a transfer. */
+    public static int acceptableExtraMinutes(int marginMinutes){
+        return Math.min(12,Math.max(0,marginMinutes)/2);
+    }
     public static Candidate select(List<Candidate> routes,Conditions weather){
         Candidate best=null;double bestScore=Double.POSITIVE_INFINITY;
         for(Candidate r:routes){double s=score(r,weather);if(s<bestScore){best=r;bestScore=s;}}
