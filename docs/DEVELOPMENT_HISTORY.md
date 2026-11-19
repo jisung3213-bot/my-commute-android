@@ -107,6 +107,6 @@ src/test/   = 로컬 JUnit 테스트 (APK 실행 화면과 별개)
 - [알림 상세](ALARM_FEATURES.md) / [알림 모의실험](ALERT_LAB.md)
 - [API 검증](API_INTEGRATION_VERIFIED.md)
 - [UI 변경 기록](UI_LAYOUT_QA.md)
-- 기존 `README.md`는 과거 개발 기록을 순서대로 누적한 부분이 있으므로 과거와 현재 기능이 혼재할 수 있다.
+- `README.md`에는 현재 실행 방법과 기능을 정리했다. 이전 단계별 설명은 저장소의 커밋 이력에서 확인할 수 있다.
 
 **원칙: 어떤 시점에 구현한 내용인지와 현재 최종 동작인지 구분한다.** 새 변경 시 `ARCHITECTURE_CURRENT.md`에 현재 구조를 갱신하고, 주요 결정과 실측 근거를 이 문서에 추가한다.

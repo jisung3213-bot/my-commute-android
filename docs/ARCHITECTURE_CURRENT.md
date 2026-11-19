@@ -50,7 +50,7 @@ Firebase 로그인 / 회원가입
 
 ```text
 MyCommuteAndroid/
-├─ README.md                    # 저장소 진입 문서(과거 단계별 기록도 누적)
+├─ README.md                    # 실행 설정, 현재 기능 및 문서 링크
 ├─ settings.gradle              # :app 단일 Android 모듈 선언
 ├─ build.gradle / gradle.properties / gradle/wrapper/
 ├─ app/
@@ -84,7 +84,7 @@ MyCommuteAndroid/
 │     └─ test/java/.../         # JUnit 엔진·파서·모델 테스트
 ├─ docs/                        # 설계·현황·API·알림·테스트 관련 기록
 ├─ firestore.rules              # 서버에 별도 배포해야 하는 Firestore 규칙
-└─ scripts/                     # 로컬 빌드/테스트 보조 스크립트
+└─ scripts/                     # Windows 전체 JUnit 테스트 실행
 ```
 
 ### 핵심 클래스 책임
@@ -211,7 +211,7 @@ Room(알림 기록) / Firestore(사용자 루틴·환경설정만)
 | `debug/RouteGpsLabActivity` | 저장 경로의 모의 마커 및 좌표 판정 | Android 기기 GPS 조작이나 실제 서비스 수신 |
 | `debug/RouteRecommendationLabActivity` | 가상 후보·저장 후보에 대해 **실제 앱과 같은 `rank()`** | 실제 기상특보 수신·TMAP 예측 정확도 |
 
-실기기에서는 Java 환경 설정 후 `./gradlew assembleDebug`로 빌드 가능하지만, 사용자가 보고한 `testDebugUnitTest`는 과거 실행에서 **20개 테스트 클래스 로딩 실패(ClassNotFoundException)** 가 발생했다. 이는 테스트가 기능적으로 틀렸다는 증거는 아니며 **현재까지 해결 확인되지 않았다**. 최근 GitHub 반영은 코드 리뷰/정적 점검 중심이고 전체 앱·실기기·Gradle/JUnit을 이 문서 작성 환경에서 재실행하지 않았다.
+로컬 개발 환경에서 `assembleDebug`, `assembleRelease`, 전체 JUnit 테스트 75개가 통과했다. Gradle 8.2의 Windows 한글 경로 클래스 로딩을 우회할 경우 `scripts/test-core.ps1`로 전체 테스트를 실행한다. 기상청 좌표 격자 검사는 Android 메인 스레드를 초기화하지 않고 순수 계산을 실행한다. 실제 GPS, 교통 API, Firebase 서버 동기화는 별도 기기 검증 항목이다.
 
 ## 9. 미완료·운영 위험
 
@@ -221,7 +221,6 @@ Room(알림 기록) / Firestore(사용자 루틴·환경설정만)
 - 환승 구간 간 경로 연계와 실제 차량 탑승 확정, 전 구간 실시간 ETA는 미완성.
 - Firebase 규칙·TAGO 승인·지도 SDK 바이너리는 GitHub 변경만으로 외부 서비스에 적용되지 않음.
 - `targetSdk=28` 및 개발용 클라이언트 내 API 키 사용은 최신 배포·보안 요건 미충족 가능성.
-- 기존 README/STATUS의 일부 문장은 작성 당시 단계의 역사 설명이라 **현재 기능과 상충할 수 있음**. 현재 스냅샷은 이 문서와 실제 코드, 변천은 [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md)를 우선 참조.
 
 ## 10. 관련 문서
 

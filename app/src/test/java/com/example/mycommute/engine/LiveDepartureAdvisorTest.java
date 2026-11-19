@@ -26,4 +26,13 @@ public class LiveDepartureAdvisorTest {
         assertFalse(d.vehicleVerified);
         assertTrue(d.note.contains("미반영"));
     }
+    @Test public void subtractsWalkingTimeAndBoardingBufferFromVehicleEta() throws Exception {
+        long now = 1_000_000L;
+        TransitArrival arrival = TransitArrival.found("승차", "1호선", "", 1200, -1, now);
+        LiveDepartureAdvisor.Advice advice = LiveDepartureAdvisor.compute(
+                now, now + 90 * 60_000L, 5, route(), 480, arrival);
+
+        assertTrue(advice.vehicleVerified);
+        assertEquals(600, advice.firstBoardingSlackSeconds);
+    }
 }

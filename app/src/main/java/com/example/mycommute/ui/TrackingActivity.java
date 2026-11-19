@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat;
 import com.example.mycommute.R;
 import com.example.mycommute.alarms.AlertLabMode;
 import android.location.LocationManager;
+import androidx.core.location.LocationManagerCompat;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.engine.BoardingFeasibilityEngine;
@@ -192,8 +193,7 @@ public class TrackingActivity extends AppCompatActivity {
             toast("설정에서 알림 테스트 모드를 꺼야 위치 추적이 가능해");
             return;
         }
-        LocationManager locationManager=(LocationManager)getSystemService(LOCATION_SERVICE);
-        if(locationManager==null||!locationManager.isLocationEnabled()){
+        if(!isDeviceLocationEnabled()){
             trackingStarting=false;
             trackingStatus="기기의 위치 서비스(GPS)가 꺼져 있어";
             render();
@@ -249,6 +249,11 @@ public class TrackingActivity extends AppCompatActivity {
     private TextView label(int id){return findViewById(id);}
     private void toast(String message){Toast.makeText(this,message,Toast.LENGTH_SHORT).show();}
 
+    private boolean isDeviceLocationEnabled() {
+        LocationManager manager = getSystemService(LocationManager.class);
+        return manager != null && LocationManagerCompat.isLocationEnabled(manager);
+    }
+
     private void render(){
         if(live==null||routine==null||isFinishing()||isDestroyed())return;
         long now=System.currentTimeMillis();
@@ -295,8 +300,7 @@ public class TrackingActivity extends AppCompatActivity {
         }
         if(!tracking&&AlertLabMode.enabled(this)){
             gpsState="알림 테스트 모드 활성화 · 설정에서 꺼야 위치 추적 가능";
-        }else if(!tracking&&getSystemService(LOCATION_SERVICE) instanceof LocationManager
-                &&!((LocationManager)getSystemService(LOCATION_SERVICE)).isLocationEnabled()){
+        }else if(!tracking&&!isDeviceLocationEnabled()){
             gpsState="기기 위치 서비스(GPS) 꺼짐";
         }
         if(trackingStarting&&!tracking)gpsState=trackingStatus;

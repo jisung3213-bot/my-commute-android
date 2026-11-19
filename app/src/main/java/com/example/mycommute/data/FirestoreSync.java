@@ -15,7 +15,6 @@ import java.util.Map;
 
 /** Firestore only holds user-authored profiles/preferences, never provider route geometry. */
 public final class FirestoreSync {
-    public interface Result {void onLoaded(Routine routine);void onFailure(String reason);}
     public interface ProfilesResult {void onLoaded(List<Routine> routines);void onFailure(String reason);}
     public interface SettingsResult {void onLoaded(JSONObject settings);void onFailure(String reason);}
     private FirestoreSync(){}
@@ -84,19 +83,4 @@ public final class FirestoreSync {
                 }).addOnFailureListener(e->result.onFailure(e.getMessage()));
     }
 
-    /** Compatibility with previous two-slot cloud API. */
-    public static void fetch(String id,Result result) {
-        FirebaseUser user=currentUser();
-        if(user==null){result.onFailure("계정 없음");return;}
-        FirebaseFirestore.getInstance().collection("users").document(user.getUid())
-                .collection("routines").document(id).get()
-                .addOnSuccessListener(doc->{
-                    String json=doc.getString("payload");
-                    if(json==null){result.onFailure("저장된 루틴 없음");return;}
-                    try{
-                        Routine r=Routine.fromJson(new JSONObject(json));r.id=id;
-                        result.onLoaded(r);
-                    }catch(Exception e){result.onFailure("데이터 형식 오류");}
-                }).addOnFailureListener(e->result.onFailure(e.getMessage()));
-    }
 }
