@@ -208,7 +208,10 @@ public final class ArrivalMatcher {
                 continue;
             }
 
+            // Prefer provider ETA (seconds). Some rows have 0/empty barvlDt
+            // even though they include a human-readable ETA in arvlMsg2.
             int raw=item.optInt("barvlDt",-1);
+            if(raw<=0)raw=explicitSubwayEtaSeconds(item.optString("arvlMsg2",""));
             if(raw>0){
                 int corrected=raw-(int)Math.max(0,age/1000L);
                 if(corrected>0){
@@ -257,6 +260,25 @@ public final class ArrivalMatcher {
                 +" · 오래된 정보 "+staleRecords+"건"
                 +(next.isEmpty()?" · TMAP 다음역 정보 없음":" · 기대 방면 "+next),
                 now);
+    }
+
+    /** Only parse a time explicitly provided by Seoul's arrival message.
+     * Station-count messages such as "[16]번째 전역" are NOT ETA estimates. */
+    private static int explicitSubwayEtaSeconds(String message) {
+        if(message==null||message.isEmpty())return -1;
+        java.util.regex.Matcher minutes=java.util.regex.Pattern
+                .compile("(\\\\d{1,3})\\\\s*분\\\\s*(?:후|뒤)").matcher(message);
+        if(minutes.find()){
+            int n=Integer.parseInt(minutes.group(1));
+            if(n>0&&n<=120)return n*60;
+        }
+        java.util.regex.Matcher seconds=java.util.regex.Pattern
+                .compile("(\\\\d{1,4})\\\\s*초\\\\s*(?:후|뒤)").matcher(message);
+        if(seconds.find()){
+            int n=Integer.parseInt(seconds.group(1));
+            if(n>0&&n<=7200)return n;
+        }
+        return -1;
     }
 
     private static long timestamp(String text) {
