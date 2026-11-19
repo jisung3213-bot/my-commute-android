@@ -9,6 +9,7 @@ import android.os.Build;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import com.example.mycommute.alarms.AlertLabMode;
+import com.example.mycommute.alarms.AlertCopy;
 import com.example.mycommute.alarms.AlertLedger;
 import com.example.mycommute.alarms.NotificationHelper;
 import com.example.mycommute.data.AlarmLogEntity;
@@ -214,16 +215,16 @@ public final class AlertLabSuite {
                 "permission="+granted+" appEnabled="+enabled);
         int accepted=0;
         List<String> refs=new ArrayList<>();
-        for(int i=0;i<TITLES.length;i++){
-            String title="[TEST "+runId+"] "+TITLES[i];
-            boolean sent=NotificationHelper.show(app,title,"자동 검증 / "+TYPES[i]+" / 실제 교통정보 아님",
+        for(int i=0;i<TYPES.length;i++){
+            AlertCopy.Message copy=sampleCopy(i);
+            String title="[TEST "+runId+"] "+copy.title;
+            boolean sent=NotificationHelper.show(app,title,copy.body,
                     (runId+"-"+i).hashCode(),"lab-fixture");
             if(sent)accepted++;
             refs.add(title);
             check("NOTIFY-"+TYPES[i],sent,"NotificationManager request="+sent+
                     " (visible delivery NOT verified)");
-            AlarmLogRepository.write(app,"test:"+TYPES[i],title,
-                    "자동 검증 / "+runId,true,null);
+            AlarmLogRepository.write(app,"test:"+TYPES[i],title,copy.body,true,null);
         }
         final int expected=accepted;
         // Room writes use a single-thread executor; the queued read happens after every write.
@@ -245,6 +246,21 @@ public final class AlertLabSuite {
             skip("REAL-FIRESTORE","cloud setting sync not exercised");
             callback.complete(finish());
         });
+    }
+    private static AlertCopy.Message sampleCopy(int id){
+        switch(id){
+            case 0:return AlertCopy.prepare(15,"08:10","학교 가는 길","");
+            case 1:return AlertCopy.departure("09:00","학교 가는 길");
+            case 2:return AlertCopy.vehicle("광운대역",180);
+            case 3:return AlertCopy.walk("광운대역",60);
+            case 4:return AlertCopy.transfer("시청역","2호선");
+            case 5:return AlertCopy.exit("서울역");
+            case 6:return AlertCopy.delay(7);
+            case 7:return AlertCopy.weather("비 예보 · 우산 준비");
+            case 8:return AlertCopy.deviation();
+            case 9:return AlertCopy.finish("광운대학교");
+            default:throw new IllegalArgumentException("알림 유형 오류");
+        }
     }
     private TransitRoute fixtureRoute() throws Exception{
         JSONObject root=new JSONObject().put("duration",1800).put("walk",300)
