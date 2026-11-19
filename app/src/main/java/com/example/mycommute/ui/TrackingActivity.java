@@ -275,6 +275,9 @@ public class TrackingActivity extends AppCompatActivity {
         schematic.setRoute(route);
         StagePositionMatcher.Match stage=live.stage();
         schematic.setCurrentLeg(stage!=null&&stage.known()?stage.legIndex:-1);
+        // A recent, accurate location matched to an unambiguous route leg.
+        // GPS data may be a foreground one-shot fix; continuous tracking is optional.
+        schematic.setGpsPosition(latestLat,latestLon,stage!=null&&stage.known());
         TextView stageLabel=label(R.id.liveCurrentStage);
         if(stage!=null&&stage.known()) {
             stageLabel.setVisibility(View.VISIBLE);
