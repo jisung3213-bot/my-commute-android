@@ -158,11 +158,17 @@ public final class ArrivalMatcher {
                 "TMAP 승차역 정보가 없어 도착정보를 검색할 수 없어",now);
         JSONObject root=new JSONObject(json);
         JSONObject error=root.optJSONObject("errorMessage");
-        if(error!=null&&!error.optString("status","").equals("200"))
+        if(error!=null&&!error.optString("status","").equals("200")){
+            String code=error.optString("code","");
+            String message=error.optString("message","조회 실패");
+            if("INFO-200".equals(code)||message.contains("해당하는 데이터가 없습니다"))
+                return TransitArrival.unavailable("서울시 API가 해당 역의 실시간 열차 정보를 제공하지 않아 (조회 시점 기준)",now);
             return TransitArrival.unavailable(
-                    "서울 지하철 API: "+error.optString("message","조회 실패"),now);
+                    "서울 지하철 API: "+code+" · "+message,now);
+        }
         JSONArray list=root.optJSONArray("realtimeArrivalList");
-        if(list==null)return TransitArrival.unavailable("해당 역의 실시간 열차 정보가 없어",now);
+        if(list==null||list.length()==0)
+            return TransitArrival.unavailable("서울시 API 응답에 실시간 열차 목록이 없어 (운행 시간·역 이름 확인)",now);
         java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         String direction="";
         long latestStatusAt=0;
@@ -184,8 +190,12 @@ public final class ArrivalMatcher {
             // Preserve parentheses in the destination/direction field:
             // "구로행 (석계방면)" must keep the word 석계.
             String trainDirection=item.optString("trainLineNm","");
+            // Provider formats vary: e.g. "청량리행 (석계방면)".
+            // Only a verified next-station cue is sufficient to claim the
+            // selected route's train. Terminus / updnLine alone is ambiguous.
             String directionText=normalizeDirection(trainDirection);
-            if(next.isEmpty()||!directionText.contains(next)) {
+            String arrivalDirection=normalizeDirection(item.optString("arvlMsg3",""));
+            if(next.isEmpty()||(!directionText.contains(next)&&!arrivalDirection.contains(next))) {
                 freshButDirectionUnconfirmed++;
                 continue;
             }
