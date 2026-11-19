@@ -1,5 +1,9 @@
 # 나만의 출퇴근 (MyCommuteAndroid)
 
+> **현재 코드 기준 통합 문서 (2026-11-20)**: [아키텍처·파일 역할·전체 기능](docs/ARCHITECTURE_CURRENT.md) · [개발 변천사·브랜치 분리 이유](docs/DEVELOPMENT_HISTORY.md) · [알림 10종](docs/ALARM_FEATURES.md) · [디버그 테스트](docs/ALERT_LAB.md) · [실제 API 확인](docs/API_INTEGRATION_VERIFIED.md).
+>
+> **주의:** 이 README 아래의 긴 개발 단계별 기록에는 **당시 기준 설명**이 섞여 있어 현재 구현과 차이가 날 수 있습니다. 최신 기능과 파일 역할은 위 통합 아키텍처 문서, 기능의 변천은 개발 변천사 문서를 기준으로 확인하세요. 현재 개발 작업은 `feat/isolated-alert-lab` 브랜치에 있으며 `main`과 동일하지 않습니다.
+
 Java 17 + XML 기반 Android 앱. 개발용 API 실험 화면, 데모 로그인, 수동 가상 날씨 시나리오는 제거했습니다. 실제 통근 기능에 필요한 로직과 JUnit 검증은 유지합니다.
 
 ## 개발 환경
