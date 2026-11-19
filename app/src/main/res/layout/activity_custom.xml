@@ -165,7 +165,21 @@
             <TextView android:id="@+id/textTransitResult" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:textColor="@color/text_secondary"
                 android:padding="8dp" android:text="" android:visibility="gone"/>
+            <TextView android:id="@+id/textRecommendationReason"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary" android:textSize="13sp"
+                android:paddingTop="8dp" android:paddingBottom="8dp"
+                android:visibility="gone"/>
             <LinearLayout android:id="@+id/transitCards" android:orientation="vertical"
+                android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOtherRoutes"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:visibility="gone" android:text="다른 경로 보기"
+                android:textAllCaps="false"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <LinearLayout android:id="@+id/otherTransitCards"
+                android:orientation="vertical" android:visibility="gone"
                 android:layout_width="match_parent" android:layout_height="wrap_content"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnPreviewMap"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
