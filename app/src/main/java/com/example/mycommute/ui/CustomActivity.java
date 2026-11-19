@@ -246,7 +246,7 @@ public class CustomActivity extends AppCompatActivity {
             String start=profile.startName==null?"":profile.startName.trim();
             String end=profile.endName==null?"":profile.endName.trim();
             String summary=start+" → "+end;
-            if(!summary.trim().equals(profile.name==null?"":profile.name.trim())){
+            if(profile.name==null||!profile.name.contains(summary.trim())){
                 TextView detail=new TextView(this);
                 detail.setText(summary);
                 detail.setTextSize(13);
