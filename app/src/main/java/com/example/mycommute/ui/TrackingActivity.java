@@ -395,15 +395,17 @@ public class TrackingActivity extends AppCompatActivity {
         View etaRow=findViewById(R.id.liveVehicleEtaRow);
         View etaDivider=findViewById(R.id.liveVehicleEtaDivider);
         View nextColumn=findViewById(R.id.liveVehicleNextColumn);
+        View auxRow=findViewById(R.id.liveVehicleAuxRow);
         // Suppress unavailable arrival time areas entirely, not just the text.
         etaRow.setVisibility(View.GONE);
         etaDivider.setVisibility(View.GONE);
         nextColumn.setVisibility(View.GONE);
+        auxRow.setVisibility(View.GONE);
         mode.setText("교통"); station.setText("정보 확인 중");
         // No fabricated ETA or placeholder when the provider did not supply one.
         eta.setText("");next.setText("");
-        status.setText("승차 가능성 확인 중");
-        walkLabel.setText("승차지 이동시간 —");slackLabel.setText("여유시간 —");
+        status.setText("도착정보 확인 중");
+        walkLabel.setText("");slackLabel.setText("");
         if(route==null){
             station.setText("경로 갱신 필요");
             status.setText("경로 정보를 다시 확인해야 해");
@@ -420,11 +422,13 @@ public class TrackingActivity extends AppCompatActivity {
         station.setText(leg.startName+" · "+leg.routeName);
         if(arrival!=null&&arrival.statusOnly){
             if(arrival.hasFreshStatus(now)){
-                status.setText(arrival.statusText+" · "+clock(arrival.statusObservedMillis)+" 기준");
+                status.setText(arrival.statusText);
                 eta.setText("");
                 next.setText("");
-                if(arrival.direction!=null&&!arrival.direction.isEmpty())
+                if(arrival.direction!=null&&!arrival.direction.isEmpty()){
                     walkLabel.setText(arrival.direction);
+                    auxRow.setVisibility(View.VISIBLE);
+                }
             }else{
                 status.setText("상태정보 만료 · 갱신 대기");
             }
@@ -432,11 +436,8 @@ public class TrackingActivity extends AppCompatActivity {
         }
         if(arrival==null||!arrival.available){
             eta.setText("");
-            status.setText(arrival==null?"도착정보를 확인하고 있어":"도착시간 미확인");
-            if(arrival!=null){
-                String display=UiNotice.error(arrival.message);
-                UiNotice.show(diagnostic,UiNotice.classify(arrival.message),display);
-            }
+            status.setText(arrival==null?"도착정보 확인 중":"실시간 도착정보 없음");
+            // Detailed provider/network errors are reserved for the debug API probe.
             return;
         }
         int remaining=arrival.currentSeconds(now);
@@ -461,6 +462,7 @@ public class TrackingActivity extends AppCompatActivity {
                     slack>=0?"탑승 시간 촉박":"현재 차량 탑승 어려움";
             status.setText(message+(tracking?"":" · 계획 기준"));
             walkLabel.setText("승차지까지 "+((walk+59)/60)+"분");
+            auxRow.setVisibility(View.VISIBLE);
             int minute=(int)Math.ceil(Math.abs(slack)/60.0);
             slackLabel.setText("여유 "+(slack>=0?"+":"-")+minute+"분");
             return;
