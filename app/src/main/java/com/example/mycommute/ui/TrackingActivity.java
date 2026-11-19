@@ -393,7 +393,8 @@ public class TrackingActivity extends AppCompatActivity {
         TextView walkLabel=label(R.id.liveVehicleWalk);
         TextView slackLabel=label(R.id.liveVehicleSlack);
         mode.setText("교통"); station.setText("정보 확인 중");
-        eta.setText("—");next.setText("—");
+        // No fabricated ETA or placeholder when the provider did not supply one.
+        eta.setText("");next.setText("");
         status.setText("승차 가능성 확인 중");
         walkLabel.setText("승차지 이동시간 —");slackLabel.setText("여유시간 —");
         if(route==null){
@@ -413,8 +414,8 @@ public class TrackingActivity extends AppCompatActivity {
         if(arrival!=null&&arrival.statusOnly){
             if(arrival.hasFreshStatus(now)){
                 status.setText(arrival.statusText+" · "+clock(arrival.statusObservedMillis)+" 기준");
-                eta.setText("시간 미제공");
-                next.setText("—");
+                eta.setText("");
+                next.setText("");
                 if(arrival.direction!=null&&!arrival.direction.isEmpty())
                     walkLabel.setText(arrival.direction);
             }else{
@@ -423,7 +424,7 @@ public class TrackingActivity extends AppCompatActivity {
             return;
         }
         if(arrival==null||!arrival.available){
-            eta.setText(arrival==null?"조회 중":"정보 없음");
+            eta.setText("");
             status.setText(arrival==null?"도착정보를 확인하고 있어":"도착시간 미확인");
             if(arrival!=null){
                 String display=UiNotice.error(arrival.message);
@@ -433,12 +434,12 @@ public class TrackingActivity extends AppCompatActivity {
         }
         int remaining=arrival.currentSeconds(now);
         if(remaining<=0){
-            eta.setText("갱신 필요");status.setText("이전 도착정보가 만료됐어");
+            eta.setText("");status.setText("이전 도착정보가 만료됐어");
             return;
         }
         int second=arrival.nextRemainingSeconds(now);
         eta.setText(remaining<60?"1분 이내":((remaining+59)/60)+"분 후");
-        next.setText(second>remaining?((second+59)/60)+"분 후":"정보 없음");
+        next.setText(second>remaining?((second+59)/60)+"분 후":"");
         if(arrival.direction!=null&&!arrival.direction.isEmpty())
             diagnostic.setText(arrival.direction);
         int walk=live.walkSeconds();
