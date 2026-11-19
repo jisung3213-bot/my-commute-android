@@ -15,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.example.mycommute.R;
+import com.example.mycommute.alarms.AlertLabMode;
+import android.location.LocationManager;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.engine.BoardingFeasibilityEngine;
@@ -183,6 +185,21 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     private void startTracking(){
+        if(AlertLabMode.enabled(this)){
+            trackingStarting=false;
+            trackingStatus="설정의 알림 테스트 모드가 켜져 있어 · 해당 모드를 끈 뒤 추적 시작";
+            render();
+            toast("설정에서 알림 테스트 모드를 꺼야 위치 추적이 가능해");
+            return;
+        }
+        LocationManager locationManager=(LocationManager)getSystemService(LOCATION_SERVICE);
+        if(locationManager==null||!locationManager.isLocationEnabled()){
+            trackingStarting=false;
+            trackingStatus="기기의 위치 서비스(GPS)가 꺼져 있어";
+            render();
+            toast(trackingStatus);
+            return;
+        }
         if(routine==null||!routine.isConfigured()){
             toast("출퇴근 경로 등록 필요");return;
         }
@@ -272,6 +289,12 @@ public class TrackingActivity extends AppCompatActivity {
             long seconds=Math.max(0,(now-gpsTime)/1000);
             gpsState=seconds<=90?"위치 추적 중 · 최근 "+seconds+"초 전":
                     "위치 갱신 대기";
+        }
+        if(!tracking&&AlertLabMode.enabled(this)){
+            gpsState="알림 테스트 모드 활성화 · 설정에서 꺼야 위치 추적 가능";
+        }else if(!tracking&&getSystemService(LOCATION_SERVICE) instanceof LocationManager
+                &&!((LocationManager)getSystemService(LOCATION_SERVICE)).isLocationEnabled()){
+            gpsState="기기 위치 서비스(GPS) 꺼짐";
         }
         if(trackingStarting&&!tracking)gpsState=trackingStatus;
         else if(!trackingStatus.isEmpty()&&!tracking)gpsState=trackingStatus;
