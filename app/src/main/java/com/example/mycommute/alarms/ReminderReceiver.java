@@ -47,7 +47,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
             // Otherwise weather remains independently enabled.
             if(AlarmSettingsStore.enabled(c,AlarmSettingsStore.PREPARE))return;
             if(!AlertLedger.tryClaim(c,id,trip,type,"scheduled",now,Long.MAX_VALUE))return;
-            boolean sent=NotificationHelper.show(c,"날씨 주의 · "+r.name,
+            boolean sent=NotificationHelper.show(c,"출발 전 날씨를 확인하세요",
                     weather,(id+"|"+type+"|"+trip).hashCode(),id);
             PendingResult async=goAsync();
             AlarmLogRepository.write(c,type+":"+id,sent?"날씨 주의":"알림 차단됨",
@@ -57,10 +57,11 @@ public final class ReminderReceiver extends BroadcastReceiver {
         if(!AlertLedger.tryClaim(c,id,trip,type,"scheduled",now,Long.MAX_VALUE))return;
 
         String title=AlarmSettingsStore.PREPARE.equals(type)
-                ?"출발 준비 · "+r.name:"출발 권장 · "+r.name;
+                ?"출발 "+AlarmSettingsStore.prepareMinutes(c)+"분 전":"지금 출발할 시간이에요";
+        String name=r.name==null||r.name.trim().isEmpty()?"등록한 이동 경로":r.name.trim();
         String message=AlarmSettingsStore.PREPARE.equals(type)
-                ?"약 "+AlarmSettingsStore.prepareMinutes(c)+"분 뒤 "+format(departure)+" 출발 예정"
-                :format(departure)+" 출발 권장 · 목표 도착 "+r.arrivalTime;
+                ?format(departure)+" 출발 예정 · "+name
+                :r.arrivalTime+" 도착 목표 · "+name;
         if(AlarmSettingsStore.PREPARE.equals(type)&&AlarmSettingsStore.enabled(c,AlarmSettingsStore.WEATHER)){
             String weather=RoutineStore.prefs(c).getString("alert_weather_text_"+id,"");
             long at=RoutineStore.prefs(c).getLong("alert_weather_at_"+id,0);
