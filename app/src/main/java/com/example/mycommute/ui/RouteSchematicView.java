@@ -19,6 +19,8 @@ public final class RouteSchematicView extends View {
     private final TextPaint paint=new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private TransitRoute route;
     private int currentLeg=-1;
+    private float gpsProgress=0.5f;
+    private boolean gpsVisible;
     private final int dark=Color.rgb(34,39,58),muted=Color.rgb(105,112,133);
     private final int purple=Color.rgb(99,87,181);
     public RouteSchematicView(Context context,AttributeSet attrs){super(context,attrs);}
@@ -30,6 +32,36 @@ public final class RouteSchematicView extends View {
         invalidate();
     }
     public void setCurrentLeg(int leg){if(currentLeg!=leg){currentLeg=leg;invalidate();}}
+
+    /** A schematic progress indicator, not a geographically precise map pin.
+     * Only the caller's fresh, accurately matched GPS position is displayed. */
+    public void setGpsPosition(double lat,double lon,boolean verified){
+        boolean visible=verified&&route!=null&&currentLeg>=0
+                &&currentLeg<route.legs.size()
+                &&Double.isFinite(lat)&&Double.isFinite(lon);
+        float progress=0.5f;
+        if(visible){
+            TransitRoute.Leg leg=route.legs.get(currentLeg);
+            if(leg.points.size()>=2){
+                double total=0,best=Double.POSITIVE_INFINITY,selected=0;
+                for(int i=1;i<leg.points.size();i++){
+                    TransitRoute.Point a=leg.points.get(i-1),b=leg.points.get(i);
+                    double scale=111195.0,cos=Math.cos(Math.toRadians(lat));
+                    double ax=(a.lon-lon)*scale*cos,ay=(a.lat-lat)*scale;
+                    double bx=(b.lon-lon)*scale*cos,by=(b.lat-lat)*scale;
+                    double dx=bx-ax,dy=by-ay,length=Math.hypot(dx,dy);
+                    double t=length<0.001?0:Math.max(0,Math.min(1,-(ax*dx+ay*dy)/(length*length)));
+                    double distance=Math.hypot(ax+dx*t,ay+dy*t);
+                    if(distance<best){best=distance;selected=total+length*t;}
+                    total+=length;
+                }
+                if(total>0.001)progress=(float)Math.max(0,Math.min(1,selected/total));
+            }
+        }
+        if(gpsVisible!=visible||Math.abs(gpsProgress-progress)>0.005f){
+            gpsVisible=visible;gpsProgress=progress;invalidate();
+        }
+    }
 
     private float dp(float value){return value*getResources().getDisplayMetrics().density;}
     private float rowHeight(){
@@ -93,6 +125,18 @@ public final class RouteSchematicView extends View {
             paint.setStrokeWidth(dp(2));
             paint.setColor(i==currentLeg?purple:muted);
             canvas.drawCircle(x,startY,dp(5),paint);
+
+            if(gpsVisible&&i==currentLeg){
+                // Distinct from route/station nodes: blue GPS puck with white center.
+                float markerY=startY+dp(4)+(step-dp(7))*gpsProgress;
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(Color.WHITE);
+                canvas.drawCircle(x,markerY,dp(10),paint);
+                paint.setColor(Color.rgb(44,117,195));
+                canvas.drawCircle(x,markerY,dp(7.5f),paint);
+                paint.setColor(Color.WHITE);
+                canvas.drawCircle(x,markerY,dp(2.5f),paint);
+            }
 
             String mode=RouteSchematicLabels.modeLabel(leg);
             text(canvas,mode,labelX,startY+dp(22),right-labelX,12,
