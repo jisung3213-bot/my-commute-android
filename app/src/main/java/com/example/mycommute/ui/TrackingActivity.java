@@ -42,6 +42,8 @@ public class TrackingActivity extends AppCompatActivity {
     private CommuteLiveCoordinator live;
     private boolean listening;
     private boolean expandedRouteDetails;
+    private String trackingStatus="";
+    private boolean trackingStarting;
     private CancellationTokenSource locationToken;
     private double latestLat=Double.NaN,latestLon=Double.NaN;
     private long gpsTime;
@@ -49,7 +51,16 @@ public class TrackingActivity extends AppCompatActivity {
     private final BroadcastReceiver locations=new BroadcastReceiver(){
         @Override public void onReceive(Context c,Intent intent){
             if(TrackingService.ACTION_STATE.equals(intent.getAction())){
-                if(intent.getBooleanExtra("finished",false)&&live!=null)live.stop();
+                boolean active=intent.getBooleanExtra("active",false);
+                trackingStarting=false;
+                if(active){
+                    trackingStatus="GPS 수신 대기 중";
+                }else{
+                    String reason=intent.getStringExtra("reason");
+                    trackingStatus=reason==null||reason.isEmpty()
+                            ?"위치 추적 종료됨":reason;
+                    if(intent.getBooleanExtra("finished",false)&&live!=null)live.stop();
+                }
                 render();
                 return;
             }
@@ -57,8 +68,9 @@ public class TrackingActivity extends AppCompatActivity {
             latestLon=intent.getDoubleExtra("lon",Double.NaN);
             gpsTime=intent.getLongExtra("timestamp",0);
             accuracy=intent.getFloatExtra("accuracyMeters",Float.NaN);
-            if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,
-                    RoutineStore.prefs(TrackingActivity.this).getBoolean("tracking_active",false));
+            boolean tracking=RoutineStore.prefs(TrackingActivity.this).getBoolean("tracking_active",false);
+            if(tracking)trackingStatus="위치 수신됨 · 정확도 "+(Float.isFinite(accuracy)?Math.round(accuracy)+"m":"미확인");
+            if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,tracking);
             render();
         }
     };
@@ -163,6 +175,8 @@ public class TrackingActivity extends AppCompatActivity {
     private void stopTracking(){
         stopService(new Intent(this,TrackingService.class));
         RoutineStore.prefs(this).edit().putBoolean("tracking_active",false).apply();
+        trackingStarting=false;
+        trackingStatus="사용자가 위치 추적을 종료했어";
         toast("위치 추적 종료");
         if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,false);
         render();
@@ -185,10 +199,18 @@ public class TrackingActivity extends AppCompatActivity {
             return;
         }
         try{
+            trackingStarting=true;
+            trackingStatus="위치 추적 서비스 시작 요청 중";
             ContextCompat.startForegroundService(this,new Intent(this,TrackingService.class));
             readForegroundLocation();
-            toast("위치 추적 시작");
-        }catch(Exception e){toast("위치 추적 시작 실패");}
+            render();
+        }catch(Exception e){
+            trackingStarting=false;
+            trackingStatus="위치 추적 시작 실패: "+(e.getMessage()==null
+                    ?e.getClass().getSimpleName():e.getMessage());
+            render();
+            toast(trackingStatus);
+        }
     }
     @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){
         super.onRequestPermissionsResult(code,permissions,grants);
@@ -216,7 +238,7 @@ public class TrackingActivity extends AppCompatActivity {
         boolean tracking=RoutineStore.prefs(this).getBoolean("tracking_active",false);
         label(R.id.liveRouteTitle).setText(routine.isConfigured()
                 ?routine.startName+" → "+routine.endName:"등록된 경로 없음");
-        findViewById(R.id.liveStartTracking).setEnabled(!tracking);
+        findViewById(R.id.liveStartTracking).setEnabled(!tracking&&!trackingStarting);
         findViewById(R.id.liveStopTracking).setEnabled(tracking);
         TransitRoute route=live.route();
         TransitArrival vehicle=live.arrival();
@@ -251,6 +273,9 @@ public class TrackingActivity extends AppCompatActivity {
             gpsState=seconds<=90?"위치 추적 중 · 최근 "+seconds+"초 전":
                     "위치 갱신 대기";
         }
+        if(trackingStarting&&!tracking)gpsState=trackingStatus;
+        else if(!trackingStatus.isEmpty()&&!tracking)gpsState=trackingStatus;
+        else if(tracking&&!trackingStatus.isEmpty()&&gpsTime<=0)gpsState=trackingStatus;
         label(R.id.livePosition).setText(gpsState);
     }
 
