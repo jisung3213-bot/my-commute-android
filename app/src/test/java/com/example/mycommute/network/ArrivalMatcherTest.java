@@ -142,4 +142,22 @@ public class ArrivalMatcherTest {
         assertTrue(result.seconds>0&&result.seconds<=360);
     }
 
+
+    @Test public void subwayUsesExplicitEtaFromThirdArrivalMessage() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat formatter=
+                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        formatter.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=formatter.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":[{\"subwayId\":\"1001\","
+                +"\"statnNm\":\"시청\",\"trainLineNm\":\"인천행 (서울역방면)\","
+                +"\"recptnDt\":\""+received+"\",\"barvlDt\":0,"
+                +"\"arvlMsg2\":\"[16]번째 전역\","
+                +"\"arvlMsg3\":\"약 7분 후 도착\"}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertTrue(result.available);
+        assertTrue(result.seconds>0&&result.seconds<=420);
+    }
+
 }
