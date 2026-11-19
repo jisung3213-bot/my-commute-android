@@ -11,6 +11,9 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.graphics.Typeface;
+import android.content.res.ColorStateList;
+import com.google.android.material.card.MaterialCardView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -137,10 +140,11 @@ public class CustomActivity extends AppCompatActivity {
 
     private void restoreDraft(){
         restoring=true;
+        updateDirectionTabs();
         ((TextView)findViewById(R.id.textActiveRoutine)).setText(
-                "현재 경로 · "+(direction.equals(RoutineStore.OUTBOUND)?"출근":"퇴근"));
-        ((MaterialButton)findViewById(R.id.btnDirectionOut)).setEnabled(!direction.equals(RoutineStore.OUTBOUND));
-        ((MaterialButton)findViewById(R.id.btnDirectionBack)).setEnabled(!direction.equals(RoutineStore.RETURN));
+                "선택된 "+(direction.equals(RoutineStore.OUTBOUND)?"출근길":"퇴근길")
+                +" · "+(draft.name==null||draft.name.trim().isEmpty()
+                        ?"새 경로":draft.name.trim()));
         ((EditText)findViewById(R.id.editRouteName)).setText(draft.name);
         ((EditText)findViewById(R.id.editDeparture)).setText(
                 draft.arrivalTime.isEmpty()?"09:00":draft.arrivalTime);
@@ -153,33 +157,110 @@ public class CustomActivity extends AppCompatActivity {
         showCached();
     }
 
+    private void updateDirectionTabs(){
+        boolean out=RoutineStore.OUTBOUND.equals(direction);
+        styleTab(R.id.btnDirectionOut,out);
+        styleTab(R.id.btnDirectionBack,!out);
+    }
+    private void styleTab(int id,boolean selected){
+        MaterialButton tab=findViewById(id);
+        tab.setEnabled(true);
+        tab.setBackgroundTintList(ColorStateList.valueOf(
+                getColor(selected?R.color.primary:R.color.surface)));
+        tab.setTextColor(getColor(selected?R.color.surface:R.color.primary_dark));
+        tab.setStrokeColor(ColorStateList.valueOf(
+                getColor(selected?R.color.primary:R.color.border)));
+        tab.setStrokeWidth(dp(selected?0:1));
+        tab.setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);
+    }
+
     private void renderSaved(){
         savedList.removeAllViews();
         List<Routine> profiles=RoutineStore.list(this,direction);
-        if(profiles.isEmpty()){
-            TextView text=new TextView(this);
-            text.setText("저장된 경로 없음");
-            text.setPadding(12,12,12,12);
-            savedList.addView(text);
-        }
         String defaultId=RoutineStore.defaultId(this,direction);
+        boolean saved=isSaved(draft.id);
+        MaterialButton makeDefault=findViewById(R.id.btnMakeDefault);
+        makeDefault.setVisibility(saved&&!draft.id.equals(defaultId)?View.VISIBLE:View.GONE);
+        if(profiles.isEmpty()){
+            TextView empty=new TextView(this);
+            empty.setText("아직 저장된 경로가 없어. 새 경로를 만들어 봐.");
+            empty.setTextSize(14);
+            empty.setTextColor(getColor(R.color.text_secondary));
+            empty.setPadding(dp(12),dp(18),dp(12),dp(18));
+            savedList.addView(empty);
+            return;
+        }
         for(Routine profile:profiles){
             boolean current=profile.id.equals(draft.id);
-            MaterialButton button=new MaterialButton(this);
-            button.setAllCaps(false);
-            button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-            button.setText((profile.id.equals(defaultId)?"★ 기본 · ":"")
-                    +(current?"[선택] ":"")+profile.name+"\n"+
-                    profile.startName+" → "+profile.endName);
-            button.setTextSize(14);
-            button.setMinHeight((int)(56*getResources().getDisplayMetrics().density));
-            button.setPaddingRelative((int)(16*getResources().getDisplayMetrics().density),
-                    (int)(12*getResources().getDisplayMetrics().density),
-                    (int)(16*getResources().getDisplayMetrics().density),
-                    (int)(12*getResources().getDisplayMetrics().density));
-            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
-            lp.bottomMargin=7;savedList.addView(button,lp);
-            button.setOnClickListener(v->loadProfile(profile.id));
+            boolean isDefault=profile.id.equals(defaultId);
+            MaterialCardView card=new MaterialCardView(this);
+            card.setRadius(dp(14));
+            card.setCardElevation(0);
+            card.setCardBackgroundColor(getColor(current?R.color.primary_light:R.color.surface));
+            card.setStrokeColor(getColor(current?R.color.primary:R.color.border));
+            card.setStrokeWidth(dp(current?2:1));
+            card.setClickable(true);
+            card.setFocusable(true);
+
+            LinearLayout content=new LinearLayout(this);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(dp(16),dp(14),dp(16),dp(14));
+            card.addView(content);
+
+            LinearLayout heading=new LinearLayout(this);
+            heading.setOrientation(LinearLayout.HORIZONTAL);
+            heading.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            content.addView(heading);
+
+            TextView title=new TextView(this);
+            title.setText(profile.name==null||profile.name.trim().isEmpty()
+                    ?"이름 없는 경로":profile.name);
+            title.setTextSize(16);
+            title.setTypeface(null,Typeface.BOLD);
+            title.setTextColor(getColor(R.color.text_primary));
+            title.setMaxLines(2);
+            heading.addView(title,new LinearLayout.LayoutParams(0,-2,1f));
+
+            if(isDefault){
+                TextView badge=new TextView(this);
+                badge.setText("기본");
+                badge.setTextSize(12);
+                badge.setTypeface(null,Typeface.BOLD);
+                badge.setTextColor(getColor(R.color.primary_dark));
+                badge.setBackgroundResource(R.drawable.bg_route_selected);
+                badge.setPadding(dp(10),dp(5),dp(10),dp(5));
+                LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(-2,-2);
+                badgeParams.leftMargin=dp(8);
+                heading.addView(badge,badgeParams);
+            }
+            if(current){
+                TextView selected=new TextView(this);
+                selected.setText("선택 중");
+                selected.setTextSize(12);
+                selected.setTextColor(getColor(R.color.primary_dark));
+                LinearLayout.LayoutParams selectedParams=new LinearLayout.LayoutParams(-2,-2);
+                selectedParams.leftMargin=dp(8);
+                heading.addView(selected,selectedParams);
+            }
+
+            String start=profile.startName==null?"":profile.startName.trim();
+            String end=profile.endName==null?"":profile.endName.trim();
+            String summary=start+" → "+end;
+            if(!summary.trim().equals(profile.name==null?"":profile.name.trim())){
+                TextView detail=new TextView(this);
+                detail.setText(summary);
+                detail.setTextSize(13);
+                detail.setTextColor(getColor(R.color.text_secondary));
+                detail.setMaxLines(2);
+                LinearLayout.LayoutParams detailParams=new LinearLayout.LayoutParams(-1,-2);
+                detailParams.topMargin=dp(7);
+                content.addView(detail,detailParams);
+            }
+
+            LinearLayout.LayoutParams cardParams=new LinearLayout.LayoutParams(-1,-2);
+            cardParams.bottomMargin=dp(10);
+            savedList.addView(card,cardParams);
+            card.setOnClickListener(v->loadProfile(profile.id));
         }
     }
 
