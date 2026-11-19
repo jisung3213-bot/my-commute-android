@@ -47,27 +47,30 @@ public final class ReminderReceiver extends BroadcastReceiver {
             // Otherwise weather remains independently enabled.
             if(AlarmSettingsStore.enabled(c,AlarmSettingsStore.PREPARE))return;
             if(!AlertLedger.tryClaim(c,id,trip,type,"scheduled",now,Long.MAX_VALUE))return;
-            boolean sent=NotificationHelper.show(c,"출발 전 날씨를 확인하세요",
-                    weather,(id+"|"+type+"|"+trip).hashCode(),id);
+            AlertCopy.Message notice=AlertCopy.weather(weather);
+            boolean sent=NotificationHelper.show(c,notice.title,
+                    notice.body,(id+"|"+type+"|"+trip).hashCode(),id);
             PendingResult async=goAsync();
-            AlarmLogRepository.write(c,type+":"+id,sent?"날씨 주의":"알림 차단됨",
-                    weather,true,async::finish);
+            AlarmLogRepository.write(c,type+":"+id,sent?notice.title:"알림 차단됨",
+                    notice.body,true,async::finish);
             return;
         }
         if(!AlertLedger.tryClaim(c,id,trip,type,"scheduled",now,Long.MAX_VALUE))return;
 
-        String title=AlarmSettingsStore.PREPARE.equals(type)
-                ?"출발 "+AlarmSettingsStore.prepareMinutes(c)+"분 전":"지금 출발할 시간이에요";
-        String name=r.name==null||r.name.trim().isEmpty()?"등록한 이동 경로":r.name.trim();
-        String message=AlarmSettingsStore.PREPARE.equals(type)
-                ?format(departure)+" 출발 예정 · "+name
-                :r.arrivalTime+" 도착 목표 · "+name;
-        if(AlarmSettingsStore.PREPARE.equals(type)&&AlarmSettingsStore.enabled(c,AlarmSettingsStore.WEATHER)){
-            String weather=RoutineStore.prefs(c).getString("alert_weather_text_"+id,"");
-            long at=RoutineStore.prefs(c).getLong("alert_weather_at_"+id,0);
-            if(at>0&&now-at<=60*60_000L&&!weather.isEmpty())
-                message+=" · "+weather;
+        AlertCopy.Message notice;
+        if(AlarmSettingsStore.PREPARE.equals(type)){
+            String forecast="";
+            if(AlarmSettingsStore.enabled(c,AlarmSettingsStore.WEATHER)){
+                String weather=RoutineStore.prefs(c).getString("alert_weather_text_"+id,"");
+                long at=RoutineStore.prefs(c).getLong("alert_weather_at_"+id,0);
+                if(at>0&&now-at<=60*60_000L)forecast=weather;
+            }
+            notice=AlertCopy.prepare(AlarmSettingsStore.prepareMinutes(c),
+                    format(departure),r.name,forecast);
+        }else{
+            notice=AlertCopy.departure(r.arrivalTime,r.name);
         }
+        String title=notice.title,message=notice.body;
         boolean requested=NotificationHelper.show(c,title,message,
                 (id+"|"+type+"|"+trip).hashCode(),id);
         final String logTitle=requested?title:"알림 차단됨";
