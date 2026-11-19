@@ -450,8 +450,12 @@ public class CustomActivity extends AppCompatActivity {
     }
 
     private void renderCandidates(){
-        cards.removeAllViews();order.clear();
-        if(routes.isEmpty())return;
+        cards.removeAllViews();otherCards.removeAllViews();order.clear();
+        if(routes.isEmpty()){
+            findViewById(R.id.btnOtherRoutes).setVisibility(View.GONE);
+            findViewById(R.id.textRecommendationReason).setVisibility(View.GONE);
+            return;
+        }
         for(int i=0;i<routes.size();i++)order.add(i);
         int fastest=Integer.MAX_VALUE;
         for(TransitRoute route:routes)
@@ -474,7 +478,7 @@ public class CustomActivity extends AppCompatActivity {
                 weather.rain||weather.coldAlert?"비·한파 상황을 고려해 도보 부담을 낮춘 추천":
                 weather.lowTemperature?"낮은 기온을 고려해 도보 부담을 낮춘 추천":
                 "현재 기상정보와 환승 횟수를 고려한 추천";
-        explanation.setText(reason+" · 최단 경로 대비 최대 "+allowedExtra+"분 추가 허용");
+        explanation.setText(reason+" · 최단 경로 대비 "+allowedExtra+"분 이내의 대안을 우선 검토");
         View otherButton=findViewById(R.id.btnOtherRoutes);
         otherButton.setVisibility(order.size()>1?View.VISIBLE:View.GONE);
         otherCards.setVisibility(otherRoutesExpanded?View.VISIBLE:View.GONE);
