@@ -84,6 +84,22 @@ public final class AlertLabActivity extends AppCompatActivity {
             if(lastApiReport.isEmpty())Toast.makeText(this,"먼저 API 진단을 실행해",Toast.LENGTH_SHORT).show();
             else copyText("live-api-probe",lastApiReport);
         });
+        addLabel(root,"지하철역별 도착예정시간 제공 여부 (12개 역 · 최대 12회 요청)",18);
+        Button survey=new Button(this);
+        survey.setText("지하철역 ETA 일괄 검사 실행");
+        root.addView(survey);
+        survey.setOnClickListener(v->{
+            survey.setEnabled(false);
+            updateResult("12개 역의 실시간 ETA 제공 여부 조사 중...");
+            SubwayEtaSurvey.run(this,report->{
+                lastApiReport=report;
+                updateResult(report);
+                survey.setEnabled(true);
+                copyText("subway-eta-survey",report);
+                Toast.makeText(this,"역별 ETA 조사 결과 복사 완료",Toast.LENGTH_LONG).show();
+            });
+        });
+        addLabel(root,"요청 결과는 조회 시점의 표본이며, 동일 역에서도 시간대와 열차에 따라 달라질 수 있어. 연속 재실행은 15분 제한.",13);
         type=new Spinner(this);
         type.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names));
         root.addView(type);
