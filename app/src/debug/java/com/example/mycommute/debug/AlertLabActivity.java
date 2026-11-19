@@ -87,6 +87,13 @@ public final class AlertLabActivity extends AppCompatActivity {
             if(lastApiReport.isEmpty())Toast.makeText(this,"먼저 API 진단을 실행해",Toast.LENGTH_SHORT).show();
             else copyText("live-api-probe",lastApiReport);
         });
+        addLabel(root,"경로 추천 점수·정렬 테스트",18);
+        Button rankingLab=new Button(this);
+        rankingLab.setText("경로 추천 로직 테스트 열기");
+        root.addView(rankingLab);
+        rankingLab.setOnClickListener(v->startActivity(
+                new android.content.Intent(this,RouteRecommendationLabActivity.class)));
+        addLabel(root,"가상 날씨·여유시간·경로 후보를 바꾸거나 저장된 경로 후보의 추천 순위를 비교할 수 있어.",13);
         addLabel(root,"경로상 GPS 마커 모의실험",18);
         Button markerLab=new Button(this);
         markerLab.setText("GPS 경로 마커 테스트 열기");
