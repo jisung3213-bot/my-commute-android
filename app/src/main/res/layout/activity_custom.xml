@@ -9,30 +9,36 @@
                 android:text="나만의 출퇴근" android:textColor="@color/text_primary"
                 android:textSize="26sp" android:textStyle="bold"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginTop="10dp">
+                android:orientation="horizontal" android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card" android:padding="4dp">
                 <com.google.android.material.button.MaterialButton android:id="@+id/btnDirectionOut"
                     android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="출근길"/>
+                    android:layout_height="wrap_content" android:text="출근길"
+                    android:textAllCaps="false" android:minHeight="48dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
                 <com.google.android.material.button.MaterialButton android:id="@+id/btnDirectionBack"
                     android:layout_width="0dp" android:layout_weight="1"
                     android:layout_height="wrap_content" android:text="퇴근길"
+                    android:textAllCaps="false" android:minHeight="48dp"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             </LinearLayout>
             <TextView android:id="@+id/textActiveRoutine" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:paddingTop="6dp"
-                android:textColor="@color/text_secondary" android:text=""/>
+                android:layout_height="wrap_content" android:paddingTop="12dp"
+                android:textSize="13sp" android:textColor="@color/text_secondary" android:text=""/>
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="14dp"
+                android:layout_height="wrap_content" android:layout_marginTop="18dp"
                 android:text="저장된 경로"/>
             <LinearLayout android:id="@+id/savedRoutineList" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:orientation="vertical"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnNewRoutine"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="+ 새 경로 작성"
+                android:text="+ 새 경로 만들기" android:textAllCaps="false"
+                android:layout_marginTop="8dp"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnMakeDefault"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="현재 경로를 기본 경로로 지정"
+                android:text="선택한 경로를 기본으로 설정" android:textAllCaps="false"
+                android:visibility="gone"
                 style="@style/Widget.MaterialComponents.Button.TextButton"/>
             <LinearLayout android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:orientation="vertical"
