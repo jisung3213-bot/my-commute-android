@@ -392,6 +392,13 @@ public class TrackingActivity extends AppCompatActivity {
         TextView status=label(R.id.liveBoarding);
         TextView walkLabel=label(R.id.liveVehicleWalk);
         TextView slackLabel=label(R.id.liveVehicleSlack);
+        View etaRow=findViewById(R.id.liveVehicleEtaRow);
+        View etaDivider=findViewById(R.id.liveVehicleEtaDivider);
+        View nextColumn=findViewById(R.id.liveVehicleNextColumn);
+        // Suppress unavailable arrival time areas entirely, not just the text.
+        etaRow.setVisibility(View.GONE);
+        etaDivider.setVisibility(View.GONE);
+        nextColumn.setVisibility(View.GONE);
         mode.setText("교통"); station.setText("정보 확인 중");
         // No fabricated ETA or placeholder when the provider did not supply one.
         eta.setText("");next.setText("");
@@ -439,7 +446,12 @@ public class TrackingActivity extends AppCompatActivity {
         }
         int second=arrival.nextRemainingSeconds(now);
         eta.setText(remaining<60?"1분 이내":((remaining+59)/60)+"분 후");
-        next.setText(second>remaining?((second+59)/60)+"분 후":"");
+        etaRow.setVisibility(View.VISIBLE);
+        etaDivider.setVisibility(View.VISIBLE);
+        if(second>remaining){
+            next.setText(((second+59)/60)+"분 후");
+            nextColumn.setVisibility(View.VISIBLE);
+        }
         if(arrival.direction!=null&&!arrival.direction.isEmpty())
             diagnostic.setText(arrival.direction);
         int walk=live.walkSeconds();
