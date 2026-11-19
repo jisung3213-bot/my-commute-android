@@ -241,10 +241,8 @@ public final class ArrivalMatcher {
             }
             if(generated>latestStatusAt){
                 latestStatusAt=generated;
-                String etaReason=providerSeconds>0
-                        ?"원본 ETA "+providerSeconds+"초 · 정보 생성 후 경과 "+Math.max(0,age/1000L)+"초"
-                        :"원본 ETA "+(providerSeconds==0?"0초":"없음");
-                statusText=message+" · "+etaReason;
+                // Provider diagnostics belong in the debug survey, not commuter UI.
+                statusText=message;
                 statusDirection=trainDirection;
             }
         }
