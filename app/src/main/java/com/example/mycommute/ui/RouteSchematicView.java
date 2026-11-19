@@ -33,6 +33,18 @@ public final class RouteSchematicView extends View {
     }
     public void setCurrentLeg(int leg){if(currentLeg!=leg){currentLeg=leg;invalidate();}}
 
+    /** Draw a marker at a chosen schematic position for an isolated debug preview.
+     * Does not change Android GPS, route storage, or production location state. */
+    public void setPreviewPosition(int leg,float progress){
+        int bounded=route!=null&&leg>=0&&leg<route.legs.size()?leg:-1;
+        setCurrentLeg(bounded);
+        float next=Math.max(0f,Math.min(1f,progress));
+        boolean visible=bounded>=0;
+        if(gpsVisible!=visible||Math.abs(gpsProgress-next)>0.001f){
+            gpsVisible=visible;gpsProgress=next;invalidate();
+        }
+    }
+
     /** A schematic progress indicator, not a geographically precise map pin.
      * Only the caller's fresh, accurately matched GPS position is displayed. */
     public void setGpsPosition(double lat,double lon,boolean verified){
