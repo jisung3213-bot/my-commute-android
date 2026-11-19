@@ -34,4 +34,28 @@ public class WeatherRouteRankerTest {
     <WeatherRouteRanker.commuteScore(walking,
     new WeatherRouteRanker.Conditions(true,true,false),10));
  }
+
+ @Test public void rankingAlwaysPrioritizesRoutesWithinTravelTimeAllowance(){
+  var fast=new WeatherRouteRanker.Candidate("fast","transit",30,12,0,2,false);
+  var longDirect=new WeatherRouteRanker.Candidate("long","transit",48,0,0,0,false);
+  var rain=new WeatherRouteRanker.Conditions(true,true,false);
+  var ranked=WeatherRouteRanker.rank(Arrays.asList(fast,longDirect),rain,10);
+  assertEquals(Integer.valueOf(0),ranked.get(0));
+  assertEquals(Integer.valueOf(1),ranked.get(1));
+ }
+ @Test public void rankingChangesFromFastToFewerTransfersWithBuffer(){
+  var fast=new WeatherRouteRanker.Candidate("fast","transit",30,2,0,2,false);
+  var direct=new WeatherRouteRanker.Candidate("direct","transit",34,2,0,0,false);
+  var fine=new WeatherRouteRanker.Conditions(true,false,false);
+  assertEquals(Integer.valueOf(0),WeatherRouteRanker.rank(Arrays.asList(fast,direct),fine,0).get(0));
+  assertEquals(Integer.valueOf(1),WeatherRouteRanker.rank(Arrays.asList(fast,direct),fine,20).get(0));
+ }
+ @Test public void rankingChangesFromShorterTripToLessWalkingInRain(){
+  var shortWalk=new WeatherRouteRanker.Candidate("short","transit",30,10,0,0,false);
+  var lessWalk=new WeatherRouteRanker.Candidate("sheltered","transit",34,2,0,0,false);
+  var good=new WeatherRouteRanker.Conditions(true,false,false);
+  var rain=new WeatherRouteRanker.Conditions(true,true,false);
+  assertEquals(Integer.valueOf(0),WeatherRouteRanker.rank(Arrays.asList(shortWalk,lessWalk),good,10).get(0));
+  assertEquals(Integer.valueOf(1),WeatherRouteRanker.rank(Arrays.asList(shortWalk,lessWalk),rain,10).get(0));
+ }
 }
