@@ -109,4 +109,37 @@ public class ArrivalMatcherTest {
         assertTrue(result.message.contains("제공하지 않아"));
     }
 
+
+    @Test public void subwayDoesNotConvertStationCountIntoMinutes() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat formatter=
+                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        formatter.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=formatter.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":[{\"subwayId\":\"1001\","
+                +"\"statnNm\":\"시청\",\"trainLineNm\":\"인천행 (서울역방면)\","
+                +"\"recptnDt\":\""+received+"\",\"barvlDt\":0,"
+                +"\"arvlMsg2\":\"[16]번째 전역 (동두천중앙)\"}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertFalse(result.available);
+        assertTrue(result.statusOnly);
+    }
+
+    @Test public void subwayUsesExplicitMinuteEtaWhenProviderSecondsMissing() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat formatter=
+                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        formatter.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=formatter.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":[{\"subwayId\":\"1001\","
+                +"\"statnNm\":\"시청\",\"trainLineNm\":\"인천행 (서울역방면)\","
+                +"\"recptnDt\":\""+received+"\",\"barvlDt\":0,"
+                +"\"arvlMsg2\":\"약 6분 후 도착\"}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertTrue(result.available);
+        assertTrue(result.seconds>0&&result.seconds<=360);
+    }
+
 }
