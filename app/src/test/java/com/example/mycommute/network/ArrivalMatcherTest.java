@@ -86,7 +86,7 @@ public class ArrivalMatcherTest {
         assertEquals(210,result.seconds);
     }
 
-    @Test public void subwayAcceptsExplicitNextStationInArrivalDirection() throws Exception {
+    @Test public void subwayRejectsArrivalStatusAsDirectionEvidence() throws Exception {
         TransitRoute.Leg leg=subwayLegWithNext();
         long now=System.currentTimeMillis();
         java.text.SimpleDateFormat time=new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
@@ -96,8 +96,8 @@ public class ArrivalMatcherTest {
                 +"{\"subwayId\":\"1001\",\"statnNm\":\"시청\",\"trainLineNm\":\"청량리행\","
                 +"\"arvlMsg3\":\"서울역 방면\",\"recptnDt\":\""+received+"\",\"barvlDt\":180}]}";
         TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
-        assertTrue(result.available);
-        assertEquals(180,result.seconds);
+        assertFalse(result.available);
+        assertTrue(result.message.contains("방향 미검증"));
     }
 
     @Test public void subwayInfo200MeansNoProviderDataNotAuthFailure() throws Exception {
