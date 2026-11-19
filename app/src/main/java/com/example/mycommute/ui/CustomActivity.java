@@ -53,7 +53,8 @@ public class CustomActivity extends AppCompatActivity {
     private int requestGeneration,weatherGeneration;
     private WeatherRouteRanker.Conditions weather=new WeatherRouteRanker.Conditions(false,false,false);
     private TextView weatherStatus,resultStatus;
-    private LinearLayout cards,savedList;
+    private LinearLayout cards,otherCards,savedList;
+    private boolean otherRoutesExpanded;
 
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
@@ -65,6 +66,11 @@ public class CustomActivity extends AppCompatActivity {
         weatherStatus=findViewById(R.id.textWeatherStatus);
         resultStatus=findViewById(R.id.textTransitResult);
         cards=findViewById(R.id.transitCards);
+        otherCards=findViewById(R.id.otherTransitCards);
+        findViewById(R.id.btnOtherRoutes).setOnClickListener(v->{
+            otherRoutesExpanded=!otherRoutesExpanded;
+            renderCandidates();
+        });
         savedList=findViewById(R.id.savedRoutineList);
         direction=RoutineStore.activeDirection(this);
         draft=RoutineStore.read(this);
@@ -346,7 +352,9 @@ public class CustomActivity extends AppCompatActivity {
         searching=false;
         findViewById(R.id.btnSearchTransit).setEnabled(true);
         routes=Collections.emptyList();selected=-1;order.clear();expandedRoutes.clear();
-        cards.removeAllViews();
+        cards.removeAllViews();otherCards.removeAllViews();otherRoutesExpanded=false;
+        findViewById(R.id.btnOtherRoutes).setVisibility(View.GONE);
+        findViewById(R.id.textRecommendationReason).setVisibility(View.GONE);
         UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
         findViewById(R.id.btnPreviewMap).setEnabled(false);
         TransitRouteMemory.clear();
@@ -445,12 +453,39 @@ public class CustomActivity extends AppCompatActivity {
         cards.removeAllViews();order.clear();
         if(routes.isEmpty())return;
         for(int i=0;i<routes.size();i++)order.add(i);
-        if(draft.weatherEnabled&&weatherKnown)order.sort((a,b)->
-                Double.compare(score(routes.get(a)),score(routes.get(b))));
-        else order.sort(Comparator.comparingInt(i->routes.get(i).totalSeconds));
-        for(int index:order){
+        int fastest=Integer.MAX_VALUE;
+        for(TransitRoute route:routes)
+            fastest=Math.min(fastest,TransitRoute.minutes(route.totalSeconds));
+        final int fastestMinutes=fastest;
+        final int allowedExtra=WeatherRouteRanker.acceptableExtraMinutes(draft.marginMinutes);
+        order.sort((a,b)->{
+            boolean aEligible=TransitRoute.minutes(routes.get(a).totalSeconds)<=fastestMinutes+allowedExtra;
+            boolean bEligible=TransitRoute.minutes(routes.get(b).totalSeconds)<=fastestMinutes+allowedExtra;
+            if(aEligible!=bEligible)return aEligible?-1:1;
+            int scoreCompare=Double.compare(score(routes.get(a)),score(routes.get(b)));
+            if(scoreCompare!=0)return scoreCompare;
+            int durationCompare=Integer.compare(routes.get(a).totalSeconds,routes.get(b).totalSeconds);
+            return durationCompare!=0?durationCompare:Integer.compare(a,b);
+        });
+        TextView explanation=findViewById(R.id.textRecommendationReason);
+        explanation.setVisibility(View.VISIBLE);
+        String reason=(!draft.weatherEnabled)?"이동시간·환승 횟수를 고려한 추천":
+                !weatherKnown?"기상정보 확인 전 · 이동시간과 환승 횟수를 고려한 추천":
+                weather.rain||weather.coldAlert?"비·한파 상황을 고려해 도보 부담을 낮춘 추천":
+                weather.lowTemperature?"낮은 기온을 고려해 도보 부담을 낮춘 추천":
+                "현재 기상정보와 환승 횟수를 고려한 추천";
+        explanation.setText(reason+" · 최단 경로 대비 최대 "+allowedExtra+"분 추가 허용");
+        View otherButton=findViewById(R.id.btnOtherRoutes);
+        otherButton.setVisibility(order.size()>1?View.VISIBLE:View.GONE);
+        otherCards.setVisibility(otherRoutesExpanded?View.VISIBLE:View.GONE);
+        ((MaterialButton)otherButton).setText(otherRoutesExpanded
+                ?"다른 경로 접기":"다른 경로 "+Math.max(0,order.size()-1)+"개 보기");
+        for(int orderPosition=0;orderPosition<order.size();orderPosition++){
+            if(orderPosition>0&&!otherRoutesExpanded)continue;
+            int index=order.get(orderPosition);
             TransitRoute route=routes.get(index);
-            View card=getLayoutInflater().inflate(R.layout.item_route_result,cards,false);
+            LinearLayout destination=orderPosition==0?cards:otherCards;
+            View card=getLayoutInflater().inflate(R.layout.item_route_result,destination,false);
             com.google.android.material.card.MaterialCardView surface=
                     (com.google.android.material.card.MaterialCardView)card;
             surface.setStrokeColor(getColor(selected==index?R.color.primary:R.color.border));
@@ -462,7 +497,7 @@ public class CustomActivity extends AppCompatActivity {
             LinearLayout segments=card.findViewById(R.id.routeCardLegs);
             MaterialButton expand=card.findViewById(R.id.routeCardExpand);
             MaterialButton choose=card.findViewById(R.id.routeCardChoose);
-            rank.setText((index+1)+"번 경로");
+            rank.setText(orderPosition==0?"추천 경로":(index+1)+"번 경로");
             flag.setVisibility(selected==index?View.VISIBLE:View.GONE);
             duration.setText(TransitRoute.minutes(route.totalSeconds)+"분");
             String info="도보 "+TransitRoute.minutes(route.walkSeconds)+"분 ("+route.walkMeters+"m)"
@@ -508,7 +543,7 @@ public class CustomActivity extends AppCompatActivity {
             choose.setText(selected==index?"선택된 경로":"이 경로 선택");
             choose.setOnClickListener(v->chooseCandidate(index));
             card.setOnClickListener(v->chooseCandidate(index));
-            cards.addView(card,new LinearLayout.LayoutParams(-1,-2));
+            destination.addView(card,new LinearLayout.LayoutParams(-1,-2));
         }
         findViewById(R.id.btnPreviewMap).setEnabled(selected>=0&&selected<routes.size());
     }
@@ -516,9 +551,12 @@ public class CustomActivity extends AppCompatActivity {
     private double score(TransitRoute r){
         int duration=TransitRoute.minutes(r.totalSeconds);
         int walk=Math.min(TransitRoute.minutes(r.walkSeconds),Math.max(1,duration));
-        return WeatherRouteRanker.score(
+        return WeatherRouteRanker.commuteScore(
                 new WeatherRouteRanker.Candidate("route","대중교통",Math.max(1,duration),
-                        walk,0,r.transfers,false),weather);
+                        walk,0,r.transfers,false),
+                draft.weatherEnabled&&weatherKnown?weather:
+                        new WeatherRouteRanker.Conditions(false,false,false),
+                draft.marginMinutes);
     }
 
     /** Save human-authored settings independently from any paid API request. */
