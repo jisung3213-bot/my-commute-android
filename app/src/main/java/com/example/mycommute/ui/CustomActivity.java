@@ -456,21 +456,16 @@ public class CustomActivity extends AppCompatActivity {
             findViewById(R.id.textRecommendationReason).setVisibility(View.GONE);
             return;
         }
-        for(int i=0;i<routes.size();i++)order.add(i);
-        int fastest=Integer.MAX_VALUE;
-        for(TransitRoute route:routes)
-            fastest=Math.min(fastest,TransitRoute.minutes(route.totalSeconds));
-        final int fastestMinutes=fastest;
+        List<WeatherRouteRanker.Candidate> candidates=new ArrayList<>();
+        for(int i=0;i<routes.size();i++){
+            TransitRoute route=routes.get(i);
+            candidates.add(candidate(route));
+        }
+        WeatherRouteRanker.Conditions effectiveWeather=
+                draft.weatherEnabled&&weatherKnown?weather:
+                        new WeatherRouteRanker.Conditions(false,false,false);
+        order.addAll(WeatherRouteRanker.rank(candidates,effectiveWeather,draft.marginMinutes));
         final int allowedExtra=WeatherRouteRanker.acceptableExtraMinutes(draft.marginMinutes);
-        order.sort((a,b)->{
-            boolean aEligible=TransitRoute.minutes(routes.get(a).totalSeconds)<=fastestMinutes+allowedExtra;
-            boolean bEligible=TransitRoute.minutes(routes.get(b).totalSeconds)<=fastestMinutes+allowedExtra;
-            if(aEligible!=bEligible)return aEligible?-1:1;
-            int scoreCompare=Double.compare(score(routes.get(a)),score(routes.get(b)));
-            if(scoreCompare!=0)return scoreCompare;
-            int durationCompare=Integer.compare(routes.get(a).totalSeconds,routes.get(b).totalSeconds);
-            return durationCompare!=0?durationCompare:Integer.compare(a,b);
-        });
         TextView explanation=findViewById(R.id.textRecommendationReason);
         explanation.setVisibility(View.VISIBLE);
         String reason=(!draft.weatherEnabled)?"이동시간·환승 횟수를 고려한 추천":
@@ -552,15 +547,11 @@ public class CustomActivity extends AppCompatActivity {
         findViewById(R.id.btnPreviewMap).setEnabled(selected>=0&&selected<routes.size());
     }
 
-    private double score(TransitRoute r){
-        int duration=TransitRoute.minutes(r.totalSeconds);
-        int walk=Math.min(TransitRoute.minutes(r.walkSeconds),Math.max(1,duration));
-        return WeatherRouteRanker.commuteScore(
-                new WeatherRouteRanker.Candidate("route","대중교통",Math.max(1,duration),
-                        walk,0,r.transfers,false),
-                draft.weatherEnabled&&weatherKnown?weather:
-                        new WeatherRouteRanker.Conditions(false,false,false),
-                draft.marginMinutes);
+    private WeatherRouteRanker.Candidate candidate(TransitRoute r){
+        int duration=Math.max(1,TransitRoute.minutes(r.totalSeconds));
+        int walk=Math.min(TransitRoute.minutes(r.walkSeconds),duration);
+        return new WeatherRouteRanker.Candidate("route","대중교통",duration,
+                walk,0,r.transfers,false);
     }
 
     /** Save human-authored settings independently from any paid API request. */
