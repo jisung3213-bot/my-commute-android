@@ -8,6 +8,9 @@ import android.view.View;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.mycommute.alarms.AlertLabMode;
+import com.example.mycommute.alarms.AlertCopy;
+import com.example.mycommute.data.RoutineStore;
+import com.example.mycommute.model.Routine;
 import com.example.mycommute.alarms.NotificationHelper;
 import com.example.mycommute.data.AlarmLogRepository;
 import com.example.mycommute.data.AlarmSettingsStore;
@@ -199,13 +202,36 @@ public final class AlertLabActivity extends AppCompatActivity {
         String trace="[TEST] "+names[id]+" · "+time()+" · "+
                 (variant==0?"정상":variant==1?"경계 실패":"정보 불확실");
         if(!fire){updateResult(trace+"\n판정: 발송하지 않음 (예상된 미발송)");return;}
-        String body="모의 데이터 기준 검증용 알림 · 실제 교통정보 아님 · "+time();
-        boolean sent=NotificationHelper.show(this,"[TEST] "+names[id],body,
+        AlertCopy.Message copy=sampleCopy(id);
+        String title="[TEST] "+copy.title;
+        boolean sent=NotificationHelper.show(this,title,copy.body,
                 ("lab-"+(++event)).hashCode(),"lab-fixture");
         AlarmLogRepository.write(this,"test:"+types[id],
-                sent?"[TEST] "+names[id]:"[TEST] 알림 차단됨",body,true,null);
-        updateResult(trace+"\n판정: "+(sent?"알림 요청 성공":"기기 알림 권한 차단")+"\n로그 유형: test:"+types[id]);
+                sent?title:"[TEST] 알림 차단됨",copy.body,true,null);
+        updateResult(trace+"\n제목: "+title+"\n본문: "+copy.body
+                +"\n판정: "+(sent?"알림 요청 성공":"기기 알림 권한 차단")
+                +"\n로그 유형: test:"+types[id]);
     }
+    /** The same user-visible copy factory as production, with fixed synthetic facts. */
+    private AlertCopy.Message sampleCopy(int id){
+        Routine saved=RoutineStore.read(this);
+        String profile=saved.name==null||saved.name.trim().isEmpty()?"학교 가는 길":saved.name;
+        switch(id){
+            case 0:return AlertCopy.prepare(AlarmSettingsStore.prepareMinutes(this),
+                    "08:10",profile,"");
+            case 1:return AlertCopy.departure("09:00",profile);
+            case 2:return AlertCopy.vehicle("광운대역",value(eta));
+            case 3:return AlertCopy.walk("광운대역",value(eta)-value(walking)-120);
+            case 4:return AlertCopy.transfer("시청역","2호선");
+            case 5:return AlertCopy.exit("서울역");
+            case 6:return AlertCopy.delay(value(delay));
+            case 7:return AlertCopy.weather("비 예보 · 우산 준비");
+            case 8:return AlertCopy.deviation();
+            case 9:return AlertCopy.finish("광운대학교");
+            default:throw new IllegalArgumentException("알림 종류 오류");
+        }
+    }
+
     private void copyReport(){
         if(lastReport.isEmpty()){
             Toast.makeText(this,"먼저 전체 검증을 실행해",Toast.LENGTH_SHORT).show();return;
