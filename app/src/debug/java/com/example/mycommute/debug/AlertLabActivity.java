@@ -84,6 +84,13 @@ public final class AlertLabActivity extends AppCompatActivity {
             if(lastApiReport.isEmpty())Toast.makeText(this,"먼저 API 진단을 실행해",Toast.LENGTH_SHORT).show();
             else copyText("live-api-probe",lastApiReport);
         });
+        addLabel(root,"경로상 GPS 마커 모의실험",18);
+        Button markerLab=new Button(this);
+        markerLab.setText("GPS 경로 마커 테스트 열기");
+        root.addView(markerLab);
+        markerLab.setOnClickListener(v->startActivity(
+                new android.content.Intent(this,RouteGpsLabActivity.class)));
+        addLabel(root,"현재 저장된 경로를 사용해 구간·진행률을 조작해. 실제 기기 GPS는 바꾸지 않아.",13);
         addLabel(root,"지하철역별 도착예정시간 제공 여부 (12개 역 · 최대 12회 요청)",18);
         Button survey=new Button(this);
         survey.setText("지하철역 ETA 일괄 검사 실행");
