@@ -194,8 +194,9 @@ public final class ArrivalMatcher {
             // Only a verified next-station cue is sufficient to claim the
             // selected route's train. Terminus / updnLine alone is ambiguous.
             String directionText=normalizeDirection(trainDirection);
-            String arrivalDirection=normalizeDirection(item.optString("arvlMsg3",""));
-            if(next.isEmpty()||(!directionText.contains(next)&&!arrivalDirection.contains(next))) {
+            // arvlMsg3 describes observed approach/location, not the route direction.
+            // Do not infer direction from an arbitrary station in that field.
+            if(next.isEmpty()||!directionText.contains(next)) {
                 freshButDirectionUnconfirmed++;
                 continue;
             }
