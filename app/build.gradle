@@ -12,9 +12,14 @@ def localFile = rootProject.file('local.properties')
 if (localFile.exists()) localFile.withInputStream { localConfig.load(it) }
 def tmapKey = (localConfig.getProperty('TMAP_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
 def transitKey = (localConfig.getProperty('TMAP_TRANSIT_APP_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
-def weatherKey = (localConfig.getProperty('KMA_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+// data.go.kr may issue one key usable across separately approved APIs.
+// Explicit per-service keys take precedence, shared key is fallback only.
+def sharedDataKey = (localConfig.getProperty('PUBLIC_DATA_SERVICE_KEY')
+        ?: localConfig.getProperty('KMA_SERVICE_KEY') ?: '').trim()
+def weatherKey = ((localConfig.getProperty('KMA_SERVICE_KEY') ?: '').trim() ?: sharedDataKey).replace('\\', '\\\\').replace('"', '\\"')
 def subwayKey = (localConfig.getProperty('SEOUL_SUBWAY_API_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
-def busKey = (localConfig.getProperty('TAGO_BUS_SERVICE_KEY') ?: '').replace('\\', '\\\\').replace('"', '\\"')
+def seoulBusKey = ((localConfig.getProperty('SEOUL_BUS_SERVICE_KEY') ?: '').trim() ?: sharedDataKey).replace('\\', '\\\\').replace('"', '\\"')
+def busKey = ((localConfig.getProperty('TAGO_BUS_SERVICE_KEY') ?: '').trim() ?: sharedDataKey).replace('\\', '\\\\').replace('"', '\\"')
 
 android {
     namespace 'com.example.mycommute'
@@ -30,6 +35,7 @@ android {
         buildConfigField 'String', 'TMAP_TRANSIT_APP_KEY', '"' + transitKey + '"'
         buildConfigField 'String', 'KMA_SERVICE_KEY', '"' + weatherKey + '"'
         buildConfigField 'String', 'SEOUL_SUBWAY_API_KEY', '"' + subwayKey + '"'
+        buildConfigField 'String', 'SEOUL_BUS_SERVICE_KEY', '"' + seoulBusKey + '"'
         buildConfigField 'String', 'TAGO_BUS_SERVICE_KEY', '"' + busKey + '"'
     }
 

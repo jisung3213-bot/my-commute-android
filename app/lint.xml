@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- This pilot is built for local testing at its existing target SDK. -->
+    <issue id="ExpiredTargetSdkVersion">
+        <ignore path="build.gradle" />
+    </issue>
+</lint>

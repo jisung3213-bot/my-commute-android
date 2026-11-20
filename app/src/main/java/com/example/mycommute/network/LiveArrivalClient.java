@@ -74,9 +74,9 @@ public final class LiveArrivalClient {
             UI.post(()->callback.complete(TransitArrival.unavailable(
                     "SEOUL_SUBWAY_API_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
         }
-        if("BUS".equals(leg.mode)&&!busEnabled()){
+        if("BUS".equals(leg.mode)&&!(SeoulBusClient.likelySeoul(leg.startLat,leg.startLon) ? SeoulBusClient.enabled() : busEnabled())){
             UI.post(()->callback.complete(TransitArrival.unavailable(
-                    "TAGO_BUS_SERVICE_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
+                    SeoulBusClient.likelySeoul(leg.startLat,leg.startLon)?"SEOUL_BUS_SERVICE_KEY가 설정되지 않았어":"TAGO_BUS_SERVICE_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
         }
         IO.execute(()->{
             String identifier=leg.mode+"|"+leg.routeName+"|"+leg.startName+"|"+
@@ -89,6 +89,7 @@ public final class LiveArrivalClient {
             }else{
                 try {
                     if("SUBWAY".equals(leg.mode))result=subway(leg);
+                    else if(SeoulBusClient.likelySeoul(leg.startLat,leg.startLon))result=SeoulBusClient.fetch(leg);
                     else result=bus(leg);
                 }catch(Exception e){
                     String why=e.getMessage()==null?"알 수 없는 오류":e.getMessage();
@@ -109,7 +110,7 @@ public final class LiveArrivalClient {
                 System.currentTimeMillis());
         String url="http://swopenAPI.seoul.go.kr/api/subway/"
                 +URLEncoder.encode(BuildConfig.SEOUL_SUBWAY_API_KEY,StandardCharsets.UTF_8.name())
-                +"/json/realtimeStationArrival/0/30/"
+                +"/json/realtimeStationArrival/1/100/"
                 +URLEncoder.encode(station,StandardCharsets.UTF_8.name());
         String text=request(url,"서울시 지하철 도착정보");
         return ArrivalMatcher.subwayArrival(text,leg,System.currentTimeMillis());

@@ -53,7 +53,6 @@ public final class KmaWeatherClient {
         }
     }
     private static final ExecutorService NETWORK=Executors.newSingleThreadExecutor();
-    private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static final TimeZone KST=TimeZone.getTimeZone("Asia/Seoul");
     private KmaWeatherClient(){}
 
@@ -63,8 +62,9 @@ public final class KmaWeatherClient {
     }
 
     public static void forecast(final Routine r,final Callback cb) {
-        if(!enabled()) {MAIN.post(()->cb.error("기상청 API 키가 없어. 기상정보를 적용하지 않았어"));return;}
-        if(!r.validCoordinates()) {MAIN.post(()->cb.error("기상 조회 위치가 없어"));return;}
+        Handler main = new Handler(Looper.getMainLooper());
+        if(!enabled()) {main.post(()->cb.error("기상청 API 키가 없어. 기상정보를 적용하지 않았어"));return;}
+        if(!r.validCoordinates()) {main.post(()->cb.error("기상 조회 위치가 없어"));return;}
         NETWORK.execute(()-> {
             try {
                 Calendar at=targetArrival(r);
@@ -100,10 +100,10 @@ public final class KmaWeatherClient {
                     }
                 } finally{connection.disconnect();}
                 Report report=parse(text,at);
-                MAIN.post(()->cb.success(report));
+                main.post(()->cb.success(report));
             }catch(Exception e) {
                 String message=e.getMessage()==null?"기상청 조회 실패":e.getMessage();
-                MAIN.post(()->cb.error(message));
+                main.post(()->cb.error(message));
             }
         });
     }

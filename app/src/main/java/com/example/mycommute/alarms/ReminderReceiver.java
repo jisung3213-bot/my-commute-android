@@ -1,6 +1,7 @@
 package com.example.mycommute.alarms;
 
 import android.content.BroadcastReceiver;
+import com.example.mycommute.alarms.AlertLabMode;
 import android.content.Context;
 import android.content.Intent;
 import com.example.mycommute.data.AlarmLogRepository;
@@ -14,6 +15,7 @@ import java.util.Calendar;
 /** Scheduled events must remain local, never requiring a live API on wakeup. */
 public final class ReminderReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c,Intent intent){
+        if(AlertLabMode.enabled(c))return;
         if(intent==null||!Session.signedIn(c)||!
                 Session.accountId(c).equals(intent.getStringExtra("account")))return;
         String id=intent.getStringExtra("routineId");
@@ -45,26 +47,30 @@ public final class ReminderReceiver extends BroadcastReceiver {
             // Otherwise weather remains independently enabled.
             if(AlarmSettingsStore.enabled(c,AlarmSettingsStore.PREPARE))return;
             if(!AlertLedger.tryClaim(c,id,trip,type,"scheduled",now,Long.MAX_VALUE))return;
-            boolean sent=NotificationHelper.show(c,"날씨 주의 · "+r.name,
-                    weather,(id+"|"+type+"|"+trip).hashCode(),id);
+            AlertCopy.Message notice=AlertCopy.weather(weather);
+            boolean sent=NotificationHelper.show(c,notice.title,
+                    notice.body,(id+"|"+type+"|"+trip).hashCode(),id);
             PendingResult async=goAsync();
-            AlarmLogRepository.write(c,type+":"+id,sent?"날씨 주의":"알림 차단됨",
-                    weather,true,async::finish);
+            AlarmLogRepository.write(c,type+":"+id,sent?notice.title:"알림 차단됨",
+                    notice.body,true,async::finish);
             return;
         }
         if(!AlertLedger.tryClaim(c,id,trip,type,"scheduled",now,Long.MAX_VALUE))return;
 
-        String title=AlarmSettingsStore.PREPARE.equals(type)
-                ?"출발 준비 · "+r.name:"출발 권장 · "+r.name;
-        String message=AlarmSettingsStore.PREPARE.equals(type)
-                ?"약 "+AlarmSettingsStore.prepareMinutes(c)+"분 뒤 "+format(departure)+" 출발 예정"
-                :format(departure)+" 출발 권장 · 목표 도착 "+r.arrivalTime;
-        if(AlarmSettingsStore.PREPARE.equals(type)&&AlarmSettingsStore.enabled(c,AlarmSettingsStore.WEATHER)){
-            String weather=RoutineStore.prefs(c).getString("alert_weather_text_"+id,"");
-            long at=RoutineStore.prefs(c).getLong("alert_weather_at_"+id,0);
-            if(at>0&&now-at<=60*60_000L&&!weather.isEmpty())
-                message+=" · "+weather;
+        AlertCopy.Message notice;
+        if(AlarmSettingsStore.PREPARE.equals(type)){
+            String forecast="";
+            if(AlarmSettingsStore.enabled(c,AlarmSettingsStore.WEATHER)){
+                String weather=RoutineStore.prefs(c).getString("alert_weather_text_"+id,"");
+                long at=RoutineStore.prefs(c).getLong("alert_weather_at_"+id,0);
+                if(at>0&&now-at<=60*60_000L)forecast=weather;
+            }
+            notice=AlertCopy.prepare(AlarmSettingsStore.prepareMinutes(c),
+                    format(departure),r.name,forecast);
+        }else{
+            notice=AlertCopy.departure(r.arrivalTime,r.name);
         }
+        String title=notice.title,message=notice.body;
         boolean requested=NotificationHelper.show(c,title,message,
                 (id+"|"+type+"|"+trip).hashCode(),id);
         final String logTitle=requested?title:"알림 차단됨";

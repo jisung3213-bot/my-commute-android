@@ -1,6 +1,7 @@
 package com.example.mycommute.location;
 
 import android.Manifest;
+import com.example.mycommute.alarms.AlertLabMode;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -40,6 +41,7 @@ public class TrackingService extends Service {
     private Routine monitoredRoutine;
     private TransitRoute monitoredRoute;
     private boolean networkActive,walkLoading,arrivalLoading,autoFinished;
+    private String stopReason="";
     private long lastArrivalPoll,lastWalkPoll;
     private int lastArrivalLeg=-1;
     private final Runnable ticker=new Runnable(){
@@ -132,8 +134,20 @@ public class TrackingService extends Service {
         trackingPrefs=RoutineStore.prefs(this);
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
-        if(intent!=null&&ACTION_STOP.equals(intent.getAction())) {stopSelf();return START_NOT_STICKY;}
-        if(!Session.signedIn(this)||!(allowed(Manifest.permission.ACCESS_FINE_LOCATION)||allowed(Manifest.permission.ACCESS_COARSE_LOCATION))) {
+        if(AlertLabMode.enabled(this)){
+            stopReason="알림 실험 모드에서는 위치 추적이 중지돼";
+            stopSelf();return START_NOT_STICKY;
+        }
+        if(intent!=null&&ACTION_STOP.equals(intent.getAction())) {
+            stopReason="사용자가 위치 추적을 종료했어";
+            stopSelf();return START_NOT_STICKY;
+        }
+        if(!Session.signedIn(this)){
+            stopReason="로그인이 만료되어 위치 추적을 시작할 수 없어";
+            stopSelf();return START_NOT_STICKY;
+        }
+        if(!(allowed(Manifest.permission.ACCESS_FINE_LOCATION)||allowed(Manifest.permission.ACCESS_COARSE_LOCATION))){
+            stopReason="위치 접근 권한이 없어";
             stopSelf();return START_NOT_STICKY;
         }
         try {
@@ -166,12 +180,30 @@ public class TrackingService extends Service {
                         sendBroadcast(event);
                     }
                 };
-                provider.requestLocationUpdates(request,callback,getMainLooper());
+                provider.requestLocationUpdates(request,callback,getMainLooper())
+                        .addOnSuccessListener(v->broadcastState(true,""))
+                        .addOnFailureListener(error->{
+                            stopReason="GPS 위치 업데이트 등록 실패: "
+                                    +(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage());
+                            stopSelf();
+                        });
             }
-        }catch(SecurityException|IllegalStateException e){stopSelf();return START_NOT_STICKY;}
+        }catch(SecurityException|IllegalStateException e){
+            stopReason="위치추적 서비스 시작 실패: "
+                    +(e.getMessage()==null?e.getClass().getSimpleName():e.getMessage());
+            stopSelf();return START_NOT_STICKY;
+        }
         return START_NOT_STICKY;
     }
     private boolean allowed(String permission) {return ContextCompat.checkSelfPermission(this,permission)==PackageManager.PERMISSION_GRANTED;}
+    private void broadcastState(boolean active,String reason){
+        Intent changed=new Intent(ACTION_STATE);
+        changed.setPackage(getPackageName());
+        changed.putExtra("active",active);
+        changed.putExtra("reason",reason);
+        changed.putExtra("finished",autoFinished);
+        sendBroadcast(changed);
+    }
     @Override public void onDestroy() {
         networkActive=false;
         handler.removeCallbacks(ticker);
@@ -184,10 +216,7 @@ public class TrackingService extends Service {
         if(callback!=null)provider.removeLocationUpdates(callback);
         trackingPrefs.edit().putBoolean("tracking_active",false)
                 .putLong("trip_ended",System.currentTimeMillis()).apply();
-        Intent changed=new Intent(ACTION_STATE);
-        changed.setPackage(getPackageName());
-        changed.putExtra("finished",autoFinished);
-        sendBroadcast(changed);
+        broadcastState(false,stopReason);
         com.example.mycommute.data.AlarmLogRepository.write(this,"trip_end","이동 종료","위치 추적이 종료되었습니다",false,null);
         super.onDestroy();
     }

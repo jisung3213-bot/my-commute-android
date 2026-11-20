@@ -13,6 +13,8 @@ import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.mycommute.R;
+import com.example.mycommute.BuildConfig;
+import com.example.mycommute.alarms.AlertLabMode;
 import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.AlarmSettingsStore;
 import com.example.mycommute.data.FirestoreSync;
@@ -54,6 +56,32 @@ public class SettingsActivity extends AppCompatActivity {
                     LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT));
         }
         refreshSwitchStates();
+        if(BuildConfig.DEBUG){
+            SwitchMaterial lab=new SwitchMaterial(this);
+            lab.setText("알림 테스트 모드 (디버그 전용)");
+            lab.setChecked(AlertLabMode.enabled(this));
+            lab.setOnCheckedChangeListener((v,enabled)->{
+                if(enabled){
+                    ReminderScheduler.cancelCurrent(this);
+                    stopService(new Intent(this,com.example.mycommute.location.TrackingService.class));
+                }
+                AlertLabMode.setEnabled(this,enabled);
+                if(!enabled)ReminderScheduler.scheduleCurrent(this);
+                Toast.makeText(this,enabled?"테스트 모드 활성화 · 실제 알림 중지":"실제 모드 복귀",Toast.LENGTH_SHORT).show();
+            });
+            list.addView(lab,0);
+            com.google.android.material.button.MaterialButton openLab=
+                    new com.google.android.material.button.MaterialButton(this);
+            openLab.setText("알림 시뮬레이터 열기");
+            openLab.setOnClickListener(v->{
+                if(!AlertLabMode.enabled(this)){
+                    Toast.makeText(this,"먼저 테스트 모드를 켜세요",Toast.LENGTH_SHORT).show();return;
+                }
+                startActivity(new Intent().setClassName(this,
+                    "com.example.mycommute.debug.AlertLabActivity"));
+            });
+            list.addView(openLab,1);
+        }
         number(R.id.settingPrepareMinutes,AlarmSettingsStore.prepareMinutes(this));
         number(R.id.settingVehicleMinutes,AlarmSettingsStore.vehicleMinutes(this));
         number(R.id.settingWalkSlackMinutes,AlarmSettingsStore.walkSlackMinutes(this));
@@ -128,7 +156,8 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void refreshSwitchStates(){
         for(int i=0;i<list.getChildCount();i++)
-            list.getChildAt(i).setEnabled(AlarmSettingsStore.overall(this));
+            if(!(BuildConfig.DEBUG&&i<2))
+                list.getChildAt(i).setEnabled(AlarmSettingsStore.overall(this));
     }
 
     private void number(int id,int value){

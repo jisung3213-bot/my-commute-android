@@ -3,7 +3,6 @@ package com.example.mycommute.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
-import android.view.View;
 import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.model.TransitRoute;
 import androidx.appcompat.app.AppCompatActivity;
@@ -12,7 +11,6 @@ import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.engine.RoutePlanner;
-import com.example.mycommute.engine.TripTimeline;
 import com.example.mycommute.model.Routine;
 
 public class MainActivity extends AppCompatActivity {
@@ -79,7 +77,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.homeReturn).setEnabled(!direction.equals(RoutineStore.RETURN));
         ((TextView)findViewById(R.id.btnSelectRoutine)).setText("다른 경로 선택");
         RoutePlanner.Plan plan=RoutePlanner.select(r);
-        findViewById(R.id.mainGreeting).setVisibility(View.GONE);
         ((TextView)findViewById(R.id.mainRoute)).setText(r.isConfigured()
                 ?r.name+"\n"+r.startName+" → "+r.endName:"등록된 출퇴근 경로 없음");
         TextView time=findViewById(R.id.mainTime);
@@ -95,7 +92,5 @@ public class MainActivity extends AppCompatActivity {
             time.setText("출발 "+r.plannedDeparture(plan.durationMinutes)
                     +" · 목표 "+r.arrivalTime);
         }else time.setText("경로 재설정 필요");
-        findViewById(R.id.mainWeather).setVisibility(View.GONE);
-        findViewById(R.id.mainTransit).setVisibility(View.GONE);
     }
 }

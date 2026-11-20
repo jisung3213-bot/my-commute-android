@@ -2,70 +2,108 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
     <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:fillViewport="true">
+        android:layout_weight="1" android:fillViewport="true" android:clipToPadding="false">
         <LinearLayout android:orientation="vertical" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:padding="18dp">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="나만의 출퇴근" android:textColor="@color/text_primary"
                 android:textSize="26sp" android:textStyle="bold"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:layout_marginTop="10dp">
+                android:orientation="horizontal" android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card" android:padding="4dp">
                 <com.google.android.material.button.MaterialButton android:id="@+id/btnDirectionOut"
                     android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="출근길"/>
+                    android:layout_height="wrap_content" android:text="출근길"
+                    android:textAllCaps="false" android:minHeight="48dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
                 <com.google.android.material.button.MaterialButton android:id="@+id/btnDirectionBack"
                     android:layout_width="0dp" android:layout_weight="1"
                     android:layout_height="wrap_content" android:text="퇴근길"
+                    android:textAllCaps="false" android:minHeight="48dp"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             </LinearLayout>
             <TextView android:id="@+id/textActiveRoutine" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:paddingTop="6dp"
-                android:textColor="@color/text_secondary" android:text=""/>
+                android:layout_height="wrap_content" android:paddingTop="12dp"
+                android:textSize="13sp" android:textColor="@color/text_secondary" android:text=""/>
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="14dp"
+                android:layout_height="wrap_content" android:layout_marginTop="18dp"
                 android:text="저장된 경로"/>
             <LinearLayout android:id="@+id/savedRoutineList" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:orientation="vertical"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnNewRoutine"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="+ 새 경로 작성"
+                android:text="+ 새 경로 만들기" android:textAllCaps="false"
+                android:layout_marginTop="8dp"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnMakeDefault"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="현재 경로를 기본 경로로 지정"
+                android:text="선택한 경로를 기본으로 설정" android:textAllCaps="false"
+                android:visibility="gone"
                 style="@style/Widget.MaterialComponents.Button.TextButton"/>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="18dp"
-                android:text="경로 이름"/>
-            <EditText android:id="@+id/editRouteName" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:singleLine="true"
-                android:hint="예: 월수금 학교 가는 길" android:maxLength="50"/>
-
-            <TextView style="@style/Text.Section" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="14dp"
-                android:text="1. 이동 장소"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnStartPlace"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="출발지 검색" android:textAlignment="viewStart"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnEndPlace"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="도착지 검색" android:textAlignment="viewStart"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <TextView android:id="@+id/textWaypoints" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:textColor="@color/text_secondary"
-                android:padding="8dp" android:text="주변 시설·경유지 없음"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnAddWaypoint"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="주변 시설·경유지 장소 검색"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnClearWaypoints"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="추가한 장소 지우기"
-                style="@style/Widget.MaterialComponents.Button.TextButton"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="경유지 최대 2개 · 순서대로 경로에 반영"
-                android:textColor="@color/text_secondary" android:textSize="12sp"/>
+            <LinearLayout android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:layout_marginTop="16dp" android:padding="18dp"
+                android:background="@drawable/bg_card">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="내 경로 만들기" android:textSize="20sp"
+                    android:textStyle="bold" android:textColor="@color/text_primary"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:text="이름과 장소를 설정해 출퇴근 경로를 저장해"
+                    android:textSize="13sp" android:textColor="@color/text_secondary"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp" android:text="경로 이름"
+                    android:textSize="14sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+                <EditText android:id="@+id/editRouteName" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                    android:singleLine="true" android:hint="예: 월수금 학교 가는 길"
+                    android:maxLength="50" android:textSize="16sp"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginTop="18dp" android:layout_marginBottom="12dp"
+                    android:background="@color/border"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="1. 이동 장소" android:textSize="18sp"
+                    android:textStyle="bold" android:textColor="@color/text_primary"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:text="출발지"
+                    android:textSize="13sp" android:textColor="@color/text_secondary"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnStartPlace"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp" android:text="출발지 선택"
+                    android:textAlignment="viewStart" android:textAllCaps="false"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:text="도착지"
+                    android:textSize="13sp" android:textColor="@color/text_secondary"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnEndPlace"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp" android:text="도착지 선택"
+                    android:textAlignment="viewStart" android:textAllCaps="false"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:text="경유 장소"
+                    android:textSize="13sp" android:textStyle="bold"
+                    android:textColor="@color/text_primary"/>
+                <TextView android:id="@+id/textWaypoints" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                    android:textColor="@color/text_secondary" android:textSize="13sp"
+                    android:text="등록한 경유 장소가 없어"/>
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/waypointChips"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnAddWaypoint"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:text="+ 경유 장소 추가"
+                    android:textAllCaps="false"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnClearWaypoints"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="경유 장소 모두 지우기"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="최대 2곳 · 선택한 순서대로 경로에 반영"
+                    android:textColor="@color/text_secondary" android:textSize="12sp"/>
+            </LinearLayout>
 
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="22dp"
@@ -83,23 +121,30 @@
                 android:layout_height="wrap_content" android:text="목표 도착일의 요일"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="horizontal">
-                <CheckBox android:id="@+id/dayMon" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="월"/>
-                <CheckBox android:id="@+id/dayTue" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="화"/>
-                <CheckBox android:id="@+id/dayWed" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="수"/>
-                <CheckBox android:id="@+id/dayThu" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="목"/>
-                <CheckBox android:id="@+id/dayFri" android:layout_width="0dp" android:layout_weight="1"
-                    android:layout_height="wrap_content" android:text="금"/>
+                <CheckBox android:id="@+id/dayMon" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:text="월"
+                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
+                <CheckBox android:id="@+id/dayTue" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:text="화"
+                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
+                <CheckBox android:id="@+id/dayWed" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:text="수"
+                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="horizontal">
-                <CheckBox android:id="@+id/daySat" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:text="토"/>
-                <CheckBox android:id="@+id/daySun" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:text="일"/>
+                <CheckBox android:id="@+id/dayThu" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:text="목"
+                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
+                <CheckBox android:id="@+id/dayFri" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:text="금"
+                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
+                <CheckBox android:id="@+id/daySat" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:text="토"
+                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
+                <CheckBox android:id="@+id/daySun" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_height="wrap_content" android:text="일"
+                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
             </LinearLayout>
 
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
@@ -120,7 +165,21 @@
             <TextView android:id="@+id/textTransitResult" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:textColor="@color/text_secondary"
                 android:padding="8dp" android:text="" android:visibility="gone"/>
+            <TextView android:id="@+id/textRecommendationReason"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary" android:textSize="13sp"
+                android:paddingTop="8dp" android:paddingBottom="8dp"
+                android:visibility="gone"/>
             <LinearLayout android:id="@+id/transitCards" android:orientation="vertical"
+                android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOtherRoutes"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:visibility="gone" android:text="다른 경로 보기"
+                android:textAllCaps="false"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            <LinearLayout android:id="@+id/otherTransitCards"
+                android:orientation="vertical" android:visibility="gone"
                 android:layout_width="match_parent" android:layout_height="wrap_content"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/btnPreviewMap"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
