@@ -12,7 +12,6 @@ import com.example.mycommute.alarms.AlertLabMode;
 import com.example.mycommute.alarms.AlertCopy;
 import com.example.mycommute.alarms.AlertLedger;
 import com.example.mycommute.alarms.NotificationHelper;
-import com.example.mycommute.data.AlarmLogEntity;
 import com.example.mycommute.data.AlarmLogRepository;
 import com.example.mycommute.data.AlarmSettingsStore;
 import com.example.mycommute.data.RoutineStore;
@@ -24,10 +23,8 @@ import com.example.mycommute.model.TransitRoute;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -214,26 +211,21 @@ public final class AlertLabSuite {
         check("NOTIFY-PERMISSION",granted&&enabled,
                 "permission="+granted+" appEnabled="+enabled);
         int accepted=0;
-        List<String> refs=new ArrayList<>();
+        String logTypePrefix="test:"+runId+":";
         for(int i=0;i<TYPES.length;i++){
             AlertCopy.Message copy=sampleCopy(i);
-            String title="[TEST "+runId+"] "+copy.title;
-            boolean sent=NotificationHelper.show(app,title,copy.body,
+            boolean sent=NotificationHelper.show(app,copy.title,copy.body,
                     (runId+"-"+i).hashCode(),"lab-fixture");
             if(sent)accepted++;
-            refs.add(title);
             check("NOTIFY-"+TYPES[i],sent,"NotificationManager request="+sent+
                     " (visible delivery NOT verified)");
-            AlarmLogRepository.write(app,"test:"+TYPES[i],title,copy.body,true,null);
+            AlarmLogRepository.write(app,logTypePrefix+TYPES[i],copy.title,copy.body,true,null);
         }
         final int expected=accepted;
         // Room writes use a single-thread executor; the queued read happens after every write.
-        AlarmLogRepository.list(app,rows->{
-            int count=0;
-            for(AlarmLogEntity row:rows)
-                if(row.title!=null&&row.title.startsWith("[TEST "+runId+"]"))count++;
+        AlarmLogRepository.countByTypePrefix(app,logTypePrefix,count->{
             check("ROOM-10-ROWS",count==10,
-                    "found="+count+" / 10 within latest 200 rows");
+                    "found="+count+" / 10 for this run");
             check("NOTIFICATION-REQUEST-COUNT",expected==10,
                     "accepted="+expected+"/10 (OS may coalesce or suppress banners)");
             section("F. END-TO-END NOT VERIFIED BY MOCK RUN");

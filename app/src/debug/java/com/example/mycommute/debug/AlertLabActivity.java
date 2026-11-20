@@ -64,7 +64,7 @@ public final class AlertLabActivity extends AppCompatActivity {
         copy.setText("최근 전체 검증 결과 다시 복사");
         root.addView(copy);
         copy.setOnClickListener(v->copyReport());
-        addLabel(root,"실제 GPS·API·루틴 및 예약을 사용하지 않아. 모든 발송 제목은 [TEST]로 표시하고 테스트 로그로 분리해.",13);
+        addLabel(root,"모의 알림은 실제 알림과 같은 문구를 사용하며 출퇴근 알림 기록에는 표시되지 않아.",13);
         addLabel(root,"실제 교통·기상 API 연결 진단 (실행당 최대 9건)",18);
         Button api=new Button(this);
         api.setText("실제 API 양식·응답·오류 진단 실행");
@@ -206,18 +206,16 @@ public final class AlertLabActivity extends AppCompatActivity {
         if(!AlertLabMode.enabled(this)){finish();return;}
         int id=type.getSelectedItemPosition(),variant=scenario.getSelectedItemPosition();
         boolean fire=evaluateInputs(id,variant);
-        String trace="[TEST] "+names[id]+" · "+time()+" · "+
+        String trace=names[id]+" · "+time()+" · "+
                 (variant==0?"정상":variant==1?"경계 실패":"정보 불확실");
         if(!fire){updateResult(trace+"\n판정: 발송하지 않음 (예상된 미발송)");return;}
         AlertCopy.Message copy=sampleCopy(id);
-        String title="[TEST] "+copy.title;
-        boolean sent=NotificationHelper.show(this,title,copy.body,
+        boolean sent=NotificationHelper.show(this,copy.title,copy.body,
                 ("lab-"+(++event)).hashCode(),"lab-fixture");
         AlarmLogRepository.write(this,"test:"+types[id],
-                sent?title:"[TEST] 알림 차단됨",copy.body,true,null);
-        updateResult(trace+"\n제목: "+title+"\n본문: "+copy.body
-                +"\n판정: "+(sent?"알림 요청 성공":"기기 알림 권한 차단")
-                +"\n로그 유형: test:"+types[id]);
+                sent?copy.title:"알림 차단됨",copy.body,true,null);
+        updateResult(trace+"\n제목: "+copy.title+"\n본문: "+copy.body
+                +"\n판정: "+(sent?"알림 요청 성공":"기기 알림 권한 차단"));
     }
     /** The same user-visible copy factory as production, with fixed synthetic facts. */
     private AlertCopy.Message sampleCopy(int id){
