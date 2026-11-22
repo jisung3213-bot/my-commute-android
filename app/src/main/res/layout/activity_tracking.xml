@@ -5,7 +5,7 @@
     <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
         android:layout_weight="1" android:fillViewport="true">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="18dp">
+            android:orientation="vertical" android:padding="16dp">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="실시간 이동" android:textColor="@color/text_primary"
                 android:textStyle="bold" android:textSize="26sp"/>
@@ -22,7 +22,7 @@
                 android:layout_marginTop="5dp" android:indeterminate="true"
                 android:visibility="gone"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="15dp" android:padding="18dp"
+                android:layout_marginTop="10dp" android:padding="14dp"
                 android:background="@drawable/bg_card" android:orientation="vertical">
                 <TextView style="@style/Text.Label" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:text="지금의 출발 판단"/>
@@ -37,10 +37,21 @@
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
                     android:textColor="@color/text_secondary"/>
             </LinearLayout>
+            <TextView android:id="@+id/livePosition" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:text="위치 추적 꺼짐"
+                android:textColor="@color/text_secondary" android:textSize="13sp"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/liveStartTracking"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="위치 추적 시작"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/liveStopTracking"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="이번 이동 추적 종료" android:visibility="gone"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 
             <LinearLayout android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:orientation="vertical"
-                android:layout_marginTop="12dp" android:padding="16dp"
+                android:layout_marginTop="8dp" android:padding="12dp"
                 android:background="@drawable/bg_card">
                 <TextView style="@style/Text.Label" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:text="이동 시간대 날씨"/>
@@ -60,7 +71,7 @@
 
             <LinearLayout android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:orientation="vertical"
-                android:layout_marginTop="10dp" android:padding="16dp"
+                android:layout_marginTop="8dp" android:padding="12dp"
                 android:background="@drawable/bg_card">
                 <TextView style="@style/Text.Label" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:text="이동 특이사항"/>
@@ -71,7 +82,7 @@
             </LinearLayout>
 
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="22dp"
+                android:layout_height="wrap_content" android:layout_marginTop="14dp"
                 android:text="오늘의 이동 경로"/>
             <com.example.mycommute.ui.RouteSchematicView
                 android:id="@+id/liveSchematic" android:layout_width="match_parent"
@@ -166,18 +177,6 @@
                     android:layout_marginTop="7dp" android:textSize="12sp"
                     android:textColor="@color/text_secondary" android:visibility="gone"/>
             </LinearLayout>
-            <TextView android:id="@+id/livePosition" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                android:text="위치 추적 꺼짐"
-                android:textColor="@color/text_secondary" android:textSize="12sp"/>
-
-            <com.google.android.material.button.MaterialButton android:id="@+id/liveStartTracking"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="15dp" android:text="위치 추적 시작"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/liveStopTracking"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="위치 추적 종료"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <com.google.android.material.button.MaterialButton android:id="@+id/liveRefresh"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="현재 정보 확인"

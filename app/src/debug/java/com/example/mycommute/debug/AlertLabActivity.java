@@ -57,14 +57,14 @@ public final class AlertLabActivity extends AppCompatActivity {
                 updateResult(report);
                 full.setEnabled(true);
                 copyReport();
-                Toast.makeText(this,"전체 결과를 클립보드에 복사했어",Toast.LENGTH_LONG).show();
+                Toast.makeText(this,"전체 결과 복사 완료",Toast.LENGTH_LONG).show();
             });
         });
         Button copy=new Button(this);
         copy.setText("최근 전체 검증 결과 다시 복사");
         root.addView(copy);
         copy.setOnClickListener(v->copyReport());
-        addLabel(root,"모의 알림은 실제 알림과 같은 문구를 사용하며 출퇴근 알림 기록에는 표시되지 않아.",13);
+        addLabel(root,"모의 알림은 실제 알림과 같은 문구를 사용하며 출퇴근 알림 기록에는 표시되지 않습니다.",13);
         addLabel(root,"실제 교통·기상 API 연결 진단 (실행당 최대 9건)",18);
         Button api=new Button(this);
         api.setText("실제 API 양식·응답·오류 진단 실행");
@@ -84,7 +84,7 @@ public final class AlertLabActivity extends AppCompatActivity {
         apiCopy.setText("최근 API 진단 보고서 다시 복사");
         root.addView(apiCopy);
         apiCopy.setOnClickListener(v->{
-            if(lastApiReport.isEmpty())Toast.makeText(this,"먼저 API 진단을 실행해",Toast.LENGTH_SHORT).show();
+            if(lastApiReport.isEmpty())Toast.makeText(this,"API 진단 결과 없음 · 먼저 진단 실행",Toast.LENGTH_SHORT).show();
             else copyText("live-api-probe",lastApiReport);
         });
         addLabel(root,"경로 추천 점수·정렬 테스트",18);
@@ -93,14 +93,14 @@ public final class AlertLabActivity extends AppCompatActivity {
         root.addView(rankingLab);
         rankingLab.setOnClickListener(v->startActivity(
                 new android.content.Intent(this,RouteRecommendationLabActivity.class)));
-        addLabel(root,"가상 날씨·여유시간·경로 후보를 바꾸거나 저장된 경로 후보의 추천 순위를 비교할 수 있어.",13);
+        addLabel(root,"가상 날씨·여유시간·경로 후보를 바꾸거나 저장된 경로 후보의 추천 순위를 비교할 수 있습니다.",13);
         addLabel(root,"경로상 GPS 마커 모의실험",18);
         Button markerLab=new Button(this);
         markerLab.setText("GPS 경로 마커 테스트 열기");
         root.addView(markerLab);
         markerLab.setOnClickListener(v->startActivity(
                 new android.content.Intent(this,RouteGpsLabActivity.class)));
-        addLabel(root,"현재 저장된 경로를 사용해 구간·진행률을 조작해. 실제 기기 GPS는 바꾸지 않아.",13);
+        addLabel(root,"저장된 경로의 구간과 진행률을 모의로 조정합니다.",13);
         addLabel(root,"지하철역별 도착예정시간 제공 여부 (12개 역 · 최대 12회 요청)",18);
         Button survey=new Button(this);
         survey.setText("지하철역 ETA 일괄 검사 실행");
@@ -116,7 +116,7 @@ public final class AlertLabActivity extends AppCompatActivity {
                 Toast.makeText(this,"역별 ETA 조사 결과 복사 완료",Toast.LENGTH_LONG).show();
             });
         });
-        addLabel(root,"요청 결과는 조회 시점의 표본이며, 동일 역에서도 시간대와 열차에 따라 달라질 수 있어. 연속 재실행은 15분 제한.",13);
+        addLabel(root,"요청 결과는 조회 시점의 표본이며, 동일 역에서도 시간대와 열차에 따라 달라질 수 있습니다. 연속 재실행은 15분 제한.",13);
         type=new Spinner(this);
         type.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names));
         root.addView(type);
@@ -239,7 +239,7 @@ public final class AlertLabActivity extends AppCompatActivity {
 
     private void copyReport(){
         if(lastReport.isEmpty()){
-            Toast.makeText(this,"먼저 전체 검증을 실행해",Toast.LENGTH_SHORT).show();return;
+            Toast.makeText(this,"전체 검증 결과 없음 · 먼저 검증 실행",Toast.LENGTH_SHORT).show();return;
         }
         copyText("alert-lab-report",lastReport);
     }

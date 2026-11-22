@@ -51,7 +51,7 @@ public final class TmapWalkingClient {
         Handler ui=new Handler(Looper.getMainLooper());
         if(!enabled()){ui.post(()->cb.error("TMAP 보행 경로 API 미설정"));return;}
         if(!valid(fromLat,fromLon)||!valid(toLat,toLon)){
-            ui.post(()->cb.error("보행 경로 좌표가 유효하지 않아"));return;
+            ui.post(()->cb.error("보행 경로 좌표 오류"));return;
         }
         NETWORK.execute(()->{
             try{
@@ -140,7 +140,7 @@ public final class TmapWalkingClient {
                     JSONArray xy=coords.optJSONArray(j);if(xy!=null&&xy.length()>=2) segment.add(new GeoPoint(xy.optDouble(1),xy.optDouble(0)));
                 }
             }
-            if(segment.size()<2)throw new IllegalStateException("도보 경로가 반환되지 않았어");
+            if(segment.size()<2)throw new IllegalStateException("도보 경로 응답 없음");
             return segment;
         } finally {conn.disconnect();}
     }

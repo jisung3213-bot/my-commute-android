@@ -4,7 +4,7 @@
     <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
         android:layout_weight="1" android:fillViewport="true" android:clipToPadding="false">
         <LinearLayout android:orientation="vertical" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:padding="18dp">
+                android:layout_height="wrap_content" android:padding="14dp">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="나만의 출퇴근" android:textColor="@color/text_primary"
                 android:textSize="26sp" android:textStyle="bold"/>
@@ -48,7 +48,7 @@
                     android:text="내 경로 만들기" android:textSize="20sp"
                     android:textStyle="bold" android:textColor="@color/text_primary"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp" android:text="이름과 장소를 설정해 출퇴근 경로를 저장해"
+                    android:layout_marginTop="6dp" android:text="경로 이름과 출발·도착 장소를 지정합니다."
                     android:textSize="13sp" android:textColor="@color/text_secondary"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="18dp" android:text="경로 이름"
@@ -61,7 +61,7 @@
                     android:layout_marginTop="18dp" android:layout_marginBottom="12dp"
                     android:background="@color/border"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="1. 이동 장소" android:textSize="18sp"
+                    android:text="이동 장소" android:textSize="18sp"
                     android:textStyle="bold" android:textColor="@color/text_primary"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="14dp" android:text="출발지"
@@ -86,7 +86,7 @@
                 <TextView android:id="@+id/textWaypoints" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="6dp"
                     android:textColor="@color/text_secondary" android:textSize="13sp"
-                    android:text="등록한 경유 장소가 없어"/>
+                    android:text="등록된 경유지 없음"/>
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/waypointChips"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -105,51 +105,78 @@
                     android:textColor="@color/text_secondary" android:textSize="12sp"/>
             </LinearLayout>
 
-            <TextView style="@style/Text.Section" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="22dp"
-                android:text="2. 목표 시간과 반복"/>
-            <TextView style="@style/Text.Label" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="목표 도착 시각 (HH:mm)"/>
-            <EditText android:id="@+id/editDeparture" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:hint="09:00"
-                android:inputType="time" android:singleLine="true"/>
-            <TextView style="@style/Text.Label" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="도착 여유시간 (분)"/>
-            <EditText android:id="@+id/editMargin" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:inputType="number" android:text="10"/>
-            <TextView style="@style/Text.Label" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="목표 도착일의 요일"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <CheckBox android:id="@+id/dayMon" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_height="wrap_content" android:text="월"
-                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
-                <CheckBox android:id="@+id/dayTue" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_height="wrap_content" android:text="화"
-                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
-                <CheckBox android:id="@+id/dayWed" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_height="wrap_content" android:text="수"
-                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <CheckBox android:id="@+id/dayThu" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_height="wrap_content" android:text="목"
-                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
-                <CheckBox android:id="@+id/dayFri" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_height="wrap_content" android:text="금"
-                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
-                <CheckBox android:id="@+id/daySat" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_height="wrap_content" android:text="토"
-                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
-                <CheckBox android:id="@+id/daySun" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_height="wrap_content" android:text="일"
-                    android:minWidth="0dp" android:paddingStart="0dp" android:paddingEnd="0dp"/>
+                android:layout_marginTop="16dp" android:background="@drawable/bg_card"
+                android:orientation="vertical" android:padding="14dp">
+                <TextView style="@style/Text.Section" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="시간과 반복"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content" android:layout_marginEnd="10dp"
+                        android:orientation="vertical">
+                        <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                            android:layout_height="wrap_content" android:text="목표 도착"
+                            android:labelFor="@id/editDeparture"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/editDeparture"
+                            android:layout_width="match_parent" android:layout_height="48dp"
+                            android:textSize="16sp"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content" android:orientation="vertical">
+                        <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                            android:layout_height="wrap_content" android:text="도착 여유 (분)"
+                            android:labelFor="@id/editMargin"/>
+                        <EditText android:id="@+id/editMargin" android:layout_width="match_parent"
+                            android:layout_height="48dp" android:inputType="number"
+                            android:gravity="center" android:singleLine="true" android:textSize="16sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView style="@style/Text.Label" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="10dp"
+                    android:text="반복 요일 · 도착일 기준"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dayMon" style="@style/Widget.Commute.Weekday"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+                        android:text="월" android:contentDescription="월요일"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dayTue" style="@style/Widget.Commute.Weekday"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+                        android:text="화" android:contentDescription="화요일"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dayWed" style="@style/Widget.Commute.Weekday"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+                        android:text="수" android:contentDescription="수요일"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dayThu" style="@style/Widget.Commute.Weekday"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+                        android:text="목" android:contentDescription="목요일"/>
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dayFri" style="@style/Widget.Commute.Weekday"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+                        android:text="금" android:contentDescription="금요일"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/daySat" style="@style/Widget.Commute.Weekday"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+                        android:text="토" android:contentDescription="토요일"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/daySun" style="@style/Widget.Commute.Weekday"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+                        android:text="일" android:contentDescription="일요일"/>
+                    <Space android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="48dp" android:layout_marginHorizontal="3dp"/>
+                </LinearLayout>
             </LinearLayout>
 
             <TextView style="@style/Text.Section" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="20dp"
-                android:text="3. 추천 조건"/>
+                android:text="추천 조건"/>
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switchWeather" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="기상정보 반영"

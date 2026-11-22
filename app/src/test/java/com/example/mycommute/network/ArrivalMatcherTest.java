@@ -106,7 +106,7 @@ public class ArrivalMatcherTest {
                 +"\"message\":\"해당하는 데이터가 없습니다.\"}}";
         TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,System.currentTimeMillis());
         assertFalse(result.available);
-        assertTrue(result.message.contains("제공하지 않아"));
+        assertTrue(result.message.contains("실시간 열차 정보 없음"));
     }
 
 

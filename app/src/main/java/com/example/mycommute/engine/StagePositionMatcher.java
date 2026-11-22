@@ -20,10 +20,10 @@ public final class StagePositionMatcher {
 
     public static Match locate(TransitRoute route,double lat,double lon,
                                long fixTime,float accuracy,long now){
-        if(route==null||route.legs.isEmpty())return unknown("이동 경로가 없어");
+        if(route==null||route.legs.isEmpty())return unknown("이동 경로 없음");
         if(!Double.isFinite(lat)||!Double.isFinite(lon)||lat<33||lat>39||lon<124||lon>132||
                 fixTime<=0||now-fixTime>90000||now-fixTime< -30000)
-            return unknown("최신 GPS 위치가 없어");
+            return unknown("최신 GPS 위치 없음");
         if(!Float.isFinite(accuracy)||accuracy<0||accuracy>75)
             return unknown("GPS 정확도가 낮아");
         double best=Double.POSITIVE_INFINITY,second=Double.POSITIVE_INFINITY;
@@ -34,8 +34,8 @@ public final class StagePositionMatcher {
             if(dist<best){second=best;best=dist;index=i;}
             else if(dist<second)second=dist;
         }
-        if(index<0||best>160)return unknown("경로 근처 위치를 특정할 수 없어");
-        if(second-best<25)return unknown("여러 경로 구간이 겹쳐서 현재 단계를 판별할 수 없어");
+        if(index<0||best>160)return unknown("경로 인근 위치 확인 불가");
+        if(second-best<25)return unknown("경로 구간 중첩 · 현재 단계 확인 불가");
         TransitRoute.Leg leg=route.legs.get(index);
         String kind="WALK".equals(leg.mode)?"도보":
                 "BUS".equals(leg.mode)?"버스 노선 주변":

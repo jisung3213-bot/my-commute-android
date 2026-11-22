@@ -1,6 +1,7 @@
 package com.example.mycommute.data;
 
 import android.content.Context;
+import com.example.mycommute.engine.RouteSignature;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitRoute;
 import org.json.JSONArray;
@@ -20,7 +21,7 @@ public final class TransitRouteCache {
     }
     private TransitRouteCache(){}
 
-    private static String fingerprint(Routine r) {
+    static String fingerprint(Routine r) {
         StringBuilder b=new StringBuilder();
         b.append(r.startLat).append(',').append(r.startLon).append(';');
         for(com.example.mycommute.model.Waypoint w:r.waypoints){
@@ -31,10 +32,16 @@ public final class TransitRouteCache {
     }
 
     public static boolean save(Context c,Routine routine,List<TransitRoute> candidates,int index){
+        return save(c,routine,candidates,index,System.currentTimeMillis());
+    }
+
+    public static boolean save(Context c,Routine routine,List<TransitRoute> candidates,int index,long fetchedAt){
         if(candidates==null||candidates.isEmpty()||index<0||index>=candidates.size())return false;
+        long now=System.currentTimeMillis();
+        if(fetchedAt<=0||fetchedAt>now||now-fetchedAt>=TTL)return false;
         try{
             JSONObject root=new JSONObject();
-            root.put("at",System.currentTimeMillis());
+            root.put("at",fetchedAt);
             root.put("fingerprint",fingerprint(routine));
             JSONArray array=new JSONArray();
             for(TransitRoute route:candidates)array.put(route.toCacheJson());
@@ -65,6 +72,9 @@ public final class TransitRouteCache {
             for(int i=0;i<a.length();i++)list.add(TransitRoute.fromCacheJson(a.getJSONObject(i)));
             int selected=root.optInt("selected",-1);
             if(list.isEmpty()||selected<0||selected>=list.size())return null;
+            if(!r.selectedRouteSignature.isEmpty()&&!r.selectedRouteSignature.equals(RouteSignature.of(list.get(selected)))){
+                clear(c,r.id);return null;
+            }
             return new Snapshot(Collections.unmodifiableList(list),selected,time);
         }catch(Exception e){clear(c,r.id);return null;}
     }

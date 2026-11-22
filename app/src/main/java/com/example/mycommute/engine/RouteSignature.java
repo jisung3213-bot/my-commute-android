@@ -3,10 +3,16 @@ package com.example.mycommute.engine;
 import com.example.mycommute.model.TransitRoute;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.List;
 
 /** Stable non-reversible user preference, not a persisted provider itinerary. */
 public final class RouteSignature {
     private RouteSignature(){}
+    public static int match(List<TransitRoute> routes,String signature){
+        if(signature==null||signature.isEmpty())return -1;
+        for(int i=0;i<routes.size();i++)if(signature.equals(of(routes.get(i))))return i;
+        return -1;
+    }
     public static String of(TransitRoute route){
         if(route==null||route.legs.isEmpty())return "";
         StringBuilder data=new StringBuilder();

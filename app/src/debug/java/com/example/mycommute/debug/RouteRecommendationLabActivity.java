@@ -44,7 +44,7 @@ public final class RouteRecommendationLabActivity extends AppCompatActivity {
         scroll.addView(root);
         setContentView(scroll);
         label(root,"경로 추천 로직 검증 · DEBUG",22);
-        label(root,"실제 앱과 동일한 WeatherRouteRanker.rank()를 사용해. 모든 기상 조건은 테스트용 입력이며 실제 예보나 특보를 조회하지 않아.",13);
+        label(root,"실제 앱과 같은 추천 계산을 사용합니다. 기상 조건은 테스트 입력입니다.",13);
         label(root,"기상 조건",16);
         condition=new Spinner(this);
         condition.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,WEATHER));
@@ -82,20 +82,20 @@ public final class RouteRecommendationLabActivity extends AppCompatActivity {
             ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
             if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("route-recommendation-test",lastReport));
         });
-        reportView=label(root,"검사 결과가 여기에 표시돼.",14);
+        reportView=label(root,"검사 결과가 여기에 표시됩니다.",14);
     }
 
     private void evaluate(boolean actual){
         try{
             int buffer=value(margin);
-            if(buffer>180)throw new IllegalArgumentException("여유시간은 0~180분으로 입력해.");
+            if(buffer>180)throw new IllegalArgumentException("여유시간 입력 범위 0~180분");
             WeatherRouteRanker.Conditions weather=weather();
             List<WeatherRouteRanker.Candidate> candidates=new ArrayList<>();
             if(actual){
                 Routine routine=RoutineStore.read(this);
                 TransitRouteCache.Snapshot cache=TransitRouteCache.load(this,routine);
                 if(cache==null||cache.routes.isEmpty())
-                    throw new IllegalArgumentException("저장된 유효 경로 후보가 없어. 검색한 경로는 23시간 이내여야 해.");
+                    throw new IllegalArgumentException("23시간 이내에 검색한 경로 후보가 필요합니다.");
                 for(int i=0;i<cache.routes.size();i++){
                     TransitRoute r=cache.routes.get(i);
                     int duration=Math.max(1,TransitRoute.minutes(r.totalSeconds));
@@ -153,7 +153,7 @@ public final class RouteRecommendationLabActivity extends AppCompatActivity {
     }
     private int value(EditText field){
         try{return Integer.parseInt(field.getText().toString().trim());}
-        catch(Exception e){throw new IllegalArgumentException("숫자 입력을 확인해.");}
+        catch(Exception e){throw new IllegalArgumentException("숫자 입력 확인 필요");}
     }
     private EditText number(LinearLayout parent,int initial){
         EditText input=new EditText(this);

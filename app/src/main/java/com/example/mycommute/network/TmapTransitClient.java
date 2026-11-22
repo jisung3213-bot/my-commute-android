@@ -38,7 +38,7 @@ public final class TmapTransitClient {
     public static void search(final Routine r,final Callback cb) {
         if(!enabled()) {MAIN.post(() -> cb.error("대중교통 AppKey 미설정"));return;}
         if(r==null||r.startName.trim().isEmpty()||r.endName.trim().isEmpty()||!r.validCoordinates()) {
-            MAIN.post(() -> cb.error("저장된 루틴의 출발·도착 좌표를 확인해"));return;
+            MAIN.post(() -> cb.error("저장된 루틴의 출발·도착 좌표 확인 필요"));return;
         }
         final double startLat=r.startLat,startLon=r.startLon,endLat=r.endLat,endLon=r.endLon;
         NETWORK.execute(() -> {
@@ -76,9 +76,9 @@ public final class TmapTransitClient {
             InputStream stream=http>=200&&http<300?connection.getInputStream():connection.getErrorStream();
             String response=readLimited(stream);
             if(http<200||http>=300)throw new IllegalStateException(
-                    "TMAP 대중교통 HTTP "+http+" (API 키·상품 권한·호출 한도를 확인해)");
+                    "TMAP 대중교통 HTTP "+http+" (API 키·상품 권한·호출 한도 확인)");
             List<TransitRoute> routes=TransitRoute.parse(response);
-            if(routes.isEmpty())throw new IllegalStateException("대중교통 경로 결과가 없어. 다른 출발·도착지를 확인해");
+            if(routes.isEmpty())throw new IllegalStateException("대중교통 경로 검색 결과 없음");
             return routes;
         } finally { connection.disconnect(); }
     }

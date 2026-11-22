@@ -4,7 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import com.example.mycommute.data.RoutineStore;
-import com.example.mycommute.data.TransitRouteMemory;
+import com.example.mycommute.data.PinnedRouteRefresh;
 import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.engine.CommuteWindow;
 import com.example.mycommute.engine.StagePositionMatcher;
@@ -45,7 +45,7 @@ final class CommuteLiveCoordinator {
 
     private boolean running;
     private int generation;
-    private boolean loadingArrival,loadingWeather,loadingWalk;
+    private boolean loadingArrival,loadingWeather,loadingWalk,refreshingRoute;
     private int boardingLegIndex=-1;
     private int walkSeconds=-1;
     private long walkingRequestedAt,walkingFetchedAt;
@@ -87,15 +87,6 @@ final class CommuteLiveCoordinator {
             weatherStatus="루틴 미설정";
             notifyChange();return;
         }
-        TransitRoute cached=TransitRouteMemory.selected(userId,routine);
-        TransitRouteCache.Snapshot disk=TransitRouteCache.load(context,routine);
-        if(cached==null&&disk!=null)cached=disk.routes.get(disk.selected);
-        if(cached!=null){
-            route=cached;
-            routeFetchedAt=disk!=null?disk.timestamp:System.currentTimeMillis();
-            stage=null;
-            boardingLegIndex=StagePositionMatcher.boardingIndex(route,null);
-        }
         loadWeather();
         loadRoute();
         loadArrival();
@@ -121,6 +112,7 @@ final class CommuteLiveCoordinator {
     }
 
     TransitRoute route(){return route;}
+    boolean refreshingRoute(){return refreshingRoute;}
     TransitArrival arrival(){return arrival;}
     KmaWeatherClient.Report weather(){return weather;}
     String weatherStatus(){return weatherStatus;}
@@ -158,21 +150,27 @@ final class CommuteLiveCoordinator {
         notifyChange();
     }
 
-    /**
-     * Viewing a saved profile never spends a TMAP transit route request.
-     * Only the explicit button on the Custom screen performs a new search.
-     */
     private void loadRoute(){
         if(!running)return;
         TransitRouteCache.Snapshot disk=TransitRouteCache.load(context,routine);
         if(disk==null){
             route=null;arrival=null;stage=null;boardingLegIndex=-1;
+            if(!refreshingRoute){
+                final int token=generation;
+                refreshingRoute=PinnedRouteRefresh.request(context,routine,System.currentTimeMillis(),ok->{
+                    refreshingRoute=false;
+                    if(!valid(token))return;
+                    if(ok)loadRoute();
+                    notifyChange();
+                });
+            }
             return;
         }
         if(route!=null&&routeFetchedAt==disk.timestamp)return;
         route=disk.routes.get(disk.selected);
         routeFetchedAt=disk.timestamp;
         arrival=null;arrivalRequestedAt=0;
+        loadingArrival=false;loadingWalk=false;
         stage=StagePositionMatcher.locate(route,currentLat,currentLon,
                 currentFixTime,currentAccuracy,System.currentTimeMillis());
         boardingLegIndex=StagePositionMatcher.boardingIndex(route,stage);

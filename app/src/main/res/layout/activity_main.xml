@@ -4,7 +4,7 @@
     <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
         android:fillViewport="true" android:clipToPadding="false">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:padding="20dp" android:orientation="vertical">
+            android:padding="16dp" android:orientation="vertical">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오늘의 출퇴근"
                 android:textSize="26sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -16,31 +16,27 @@
                     android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
                     android:text="퇴근길" style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             </LinearLayout>
-            <Button android:id="@+id/btnSelectRoutine" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="이름 붙인 경로 선택"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="22dp" android:padding="20dp" android:background="@drawable/bg_card" android:orientation="vertical">
-                <TextView style="@style/Text.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="내 루틴"/>
+                android:layout_marginTop="8dp" android:padding="14dp" android:background="@drawable/bg_card" android:orientation="vertical">
+                <TextView style="@style/Text.Label" android:id="@+id/mainDirection" android:layout_width="match_parent" android:layout_height="wrap_content"/>
                 <TextView android:id="@+id/mainRoute" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp" android:textSize="21sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+                    android:layout_marginTop="5dp" android:textSize="19sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
                 <TextView android:id="@+id/mainTime" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:textSize="15sp" android:textColor="@color/text_secondary"/>
+                    android:layout_marginTop="5dp" android:textSize="14sp" android:textColor="@color/text_secondary"/>
                 <com.google.android.material.button.MaterialButton android:id="@+id/btnGoTracking" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="실시간 이동 화면"/>
+                    android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="실시간 이동"/>
             </LinearLayout>
-            <TextView style="@style/Text.Section" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="24dp" android:text="바로가기"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnGoCustom" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="출퇴근 루틴 등록·편집"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnGoMap" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="지도에서 경로 확인"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnGoLogs" android:visibility="gone" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="알림 로그 확인"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnSignOut" android:visibility="gone" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:layout_gravity="end" android:text="로그아웃"
-                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginTop="6dp">
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnGoLogs"
+                    android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp" android:text="알림 로그"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnSelectRoutine"
+                    android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                    android:text="다른 경로"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
     <include layout="@layout/view_bottom_nav"/>

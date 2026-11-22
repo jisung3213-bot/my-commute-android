@@ -23,9 +23,9 @@ public final class TmapPoiClient {
     public static boolean enabled() {return !BuildConfig.TMAP_APP_KEY.isEmpty()
             &&!"YOUR_TMAP_APP_KEY_HERE".equals(BuildConfig.TMAP_APP_KEY);}
     public static void search(String text,Callback cb) {
-        if(!enabled()) {MAIN.post(()->cb.error("TMAP_APP_KEY를 입력해야 해"));return;}
+        if(!enabled()) {MAIN.post(()->cb.error("TMAP 장소 검색 API 키 미설정"));return;}
         String query=text==null?"":text.trim();
-        if(query.length()<2) {MAIN.post(()->cb.error("장소명을 2글자 이상 입력해"));return;}
+        if(query.length()<2) {MAIN.post(()->cb.error("장소 이름 두 글자 이상 입력"));return;}
         EXECUTOR.execute(()-> {
             try {
                 String url="https://apis.openapi.sk.com/tmap/pois?version=1"

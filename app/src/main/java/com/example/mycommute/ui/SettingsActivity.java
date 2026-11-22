@@ -1,5 +1,6 @@
 package com.example.mycommute.ui;
 
+import android.Manifest;
 import android.app.AlarmManager;
 import android.content.Intent;
 import android.net.Uri;
@@ -12,12 +13,16 @@ import android.widget.TextView;
 import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import com.example.mycommute.R;
 import com.example.mycommute.BuildConfig;
 import com.example.mycommute.alarms.AlertLabMode;
+import com.example.mycommute.alarms.AutoCommute;
 import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.AlarmSettingsStore;
+import com.example.mycommute.data.ClockPreference;
 import com.example.mycommute.data.FirestoreSync;
+import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
@@ -32,8 +37,29 @@ public class SettingsActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_settings);
         Navigation.bind(this);
+        SwitchMaterial tracking=findViewById(R.id.switchAutoTracking);
+        tracking.setChecked(AutoCommute.enabled(this));
+        tracking.setOnCheckedChangeListener((button,enabled)->{
+            AutoCommute.setEnabled(this,enabled);
+            if(enabled)AutoCommute.resume(this,true);
+            updateTrackingPermission();
+        });
+        findViewById(R.id.btnAutoLocation).setOnClickListener(v->requestTrackingPermission());
+        SwitchMaterial amPm=findViewById(R.id.switchAmPm);
+        amPm.setChecked(ClockPreference.amPm(this));
+        amPm.setOnCheckedChangeListener((button,enabled)->{
+            ClockPreference.setAmPm(this,enabled);
+            updateClockExample();
+        });
+        updateClockExample();
         all=findViewById(R.id.switchAllAlerts);
         list=findViewById(R.id.alertSwitchList);
+        TextView types=findViewById(R.id.btnAlertTypes);
+        types.setOnClickListener(v->{
+            boolean expand=list.getVisibility()!=View.VISIBLE;
+            list.setVisibility(expand?View.VISIBLE:View.GONE);
+            types.setText(expand?"알림 종류 접기":"알림 종류 펼치기");
+        });
         all.setChecked(AlarmSettingsStore.overall(this));
         all.setOnCheckedChangeListener((button,enabled)->{
             AlarmSettingsStore.setOverall(this,enabled);
@@ -66,7 +92,11 @@ public class SettingsActivity extends AppCompatActivity {
                     stopService(new Intent(this,com.example.mycommute.location.TrackingService.class));
                 }
                 AlertLabMode.setEnabled(this,enabled);
-                if(!enabled)ReminderScheduler.scheduleCurrent(this);
+                if(!enabled){
+                    ReminderScheduler.scheduleCurrent(this);
+                    AutoCommute.resume(this,true);
+                }
+                updateTrackingPermission();
                 Toast.makeText(this,enabled?"테스트 모드 활성화 · 실제 알림 중지":"실제 모드 복귀",Toast.LENGTH_SHORT).show();
             });
             list.addView(lab,0);
@@ -139,7 +169,46 @@ public class SettingsActivity extends AppCompatActivity {
 
     @Override protected void onResume(){
         super.onResume();
+        if(!Session.signedIn(this))return;
         updateExactAlarmPermission();
+        updateTrackingPermission();
+        AutoCommute.resume(this,true);
+    }
+
+    private void updateClockExample(){
+        ((TextView)findViewById(R.id.clockExample)).setText(ClockPreference.amPm(this)
+                ?"12시간제 · "+ClockPreference.time(this,"18:30"):"24시간제 · 18:30");
+    }
+
+    private void updateTrackingPermission(){
+        boolean enabled=AutoCommute.enabled(this);
+        boolean permission=AutoCommute.hasLocation(this)&&AutoCommute.hasBackgroundLocation(this);
+        boolean lab=AlertLabMode.enabled(this);
+        ((TextView)findViewById(R.id.autoTrackingStatus)).setText(enabled&&lab
+                ?"알림 테스트 모드에서 일시 중지"
+                :enabled&&!permission?"앱을 닫아도 추적하려면 위치를 ‘항상 허용’으로 설정하세요."
+                :"예정 출발 30분 전부터 출발지 500m 이내 위치를 확인합니다.");
+        findViewById(R.id.btnAutoLocation).setVisibility(enabled&&!permission?View.VISIBLE:View.GONE);
+    }
+
+    private void requestTrackingPermission(){
+        if(!AutoCommute.hasLocation(this)&&!RoutineStore.prefs(this)
+                .getBoolean("auto_location_requested",false)){
+            RoutineStore.prefs(this).edit().putBoolean("auto_location_requested",true).apply();
+            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION},420);
+        }else{
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:"+getPackageName())));
+        }
+    }
+
+    @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] results){
+        super.onRequestPermissionsResult(code,permissions,results);
+        if(code==420){
+            updateTrackingPermission();
+            AutoCommute.resume(this,true);
+        }
     }
 
     private void updateExactAlarmPermission(){
@@ -151,7 +220,7 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btnSettingsExactAlarms).setVisibility(missing?View.VISIBLE:View.GONE);
         UiNotice.show(findViewById(R.id.settingsPermissionNotice),
                 missing?UiNotice.State.UNAVAILABLE:UiNotice.State.IDLE,
-                "정시 알림 권한이 없어 예정 시간보다 늦어질 수 있음");
+                "정시 알림 권한이 없으면 알림이 늦어질 수 있습니다.");
     }
 
     private void refreshSwitchStates(){

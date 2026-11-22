@@ -99,7 +99,7 @@ public final class SeoulBusClient {
     public static TransitArrival fetch(TransitRoute.Leg leg)throws Exception{
         long now=System.currentTimeMillis();
         if(!enabled())return TransitArrival.unavailable(
-                "서울 버스 API 키가 없어. local.properties의 SEOUL_BUS_SERVICE_KEY를 설정해야 해",now);
+                "서울 버스 API 키 미설정",now);
         if(!Double.isFinite(leg.startLat)||!Double.isFinite(leg.startLon))
             return TransitArrival.unavailable("서울 버스 승차 정류소 좌표 없음",now);
         Document stops=request("stationinfo/getStationByName?serviceKey="+key()
@@ -135,9 +135,9 @@ public final class SeoulBusClient {
             if(stopId.equals(get(row,"stId"))){arsId=get(row,"arsId");break;}
         }
         if(arsId.isEmpty())return TransitArrival.unavailable(
-                "서울 버스 정류소 ARS 번호를 확인할 수 없어",now);
+                "서울 버스 정류소 ARS 번호 확인 불가",now);
         String route=ArrivalMatcher.transitLine(leg.routeName);
-        if(route.isEmpty())return TransitArrival.unavailable("버스 노선명이 없어",now);
+        if(route.isEmpty())return TransitArrival.unavailable("버스 노선명 없음",now);
         Document stationRoutes=request("stationinfo/getRouteByStation?serviceKey="+key()
                 +"&arsId="+URLEncoder.encode(arsId,"UTF-8"));
         NodeList routeList=stationRoutes.getElementsByTagName("itemList");
@@ -154,7 +154,7 @@ public final class SeoulBusClient {
             routeId=id;
         }
         if(routeId.isEmpty())return TransitArrival.unavailable(
-                "서울 버스 정류소를 지나는 "+route+"번 노선 ID를 확인할 수 없어",now);
+                "서울 버스 정류소를 지나는 "+route+"번 노선 ID 확인 불가",now);
         Document arrivals=request("arrive/getArrInfoByRouteAll?serviceKey="+key()
                 +"&busRouteId="+URLEncoder.encode(routeId,"UTF-8"));
         NodeList arrivalsList=arrivals.getElementsByTagName("itemList");
@@ -175,7 +175,7 @@ public final class SeoulBusClient {
             }
         }
         if(matched!=1)return TransitArrival.unavailable(
-                matched==0?"선택한 버스 노선의 정류소 ID가 도착정보와 일치하지 않아":
+                matched==0?"선택한 노선 정류소와 도착 정보 불일치":
                         "순환 노선에 동일 정류소가 중복되어 승차 방향 확정 불가",now);
         if(seconds.isEmpty())return TransitArrival.unavailable(
                 stopName+" · "+route+"번 버스의 실시간 도착정보 없음 (서울시 버스 API)",now);

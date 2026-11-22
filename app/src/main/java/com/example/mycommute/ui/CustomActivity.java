@@ -2,12 +2,12 @@ package com.example.mycommute.ui;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -22,10 +22,13 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.example.mycommute.R;
 import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.RoutineStore;
+import com.example.mycommute.data.ClockPreference;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.data.TransitRouteMemory;
 import com.example.mycommute.engine.RouteSignature;
+import com.example.mycommute.engine.PlanSchedule;
+import com.example.mycommute.location.TrackingService;
 import com.example.mycommute.engine.WeatherRouteRanker;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitRoute;
@@ -44,11 +47,13 @@ public class CustomActivity extends AppCompatActivity {
             R.id.dayFri,R.id.daySat,R.id.daySun};
     private static final int[] CAL_DAYS={2,3,4,5,6,7,1};
     private String direction;
+    private String selectedArrival;
     private Routine draft;
     private List<TransitRoute> routes=Collections.emptyList();
     private final List<Integer> order=new ArrayList<>();
     private final java.util.Set<Integer> expandedRoutes=new java.util.HashSet<>();
     private int selected=-1;
+    private long routesFetchedAt;
     private boolean searching,restoring,weatherKnown;
     private int requestGeneration,weatherGeneration;
     private WeatherRouteRanker.Conditions weather=new WeatherRouteRanker.Conditions(false,false,false);
@@ -63,6 +68,7 @@ public class CustomActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_custom);
         Navigation.bind(this);
+        for(int id:DAYS)((MaterialButton)findViewById(id)).setCheckable(true);
         weatherStatus=findViewById(R.id.textWeatherStatus);
         resultStatus=findViewById(R.id.textTransitResult);
         cards=findViewById(R.id.transitCards);
@@ -76,6 +82,7 @@ public class CustomActivity extends AppCompatActivity {
         draft=RoutineStore.read(this);
         if(!draft.isConfigured())draft=newConfiguredDraft(direction);
         restoreDraft();
+        findViewById(R.id.editDeparture).setOnClickListener(v->pickArrival());
         findViewById(R.id.btnDirectionOut).setOnClickListener(v->changeDirection(RoutineStore.OUTBOUND));
         findViewById(R.id.btnDirectionBack).setOnClickListener(v->changeDirection(RoutineStore.RETURN));
         findViewById(R.id.btnNewRoutine).setOnClickListener(v->{
@@ -118,7 +125,7 @@ public class CustomActivity extends AppCompatActivity {
     }
 
     private boolean isTracking(){
-        return RoutineStore.prefs(this).getBoolean("tracking_active",false);
+        return TrackingService.running();
     }
     private boolean isSaved(String id){
         for(Routine r:RoutineStore.list(this,direction))if(id.equals(r.id))return true;
@@ -152,11 +159,11 @@ public class CustomActivity extends AppCompatActivity {
                 +" · "+(draft.name==null||draft.name.trim().isEmpty()
                         ?"새 경로":draft.name.trim()));
         ((EditText)findViewById(R.id.editRouteName)).setText(draft.name);
-        ((EditText)findViewById(R.id.editDeparture)).setText(
-                draft.arrivalTime.isEmpty()?"09:00":draft.arrivalTime);
+        selectedArrival=PlanSchedule.validTime(draft.arrivalTime)?draft.arrivalTime:"09:00";
+        renderArrival();
         ((EditText)findViewById(R.id.editMargin)).setText(String.valueOf(draft.marginMinutes));
         for(int i=0;i<DAYS.length;i++)
-            ((CheckBox)findViewById(DAYS[i])).setChecked(draft.runsOn(CAL_DAYS[i]));
+            ((MaterialButton)findViewById(DAYS[i])).setChecked(draft.runsOn(CAL_DAYS[i]));
         ((SwitchMaterial)findViewById(R.id.switchWeather)).setChecked(draft.weatherEnabled);
         restoring=false;
         renderStops();renderSaved();
@@ -165,19 +172,20 @@ public class CustomActivity extends AppCompatActivity {
 
     private void updateDirectionTabs(){
         boolean out=RoutineStore.OUTBOUND.equals(direction);
-        styleTab(R.id.btnDirectionOut,out);
-        styleTab(R.id.btnDirectionBack,!out);
+        Navigation.direction(this,R.id.btnDirectionOut,out);
+        Navigation.direction(this,R.id.btnDirectionBack,!out);
     }
-    private void styleTab(int id,boolean selected){
-        MaterialButton tab=findViewById(id);
-        tab.setEnabled(true);
-        tab.setBackgroundTintList(ColorStateList.valueOf(
-                getColor(selected?R.color.primary:R.color.surface)));
-        tab.setTextColor(getColor(selected?R.color.surface:R.color.primary_dark));
-        tab.setStrokeColor(ColorStateList.valueOf(
-                getColor(selected?R.color.primary:R.color.border)));
-        tab.setStrokeWidth(dp(selected?0:1));
-        tab.setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);
+
+    private void pickArrival(){
+        String[] hm=selectedArrival.split(":");
+        new TimePickerDialog(this,(picker,hour,minute)->{
+            selectedArrival=String.format(java.util.Locale.ROOT,"%02d:%02d",hour,minute);
+            renderArrival();
+        },Integer.parseInt(hm[0]),Integer.parseInt(hm[1]),!ClockPreference.amPm(this)).show();
+    }
+
+    private void renderArrival(){
+        ((TextView)findViewById(R.id.editDeparture)).setText(ClockPreference.time(this,selectedArrival));
     }
 
     private void renderSaved(){
@@ -189,7 +197,7 @@ public class CustomActivity extends AppCompatActivity {
         makeDefault.setVisibility(saved&&!draft.id.equals(defaultId)?View.VISIBLE:View.GONE);
         if(profiles.isEmpty()){
             TextView empty=new TextView(this);
-            empty.setText("아직 저장된 경로가 없어. 새 경로를 만들어 봐.");
+            empty.setText("저장된 경로 없음");
             empty.setTextSize(14);
             empty.setTextColor(getColor(R.color.text_secondary));
             empty.setPadding(dp(12),dp(18),dp(12),dp(18));
@@ -295,7 +303,7 @@ public class CustomActivity extends AppCompatActivity {
             group.addView(chip);
         }
         ((TextView)findViewById(R.id.textWaypoints)).setText(
-                any?"선택한 순서대로 이동해":"등록한 경유 장소가 없어");
+                any?"선택 순서대로 경유":"등록된 경유지 없음");
     }
 
     private void startPlace(int request){
@@ -323,16 +331,12 @@ public class CustomActivity extends AppCompatActivity {
     private boolean readInputs(){
         String name=((EditText)findViewById(R.id.editRouteName)).getText().toString().trim();
         if(name.isEmpty()){toast("경로 이름을 입력하세요");return false;}
-        String time=((EditText)findViewById(R.id.editDeparture)).getText().toString().trim();
-        if(!time.matches("(?:[01]\\d|2[0-3]):[0-5]\\d")){
-            toast("도착시각은 HH:mm 형식");return false;
-        }
         int margin;
         try{margin=Integer.parseInt(((EditText)findViewById(R.id.editMargin)).getText().toString().trim());}
         catch(Exception e){toast("여유시간은 숫자로 입력");return false;}
         if(margin<0||margin>180){toast("여유시간은 0~180분");return false;}
         StringBuilder days=new StringBuilder();
-        for(int i=0;i<DAYS.length;i++)if(((CheckBox)findViewById(DAYS[i])).isChecked()){
+        for(int i=0;i<DAYS.length;i++)if(((MaterialButton)findViewById(DAYS[i])).isChecked()){
             if(days.length()>0)days.append(",");
             days.append(CAL_DAYS[i]);
         }
@@ -340,7 +344,7 @@ public class CustomActivity extends AppCompatActivity {
         if(!draft.validCoordinates()||draft.startName.isEmpty()||draft.endName.isEmpty()){
             toast("출발지·도착지 선택 필요");return false;
         }
-        draft.name=name;draft.arrivalTime=time;draft.marginMinutes=margin;
+        draft.name=name;draft.arrivalTime=selectedArrival;draft.marginMinutes=margin;
         draft.days=days.toString();
         draft.weatherEnabled=((SwitchMaterial)findViewById(R.id.switchWeather)).isChecked();
         draft.apiBased=true;draft.mapVisible=true;draft.transportMode="대중교통";
@@ -351,7 +355,7 @@ public class CustomActivity extends AppCompatActivity {
         ++requestGeneration;++weatherGeneration;
         searching=false;
         findViewById(R.id.btnSearchTransit).setEnabled(true);
-        routes=Collections.emptyList();selected=-1;order.clear();expandedRoutes.clear();
+        routes=Collections.emptyList();selected=-1;routesFetchedAt=0;order.clear();expandedRoutes.clear();
         cards.removeAllViews();otherCards.removeAllViews();otherRoutesExpanded=false;
         findViewById(R.id.btnOtherRoutes).setVisibility(View.GONE);
         findViewById(R.id.textRecommendationReason).setVisibility(View.GONE);
@@ -371,7 +375,7 @@ public class CustomActivity extends AppCompatActivity {
             else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
             return;
         }
-        routes=snap.routes;selected=snap.selected;
+        routes=snap.routes;selected=snap.selected;routesFetchedAt=snap.timestamp;
         UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
         renderCandidates();
     }
@@ -394,6 +398,7 @@ public class CustomActivity extends AppCompatActivity {
                 if(token!=requestGeneration||isFinishing()||isDestroyed())return;
                 searching=false;findViewById(R.id.btnSearchTransit).setEnabled(true);
                 routes=candidates;
+                routesFetchedAt=System.currentTimeMillis();
                 UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
                 renderCandidates();
                 if(draft.weatherEnabled)refreshWeather();
@@ -437,7 +442,7 @@ public class CustomActivity extends AppCompatActivity {
     private void chooseCandidate(int index){
         selected=index;
         if(saveDraft(true)) {
-            boolean cached=TransitRouteCache.save(this,draft,routes,selected);
+            boolean cached=TransitRouteCache.save(this,draft,routes,selected,routesFetchedAt);
             TransitRouteMemory.put(Session.accountId(this),draft,routes);
             TransitRouteMemory.choose(Session.accountId(this),draft,selected);
             com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
@@ -562,9 +567,9 @@ public class CustomActivity extends AppCompatActivity {
         if(withSelectedRoute&&selected>=0&&selected<routes.size()){
             draft.selectedRouteSignature=RouteSignature.of(routes.get(selected));
             draft.preferredMode="대중교통";
-        }else if(!previous.selectedRouteSignature.isEmpty()&&
-                !samePlaces(previous,draft)){
+        }else if(!samePlaces(previous,draft)){
             draft.selectedRouteSignature="";
+            draft.estimatedMinutes=0;
             TransitRouteCache.clear(this,draft.id);
         }
         // Persist a user-selected PLAN duration for future offline alarms.

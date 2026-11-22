@@ -54,7 +54,7 @@ public final class RouteGpsLabActivity extends AppCompatActivity {
             return;
         }
         route=snapshot.routes.get(snapshot.selected);
-        if(route.legs.isEmpty()){label(panel,"경로 구간이 없어",15);return;}
+        if(route.legs.isEmpty()){label(panel,"경로 구간 없음",15);return;}
 
         diagram=new RouteSchematicView(this,null);
         panel.addView(diagram,new LinearLayout.LayoutParams(

@@ -110,7 +110,7 @@ public final class RouteSchematicView extends View {
     @Override protected void onDraw(Canvas canvas){
         super.onDraw(canvas);
         if(route==null||route.legs.isEmpty()){
-            text(canvas,"저장된 상세 경로가 없어",dp(18),dp(46),
+            text(canvas,"저장된 상세 경로 없음",dp(18),dp(46),
                     getWidth()-dp(36),14,muted,false);
             text(canvas,"경로 검색 필요",dp(18),dp(73),
                     getWidth()-dp(36),12,muted,false);

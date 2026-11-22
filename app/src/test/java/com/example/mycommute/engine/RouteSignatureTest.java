@@ -22,4 +22,12 @@ public class RouteSignatureTest {
         assertNotEquals(RouteSignature.of(parse("광운대역",1200)),
                 RouteSignature.of(parse("청량리역",1200)));
     }
+
+    @Test public void matchesThePinnedRouteEvenAfterTheProviderChangesOrder() throws Exception {
+        TransitRoute original=parse("광운대역",1200);
+        TransitRoute other=parse("청량리역",1100);
+        TransitRoute fresh=parse("광운대역",1800);
+        assertEquals(1,RouteSignature.match(List.of(other,fresh),RouteSignature.of(original)));
+        assertEquals(-1,RouteSignature.match(List.of(other),RouteSignature.of(original)));
+    }
 }

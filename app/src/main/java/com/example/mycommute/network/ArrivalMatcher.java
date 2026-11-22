@@ -87,7 +87,7 @@ public final class ArrivalMatcher {
     /** TAGO's nearby-stop API returns citycode+nodeid, not TMAP's stationID. */
     public static Stop chooseNearbyStop(String json,TransitRoute.Leg leg) throws JSONException {
         if(!Double.isFinite(leg.startLat)||!Double.isFinite(leg.startLon))
-            throw new JSONException("TMAP 승차 정류장 좌표가 없어");
+            throw new JSONException("TMAP 승차 정류장 좌표 없음");
         JSONArray entries=items(new JSONObject(json));
         Stop first=null;double best=Double.MAX_VALUE,second=Double.MAX_VALUE;
         String target=normalizeStation(leg.startName);
@@ -118,7 +118,7 @@ public final class ArrivalMatcher {
     public static TransitArrival busArrival(String json,TransitRoute.Leg leg,Stop stop,long now)
             throws JSONException {
         String label=transitLine(leg.routeName);
-        if(label.isEmpty())return TransitArrival.unavailable("TMAP 버스 노선명이 없어 조회할 수 없어",now);
+        if(label.isEmpty())return TransitArrival.unavailable("TMAP 버스 노선명 누락 · 조회 불가",now);
         JSONArray data=items(new JSONObject(json));
         java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         int remaining=-1,closest=Integer.MAX_VALUE;
@@ -140,7 +140,7 @@ public final class ArrivalMatcher {
             }
         }
         if(arrivals.isEmpty())
-            return TransitArrival.unavailable(stop.name+" · "+label+"번 버스의 실시간 도착정보가 없어",now);
+            return TransitArrival.unavailable(stop.name+" · "+label+"번 버스 실시간 도착 정보 없음",now);
         int first=arrivals.first();
         Integer second=arrivals.higher(first);
         return TransitArrival.found(stop.name,label+"번 버스","TAGO 기준",first,remaining,
@@ -155,20 +155,20 @@ public final class ArrivalMatcher {
         if(line.isEmpty())return TransitArrival.unavailable(
                 "지하철 호선 식별 실패 · "+leg.routeName,now);
         if(target.isEmpty())return TransitArrival.unavailable(
-                "TMAP 승차역 정보가 없어 도착정보를 검색할 수 없어",now);
+                "TMAP 승차역 정보 누락 · 도착 정보 조회 불가",now);
         JSONObject root=new JSONObject(json);
         JSONObject error=root.optJSONObject("errorMessage");
         if(error!=null&&!error.optString("status","").equals("200")){
             String code=error.optString("code","");
             String message=error.optString("message","조회 실패");
             if("INFO-200".equals(code)||message.contains("해당하는 데이터가 없습니다"))
-                return TransitArrival.unavailable("서울시 API가 해당 역의 실시간 열차 정보를 제공하지 않아 (조회 시점 기준)",now);
+                return TransitArrival.unavailable("해당 역의 실시간 열차 정보 없음 (조회 시점 기준)",now);
             return TransitArrival.unavailable(
                     "서울 지하철 API: "+code+" · "+message,now);
         }
         JSONArray list=root.optJSONArray("realtimeArrivalList");
         if(list==null||list.length()==0)
-            return TransitArrival.unavailable("서울시 API 응답에 실시간 열차 목록이 없어 (운행 시간·역 이름 확인)",now);
+            return TransitArrival.unavailable("실시간 열차 목록 없음 (운행 시간·역 이름 확인)",now);
         java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         String direction="";
         long latestStatusAt=0;

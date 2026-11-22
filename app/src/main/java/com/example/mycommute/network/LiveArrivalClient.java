@@ -69,14 +69,14 @@ public final class LiveArrivalClient {
 
     public static void fetchLeg(TransitRoute.Leg leg,Callback callback) {
         if(leg==null){UI.post(()->callback.complete(TransitArrival.unavailable(
-                "이 경로에는 버스·지하철 탑승 구간이 없어",System.currentTimeMillis())));return;}
+                "버스·지하철 탑승 구간 없음",System.currentTimeMillis())));return;}
         if("SUBWAY".equals(leg.mode)&&!subwayEnabled()){
             UI.post(()->callback.complete(TransitArrival.unavailable(
-                    "SEOUL_SUBWAY_API_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
+                    "서울시 지하철 API 키 미설정",System.currentTimeMillis())));return;
         }
         if("BUS".equals(leg.mode)&&!(SeoulBusClient.likelySeoul(leg.startLat,leg.startLon) ? SeoulBusClient.enabled() : busEnabled())){
             UI.post(()->callback.complete(TransitArrival.unavailable(
-                    SeoulBusClient.likelySeoul(leg.startLat,leg.startLon)?"SEOUL_BUS_SERVICE_KEY가 설정되지 않았어":"TAGO_BUS_SERVICE_KEY가 설정되지 않았어",System.currentTimeMillis())));return;
+                    SeoulBusClient.likelySeoul(leg.startLat,leg.startLon)?"서울시 버스 API 키 미설정":"TAGO 버스 API 키 미설정",System.currentTimeMillis())));return;
         }
         IO.execute(()->{
             String identifier=leg.mode+"|"+leg.routeName+"|"+leg.startName+"|"+
@@ -106,7 +106,7 @@ public final class LiveArrivalClient {
 
     private static TransitArrival subway(TransitRoute.Leg leg) throws Exception {
         String station=leg.startName.replaceAll("역$","").trim();
-        if(station.isEmpty())return TransitArrival.unavailable("승차역 정보가 없어",
+        if(station.isEmpty())return TransitArrival.unavailable("승차역 정보 없음",
                 System.currentTimeMillis());
         String url="http://swopenAPI.seoul.go.kr/api/subway/"
                 +URLEncoder.encode(BuildConfig.SEOUL_SUBWAY_API_KEY,StandardCharsets.UTF_8.name())
@@ -118,7 +118,7 @@ public final class LiveArrivalClient {
 
     private static TransitArrival bus(TransitRoute.Leg leg) throws Exception {
         if(!Double.isFinite(leg.startLat)||!Double.isFinite(leg.startLon))
-            return TransitArrival.unavailable("버스 승차 정류장 좌표가 없어",
+            return TransitArrival.unavailable("버스 승차 정류장 좌표 없음",
                     System.currentTimeMillis());
         String base="https://apis.data.go.kr/1613000/";
         String location="BusSttnInfoInqireService/getCrdntPrxmtSttnList"
@@ -127,7 +127,7 @@ public final class LiveArrivalClient {
                 +"&gpsLati="+leg.startLat+"&gpsLong="+leg.startLon;
         ArrivalMatcher.Stop stop=ArrivalMatcher.chooseNearbyStop(request(base+location,"TAGO 정류소정보"),leg);
         if(stop==null)return TransitArrival.unavailable(
-                "가까운 TAGO 정류장 중 이름과 위치를 유일하게 확인할 수 없어",
+                "인근 TAGO 정류장을 특정할 수 없습니다.",
                 System.currentTimeMillis());
         String arrivals="ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList"
                 +"?serviceKey="+encode(BuildConfig.TAGO_BUS_SERVICE_KEY)

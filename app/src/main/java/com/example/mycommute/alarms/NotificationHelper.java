@@ -40,6 +40,11 @@ public final class NotificationHelper {
                 .setContentIntent(trackingIntent(context)).setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
     }
+    public static NotificationCompat.Builder startCheckBuilder(Context context) {
+        return trackingBuilder(context).setContentTitle("출발지 위치 확인 중")
+                .setContentText("예정 출발 시각까지 출발지 500m 이내인지 확인합니다.")
+                .setSilent(true);
+    }
     public static boolean show(Context context,String title,String message,int uniqueId,String routineId) {
         ensureChannels(context);
         if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(context,Manifest.permission.POST_NOTIFICATIONS)
