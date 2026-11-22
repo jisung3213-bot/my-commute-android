@@ -154,9 +154,6 @@
                         android:id="@+id/dayThu" style="@style/Widget.Commute.Weekday"
                         android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
                         android:text="목" android:contentDescription="목요일"/>
-                </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal">
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/dayFri" style="@style/Widget.Commute.Weekday"
                         android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
@@ -169,8 +166,6 @@
                         android:id="@+id/daySun" style="@style/Widget.Commute.Weekday"
                         android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
                         android:text="일" android:contentDescription="일요일"/>
-                    <Space android:layout_width="0dp" android:layout_weight="1"
-                        android:layout_height="48dp" android:layout_marginHorizontal="3dp"/>
                 </LinearLayout>
             </LinearLayout>
 
