@@ -7,7 +7,6 @@ import android.app.job.JobService;
 import android.content.ComponentName;
 import android.content.Context;
 import android.os.PersistableBundle;
-import com.example.mycommute.alarms.AlertLabMode;
 import com.example.mycommute.model.Routine;
 import java.util.HashSet;
 import java.util.Set;
@@ -40,7 +39,7 @@ public final class RouteRefreshJob extends JobService {
     @Override public boolean onStartJob(JobParameters params){
         PersistableBundle extras=params.getExtras();
         long end=extras.getLong("windowEnd");
-        if(AlertLabMode.enabled(this)||!Session.signedIn(this)||System.currentTimeMillis()>=end
+        if(!Session.signedIn(this)||System.currentTimeMillis()>=end
                 ||!Session.accountId(this).equals(extras.getString("account")))return false;
         Routine routine=RoutineStore.read(this,RoutineStore.defaultId(this,extras.getString("direction")));
         running.add(params);

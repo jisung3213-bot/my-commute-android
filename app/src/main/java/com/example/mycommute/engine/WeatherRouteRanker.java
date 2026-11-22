@@ -40,7 +40,7 @@ public final class WeatherRouteRanker {
     public static int acceptableExtraMinutes(int marginMinutes){
         return Math.min(12,Math.max(0,marginMinutes)/2);
     }
-    /** Shared production/debug ranking; eligible routes always precede longer detours.
+    /** Eligible routes always precede longer detours.
      * Scores are preference points, not journey-duration estimates. */
     public static List<Integer> rank(List<Candidate> candidates,Conditions weather,int marginMinutes){
         List<Integer> result=new ArrayList<>();

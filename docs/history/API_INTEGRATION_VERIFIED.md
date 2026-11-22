@@ -1,6 +1,6 @@
 # 나만의 출퇴근 — API 연동 명세·실측 응답·검증 방법
 
-기준: **2026-11-19 04:37 KST** Android DEBUG / SDK 34 실제 진단 로그. 이 문서는 **검증된 사실과 아직 미검증인 기능을 분리**한다. 인증키·요청 원문·개인 경로는 기록하지 않는다.
+기준: **2026-11-19 04:37 KST** Android API 34에서 수집한 실제 응답. 이 문서는 **검증된 사실과 아직 미검증인 기능을 분리**한다. 인증키·요청 원문·개인 경로는 기록하지 않는다.
 
 ## 공통 설계 원칙
 
@@ -8,7 +8,7 @@
 2. **공공데이터포털 동일 키 공유:** `KMA_SERVICE_KEY`, `TAGO_BUS_SERVICE_KEY`, `SEOUL_BUS_SERVICE_KEY`는 같은 값이어도 정상이다. 선택적으로 `PUBLIC_DATA_SERVICE_KEY`를 공통 기본값으로 사용하되 개별 키가 지정되어 있으면 우선한다. **서비스별 활용승인/권한은 키 문자열의 동일성과 별개**이다.
 3. 서울 지하철 인증키(`SEOUL_SUBWAY_API_KEY`)와 TMAP 키(`TMAP_APP_KEY`, `TMAP_TRANSIT_APP_KEY`)는 해당 제공자별 키를 사용한다. `local.properties` 파일은 Git에 올리지 않는다. 현재 Gradle `BuildConfig` 방식은 **시연용으로 APK에 키가 들어간다**; 상용 배포는 서버 프록시 및 호출량·권한 통제가 필요하다.
 4. 제공자 오류는 **HTTP 오류 / 응답 내 제공자 코드 / 유효한 빈 데이터**로 나눠 로그에 남긴다. `INFO-200`이나 `totalCount=0`을 곧바로 키 실패로 분류하지 않는다.
-5. 운영 중에는 유효기간과 새로고침 정책을 준수한다. 디버그 진단은 별도 15분 쿨다운 없이 반복 실행 가능하지만 **실행당 최대 9건**, 제공기관 제한은 그대로 적용된다.
+5. 운영 중에는 유효기간과 새로고침 정책을 준수한다.
 6. 실시간 이동 기능의 실제 경로 매칭은 정류장·역 이름, 노선 ID, 방향, 데이터 생성시각을 검증한다. 근거가 부족하면 보류 상태를 표시하고 가짜 ETA를 생성하지 않는다.
 
 ## A. 서울시 버스 정류소조회·도착정보 (서울 BIS)
@@ -70,8 +70,8 @@
 
 - 사용자가 제공한 **서울특별시 버스도착정보조회 서비스 활용가이드(2025-08-14)**.
 - 사용자가 제공한 **서울 지하철 실시간 도착정보 요청변수·출력필드·메시지 설명 화면** 및 **실시간도착 역정보(2026-09-02) 엑셀**.
-- 사용자 실기기 **MY-COMMUTE LIVE API PROBE** 로그(2026-11-19 03:13~04:37 KST).
-- 코드: `ApiProbe.java`, `LiveArrivalClient.java`, `SeoulBusClient.java`, `SeoulXmlParser.java`, `KmaWeatherClient.java`, `ArrivalMatcher.java`.
+- 사용자 실기기 API 응답 로그(2026-11-19 03:13~04:37 KST).
+- 코드: `LiveArrivalClient.java`, `SeoulBusClient.java`, `SeoulXmlParser.java`, `KmaWeatherClient.java`, `ArrivalMatcher.java`.
 - 서울 지하철 공식 서비스: https://data.seoul.go.kr/dataList/OA-12764/F/1/datasetView.do
 - 서울시 Open API 이용안내: https://data.seoul.go.kr/together/guide/useGuide.do
 

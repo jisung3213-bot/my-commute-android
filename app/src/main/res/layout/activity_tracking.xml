@@ -176,10 +176,6 @@
                         android:text="여유시간 —" android:textSize="13sp"
                         android:textColor="@color/text_secondary"/>
                 </LinearLayout>
-                <TextView android:id="@+id/liveArrivalDiagnostic"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="7dp" android:textSize="12sp"
-                    android:textColor="@color/text_secondary" android:visibility="gone"/>
             </LinearLayout>
             <com.google.android.material.button.MaterialButton android:id="@+id/liveRefresh"
                 android:layout_width="match_parent" android:layout_height="wrap_content"

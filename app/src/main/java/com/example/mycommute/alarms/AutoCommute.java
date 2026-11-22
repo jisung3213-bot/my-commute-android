@@ -53,7 +53,7 @@ public final class AutoCommute extends BroadcastReceiver {
 
     private static void schedule(Context context,boolean catchUp){
         AlarmManager manager=context.getSystemService(AlarmManager.class);
-        if(manager==null||!Session.signedIn(context)||AlertLabMode.enabled(context))return;
+        if(manager==null||!Session.signedIn(context))return;
         long now=System.currentTimeMillis();
         for(String direction:RoutineStore.IDS){
             PendingIntent alarm=alarm(context,direction);
@@ -102,7 +102,7 @@ public final class AutoCommute extends BroadcastReceiver {
     }
 
     @Override public void onReceive(Context context,Intent intent){
-        if(intent==null||AlertLabMode.enabled(context)||!Session.signedIn(context)
+        if(intent==null||!Session.signedIn(context)
                 ||!Session.accountId(context).equals(intent.getStringExtra("account")))return;
         if(END_WINDOW.equals(intent.getAction())){
             TrackingService.stopExpired(intent.getLongExtra("target",0));
@@ -124,7 +124,7 @@ public final class AutoCommute extends BroadcastReceiver {
     }
 
     public static void resume(Context context,boolean visible){
-        if(!Session.signedIn(context)||!enabled(context)||AlertLabMode.enabled(context)
+        if(!Session.signedIn(context)||!enabled(context)
                 ||TrackingService.running()||!hasLocation(context)
                 ||(!visible&&!hasBackgroundLocation(context)))return;
         LocationManager manager=context.getSystemService(LocationManager.class);

@@ -241,7 +241,6 @@ public final class ArrivalMatcher {
             }
             if(generated>latestStatusAt){
                 latestStatusAt=generated;
-                // Provider diagnostics belong in the debug survey, not commuter UI.
                 statusText=message;
                 statusDirection=trainDirection;
             }

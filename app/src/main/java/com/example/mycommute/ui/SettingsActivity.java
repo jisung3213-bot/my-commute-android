@@ -15,8 +15,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import com.example.mycommute.R;
-import com.example.mycommute.BuildConfig;
-import com.example.mycommute.alarms.AlertLabMode;
 import com.example.mycommute.alarms.AutoCommute;
 import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.AlarmSettingsStore;
@@ -86,36 +84,6 @@ public class SettingsActivity extends AppCompatActivity {
                     LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT));
         }
         refreshSwitchStates();
-        if(BuildConfig.DEBUG){
-            SwitchMaterial lab=new SwitchMaterial(this);
-            lab.setText("알림 테스트 모드 (디버그 전용)");
-            lab.setChecked(AlertLabMode.enabled(this));
-            lab.setOnCheckedChangeListener((v,enabled)->{
-                if(enabled){
-                    ReminderScheduler.cancelCurrent(this);
-                    stopService(new Intent(this,com.example.mycommute.location.TrackingService.class));
-                }
-                AlertLabMode.setEnabled(this,enabled);
-                if(!enabled){
-                    ReminderScheduler.scheduleCurrent(this);
-                    AutoCommute.resume(this,true);
-                }
-                updateTrackingPermission();
-                Toast.makeText(this,enabled?"테스트 모드 활성화 · 실제 알림 중지":"실제 모드 복귀",Toast.LENGTH_SHORT).show();
-            });
-            list.addView(lab,0);
-            com.google.android.material.button.MaterialButton openLab=
-                    new com.google.android.material.button.MaterialButton(this);
-            openLab.setText("알림 시뮬레이터 열기");
-            openLab.setOnClickListener(v->{
-                if(!AlertLabMode.enabled(this)){
-                    Toast.makeText(this,"먼저 테스트 모드를 켜세요",Toast.LENGTH_SHORT).show();return;
-                }
-                startActivity(new Intent().setClassName(this,
-                    "com.example.mycommute.debug.AlertLabActivity"));
-            });
-            list.addView(openLab,1);
-        }
         number(R.id.settingPrepareMinutes,AlarmSettingsStore.prepareMinutes(this));
         number(R.id.settingVehicleMinutes,AlarmSettingsStore.vehicleMinutes(this));
         number(R.id.settingWalkSlackMinutes,AlarmSettingsStore.walkSlackMinutes(this));
@@ -187,10 +155,7 @@ public class SettingsActivity extends AppCompatActivity {
     private void updateTrackingPermission(){
         boolean enabled=AutoCommute.enabled(this);
         boolean permission=AutoCommute.hasLocation(this)&&AutoCommute.hasBackgroundLocation(this);
-        boolean lab=AlertLabMode.enabled(this);
-        ((TextView)findViewById(R.id.autoTrackingStatus)).setText(enabled&&lab
-                ?"알림 테스트 모드에서 일시 중지"
-                :enabled&&!permission?"앱을 닫아도 추적하려면 위치를 ‘항상 허용’으로 설정하세요."
+        ((TextView)findViewById(R.id.autoTrackingStatus)).setText(enabled&&!permission?"앱을 닫아도 추적하려면 위치를 ‘항상 허용’으로 설정하세요."
                 :"예정 출발 30분 전부터 출발지 500m 이내 위치를 확인합니다.");
         findViewById(R.id.btnAutoLocation).setVisibility(enabled&&!permission?View.VISIBLE:View.GONE);
     }
@@ -228,9 +193,10 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void refreshSwitchStates(){
-        for(int i=0;i<list.getChildCount();i++)
-            if(!(BuildConfig.DEBUG&&i<2))
-                list.getChildAt(i).setEnabled(AlarmSettingsStore.overall(this));
+        boolean enabled=AlarmSettingsStore.overall(this);
+        for(int i=0;i<list.getChildCount();i++){
+            list.getChildAt(i).setEnabled(enabled);
+        }
     }
 
     private void number(int id,int value){

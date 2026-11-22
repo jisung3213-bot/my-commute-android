@@ -17,7 +17,6 @@ import java.util.function.Supplier;
 /** Scheduled events must remain local, never requiring a live API on wakeup. */
 public final class ReminderReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c,Intent intent){
-        if(AlertLabMode.enabled(c))return;
         if(intent==null||!Session.signedIn(c)||!
                 Session.accountId(c).equals(intent.getStringExtra("account")))return;
         String id=intent.getStringExtra("routineId");

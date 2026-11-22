@@ -12,7 +12,6 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import com.example.mycommute.R;
-import com.example.mycommute.BuildConfig;
 import com.example.mycommute.ui.TrackingActivity;
 
 public final class NotificationHelper {
@@ -52,10 +51,7 @@ public final class NotificationHelper {
         NotificationManager manager=context.getSystemService(NotificationManager.class);
         if(!NotificationManagerCompat.from(context).areNotificationsEnabled())return false;
         if(manager!=null&&manager.getNotificationChannel(REMINDER)!=null&&manager.getNotificationChannel(REMINDER).getImportance()==NotificationManager.IMPORTANCE_NONE)return false;
-        Intent open=(BuildConfig.DEBUG&&"lab-fixture".equals(routineId))
-                ?new Intent().setClassName(context,"com.example.mycommute.debug.AlertLabActivity")
-                :new Intent(context,TrackingActivity.class);
-        if(!"lab-fixture".equals(routineId))open.putExtra("routineId",routineId);
+        Intent open=new Intent(context,TrackingActivity.class).putExtra("routineId",routineId);
         PendingIntent destination=PendingIntent.getActivity(context,routineId.hashCode(),open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         try {
             NotificationCompat.Builder n=new NotificationCompat.Builder(context,REMINDER)

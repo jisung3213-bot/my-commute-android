@@ -46,7 +46,7 @@ Firebase 로그인 / 회원가입
 
 ## 3. 실제 코드의 패키지·파일 역할
 
-아래 트리는 **핵심 파일을 기능별로 선별한 논리적 트리**로, 저장소의 모든 리소스 파일이나 테스트 파일을 빠짐없이 나열한 완전한 `tree` 출력은 아니다.
+핵심 파일을 기능별로 배치했습니다. 전체 파일은 [프로젝트 README](../README.md)의 파일 트리를 참고하세요.
 
 ```text
 MyCommuteAndroid/
@@ -54,37 +54,21 @@ MyCommuteAndroid/
 ├─ settings.gradle              # :app 단일 Android 모듈 선언
 ├─ build.gradle / gradle.properties / gradle/wrapper/
 ├─ app/
-│  ├─ build.gradle              # SDK, Firebase, 의존성, local.properties → BuildConfig
-│  ├─ libs/                     # 개발자가 별도 설치하는 TMAP SDK (Git 미포함)
-│  └─ src/
-│     ├─ main/
-│     │  ├─ AndroidManifest.xml # 권한, Activity/Service/Receiver
-│     │  ├─ java/com/example/mycommute/
-│     │  │  ├─ ui/              # Activity, 상태 렌더러, 경로 도식, 지도 어댑터
-│     │  │  ├─ model/           # Routine, TransitRoute, TransitArrival, Waypoint 등
-│     │  │  ├─ data/            # 계정·루틴 로컬/Firestore, 경로 캐시, Room/알림 설정
-│     │  │  ├─ network/         # TMAP·서울시·TAGO·기상청 REST 클라이언트와 파서
-│     │  │  ├─ engine/          # 경로 점수, 출발·승차·GPS 구간 판정 순수 계산
-│     │  │  ├─ alarms/          # 예약 알림, 실시간 조건 평가, 문구·발송·중복방지
-│     │  │  └─ location/        # 사용자 시작 Foreground GPS 서비스
-│     │  └─ res/
-│     │     ├─ layout/          # XML 화면·경로 후보 카드·하단 메뉴
-│     │     ├─ drawable/        # 카드/선택 표시 스타일
-│     │     ├─ values/          # 색·문자열·스타일
-│     │     └─ xml/             # 네트워크 보안 설정
-│     ├─ debug/
-│     │  ├─ AndroidManifest.xml # release에는 포함되지 않는 테스트 Activity
-│     │  └─ java/.../debug/
-│     │     ├─ AlertLabActivity.java           # 디버그 메뉴·수동 알림 테스트
-│     │     ├─ AlertLabSuite.java              # 10종 모의 알림 일괄 검사
-│     │     ├─ ApiProbe.java                   # API 진단
-│     │     ├─ SubwayEtaSurvey.java            # 12개 역 원본 ETA 가용성 조사
-│     │     ├─ RouteGpsLabActivity.java        # 구간·진행률 마커 시뮬레이터
-│     │     └─ RouteRecommendationLabActivity.java # 기상·여유시간 추천 점수 시험
-│     └─ test/java/.../         # JUnit 엔진·파서·모델 테스트
-├─ docs/                        # 설계·현황·API·알림·테스트 관련 기록
-├─ firestore.rules              # 서버에 별도 배포해야 하는 Firestore 규칙
-└─ scripts/                     # Windows 전체 JUnit 테스트 실행
+│  ├─ build.gradle
+│  ├─ libs/                     # 별도로 설치하는 TMAP SDK
+│  └─ src/main/
+│     ├─ AndroidManifest.xml    # 권한·화면·서비스·수신기
+│     ├─ java/com/example/mycommute/
+│     │  ├─ ui/                 # 화면·경로 도식·지도
+│     │  ├─ model/              # 루틴·경로·도착정보
+│     │  ├─ data/               # 루틴·설정·Room·Firestore
+│     │  ├─ network/            # TMAP·서울시·TAGO·기상청 API
+│     │  ├─ engine/             # 추천·출발·승차·위치 판정
+│     │  ├─ alarms/             # 예약과 이동 알림
+│     │  └─ location/           # 포그라운드 GPS 서비스
+│     └─ res/                   # 화면 레이아웃·스타일·네트워크 설정
+├─ docs/                        # 현재 동작·설치·검증 문서와 개발 이력
+└─ firestore.rules              # Firestore 보안 규칙
 ```
 
 ### 핵심 클래스 책임
@@ -103,15 +87,14 @@ MyCommuteAndroid/
 | `network/TmapWalkingClient.java` | 현재 GPS → 승차지까지 도보 경로/시간 조회 |
 | `network/LiveArrivalClient.java`, `ArrivalMatcher.java`, `SeoulBusClient.java`, `SeoulXmlParser.java` | 서울 지하철·버스 / TAGO 도착정보 호출·파싱, 승차지·노선·방향 교차 검증 |
 | `network/KmaWeatherClient.java` | 기상청 단기예보에서 강수형태·확률·기온 확인. **공식 한파주의보/경보 API 미연결** |
-| `engine/WeatherRouteRanker.java` | 경로별 선호 점수·추천 순위·최단 대비 추가시간 범위. 실사용 및 테스트 동일 `rank()` 호출 |
+| `engine/WeatherRouteRanker.java` | 경로별 선호 점수·추천 순위·최단 대비 추가시간 범위. 루틴 화면에서 `rank()` 호출 |
 | `engine/StagePositionMatcher.java` | GPS 신선도·정확도, 경로 구간 매칭; 모호하면 판정 보류 |
 | `engine/CommuteWindow.java`, `PlanSchedule.java` | 목표 도착일·시각, 출발 계획, 시간창 계산 |
 | `engine/BoardingFeasibilityEngine.java`, `AlertThresholds.java` | 검증된 위치·ETA·도보시간으로 승차 여유/알림 조건 검사 |
 | `alarms/ReminderScheduler.java`, `ReminderReceiver.java` | 출발 준비·출발 권장·날씨 관련 예약 알림(AlarmManager) |
 | `alarms/TravelAlertMonitor.java` | GPS 서비스에서 도착 임박·승차지 출발·환승·하차·지연·이탈·종료 평가 |
-| `alarms/AlertCopy.java` | 실제 발송과 디버그 시뮬레이터가 **같은 제목/본문 생성식** 사용 |
+| `alarms/AlertCopy.java` | 출퇴근 알림의 제목과 본문 생성 |
 | `alarms/NotificationHelper.java`, `AlertLedger.java` | 알림 채널·발송, 통근/유형/구간 중복 발송 방지 |
-| `alarms/AlertLabMode.java` | 디버그 격리 모드. 활성 중 실제 추적/예약은 중지되고, 모의 알림과 분리됨 |
 
 ## 4. 경로 검색·추천의 정확한 동작
 
@@ -135,7 +118,7 @@ score = 총 소요시간(분)
 |---|---|
 | 기본 도보/실외 대기 가중치 | 각각 0.25 |
 | 비·눈(강수) | 도보 +1.5, 야외 대기 +1.0 |
-| 한파특보 플래그(엔진·모의실험에만 연결) | 도보 +2.0, 야외 대기 +2.5 |
+| 한파특보 플래그(엔진 계산용) | 도보 +2.0, 야외 대기 +2.5 |
 | 영하 기온(한파 플래그가 없는 경우) | 도보 +1.0, 야외 대기 +1.5 |
 | 환승 가중치 | 여유 0~7분: 3 / 8~14분: 6 / 15분 이상: 8 |
 | 우선 검토 경로의 추가 소요시간 | `min(12, floor(도착 여유시간/2))` 분 |
@@ -143,7 +126,7 @@ score = 총 소요시간(분)
 | 자전거·킥보드 후보 | 실제 대중교통 후보에 포함되지 않음; 악천후 자전거 배제는 엔진에 존재 |
 | '여유시간' 의미 | 실제 남은 시간이 아니라 **루틴 설정의 도착 여유시간** |
 
-`KmaWeatherClient`가 예보를 반환하면 화면이 다시 순위를 계산한다. 예보 실패 시 기상정보는 **미확인**이며 맑음이라고 확정하지 않는다. 점수는 실제 소요시간/정시 도착 확률이 아니라 **후보 정렬용 선호 점수**다. 후보 수집, 시간 상한, 점수식과 정렬은 `RouteRecommendationLabActivity`에서 실험할 수 있다.
+`KmaWeatherClient`가 예보를 반환하면 화면이 다시 순위를 계산한다. 예보 실패 시 기상정보는 **미확인**이며 맑음이라고 확정하지 않는다. 점수는 실제 소요시간/정시 도착 확률이 아니라 **후보 정렬용 선호 점수**다.
 
 ## 5. 실시간 도착정보·GPS·알림
 
@@ -161,7 +144,7 @@ score = 총 소요시간(분)
 - 홈은 현재 시각 이후 돌아오는 목표 도착 일정이 더 가까운 방향의 기본 경로를 보여준다. 방향 탭으로 현재 홈에서 보는 경로를 바꿀 수 있다.
 - 예약과 표시의 기준 시간대는 서울이다. 기기별 12/24시간제 선택은 화면과 새 알림 표시에 적용되며 루틴의 저장 시각과 예약은 그대로 유지한다.
 - GPS 정확도·신선도·경로 일치 확인 후 `StagePositionMatcher`로 현재 구간을 판정. `RouteSchematicView`의 파란 위치 마커는 도식상의 **근사 진행률**이지 지도상 실제 좌표 아이콘이 아님.
-- 실제 추적 서비스가 종료되는 이유를 사용자 화면에 표시하도록 개선. **알림 테스트 모드가 켜져 있으면 GPS 추적이 시작되지 않음**.
+- 실제 추적 서비스가 종료되는 이유를 사용자 화면에 표시하도록 개선.
 - 일부 위치·환승·하차 상황에서는 GPS 관측 불가/모호성 때문에 표시 및 알림이 생략될 수 있음.
 
 ### 알림 10종
@@ -173,7 +156,7 @@ score = 총 소요시간(분)
 | 이동 중 | 환승 준비, 하차 준비 | 위치·구간·가까운 정차 위치 확인 |
 | 이동 중 | 도착 지연 예상, 경로 이탈, 목적지 도착 | 목표 시각 대비 계획상 지연, 경로 이탈 지속, 목적지 접근 확인 |
 
-세부 임계값/중복 억제/미발송 조건은 [ALARM_FEATURES.md](ALARM_FEATURES.md)에 기술. 테스트/실제 발송은 `AlertCopy` 문구 생성기를 공유하지만, **디버그 모의 발송이 실제 GPS·교통 API 기반 종단간 발송을 검증하지는 않는다**.
+알림의 기준, 중복 방지, 발송 조건은 [알림 동작](ALARM_FEATURES.md)에 정리했습니다.
 
 ## 6. 데이터와 네트워크 흐름
 
@@ -206,18 +189,9 @@ Room(알림 기록) / Firestore(사용자 루틴·환경설정만)
 
 `.gitignore`는 `local.properties`, `google-services.json`, 서명키, APK 및 TMAP SDK 바이너리 등을 제외한다. 단, **BuildConfig로 주입하는 REST API 키는 APK에서 추출 가능**하므로 개발/파일럿 구조로만 이해해야 한다. 상용화 시 인증·사용량 제한을 포함한 서버 프록시가 필요하다. Firebase 보안규칙 변경은 Git 커밋만으로 서비스에 배포되지 않는다.
 
-## 8. 테스트와 검증 범위
+## 8. 빌드와 실행 확인
 
-| 위치 | 검사 가능한 것 | 검사하지 못하는 것 |
-|---|---|---|
-| `app/src/test/` | 순수 Java 엔진·모델·파서 단위 테스트 | 실제 OS 알림·GPS·API 권한 |
-| `debug/AlertLabActivity`, `AlertLabSuite` | 알림 문구·10종 시뮬레이션, 경계조건 | 실제 이동 중 백그라운드 발송 신뢰성 |
-| `debug/ApiProbe` | 실제 API 연결·응답 상태 | 앱 전 구간 종단간 성공 |
-| `debug/SubwayEtaSurvey` | 12개 역, 노선별 양수/0초/누락 ETA 표본 | 모든 역·시간대의 서비스 수준 |
-| `debug/RouteGpsLabActivity` | 저장 경로의 모의 마커 및 좌표 판정 | Android 기기 GPS 조작이나 실제 서비스 수신 |
-| `debug/RouteRecommendationLabActivity` | 가상 후보·저장 후보에 대해 **실제 앱과 같은 `rank()`** | 실제 기상특보 수신·TMAP 예측 정확도 |
-
-현재 작업 사본의 Debug·Release 빌드와 JUnit 82개가 통과했다. Lint 결과는 오류 0건, 경고 184건이다. Windows 한글 경로에서 JUnit 실행 시 `scripts/test-core.ps1`을 사용한다. 기기와 서버의 실행 검증 범위는 [현재 검증 결과](STATUS.md)에 있다.
+[현재 검증 결과](STATUS.md)에 빌드 결과와 기기·서버 확인 범위를 정리했습니다.
 
 ## 9. 미완료·운영 위험
 
@@ -232,7 +206,6 @@ Room(알림 기록) / Firestore(사용자 루틴·환경설정만)
 
 - [DEVELOPMENT_HISTORY.md](history/DEVELOPMENT_HISTORY.md): 개발 단계·브랜치 전략·주요 변경과 이유
 - [ALARM_FEATURES.md](ALARM_FEATURES.md): 알림 10종 판단 및 저장
-- [ALERT_LAB.md](ALERT_LAB.md): 디버그 실험 모드의 격리 범위
 - [API_INTEGRATION_VERIFIED.md](history/API_INTEGRATION_VERIFIED.md): 이전 API 실측 기록
 - [UI_LAYOUT_QA.md](UI_LAYOUT_QA.md): 화면 QA 기준
 - [STATUS.md](STATUS.md), [REQUIREMENTS_CURRENT.md](REQUIREMENTS_CURRENT.md): 현재 실행 결과와 과제 요구사항

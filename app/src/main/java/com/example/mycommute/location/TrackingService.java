@@ -1,7 +1,6 @@
 package com.example.mycommute.location;
 
 import android.Manifest;
-import com.example.mycommute.alarms.AlertLabMode;
 import com.example.mycommute.alarms.AutoCommute;
 import com.example.mycommute.alarms.ReminderScheduler;
 import android.app.Service;
@@ -98,7 +97,7 @@ public class TrackingService extends Service {
     }
 
     private boolean canContinue(){
-        if(AlertLabMode.enabled(this)||!account.equals(Session.accountId(this))) {
+        if(!account.equals(Session.accountId(this))) {
             stopSelf();return false;
         }
         long now=System.currentTimeMillis();
@@ -234,10 +233,6 @@ public class TrackingService extends Service {
         account=Session.accountId(this);
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
-        if(AlertLabMode.enabled(this)){
-            stopReason="알림 테스트 모드 · 위치 추적 중지";
-            stopSelf();return START_NOT_STICKY;
-        }
         if(intent!=null&&ACTION_STOP.equals(intent.getAction())) {
             stopReason="위치 추적 종료";
             stopTrip(this);return START_NOT_STICKY;

@@ -24,25 +24,24 @@
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 .\gradlew.bat assembleDebug assembleRelease lintDebug
-.\scripts\test-core.ps1
 ```
 
-Windows 한글 경로에서 JUnit 전체를 실행할 때는 `scripts/test-core.ps1`을 사용합니다. 로컬 파일럿의 `targetSdk 28`을 유지하기 위해 `app/lint.xml`에서 `app/build.gradle`의 `ExpiredTargetSdkVersion` 검사만 예외로 둡니다.
+로컬 파일럿의 `targetSdk 28`을 유지하기 위해 `app/lint.xml`에서 `app/build.gradle`의 `ExpiredTargetSdkVersion` 검사만 예외로 둡니다.
 
 - [문서 안내](docs/README.md) · [화면별 사용 방법](docs/USER_GUIDE.md)
 - [과제 기술 요구사항](docs/REQUIREMENTS_CURRENT.md) · [실행 검증 결과](docs/STATUS.md) · [시연·UI 점검표](docs/UI_LAYOUT_QA.md)
 - [현재 코드와 데이터 흐름](docs/ARCHITECTURE_CURRENT.md) · [알림 상세](docs/ALARM_FEATURES.md)
-- [개발 이력과 이전 검증 자료](docs/history/) · [반입 원본 설명서](docs/imported/)
+- [개발 이력과 이전 검증 자료](docs/history/) · [반입 당시 연동 설정](docs/imported/)
 
 ## 전체 파일 구조와 GitHub 반영 상태
 
-이번 업데이트의 파일 목록을 직전 GitHub `main` 기준인 `31a5b22`와 비교했습니다.
+이번 변경의 파일 목록을 GitHub `main`의 `339dc1e`와 비교했습니다.
 
 - **(업데이트됨)** 이번 업데이트에서 수정·추가·이동된 파일
 - **(올라가 있음)** 비교 기준과 내용이 같은 Git 관리 파일
 - **(올라가지 않음)** 로컬 설정, 공급사 SDK, 빌드 결과 등 Git 제외 항목
 
-이전 경로의 `docs/API_INTEGRATION_VERIFIED.md`, `docs/DEVELOPMENT_HISTORY.md`, `docs/HANDOFF.md`는 `docs/history/`로 옮겼습니다. 기존 상태·알림 실험·화면 점검 기록도 날짜를 붙여 이력으로 옮겼으며, 원래 경로에는 현재 안내가 있습니다.
+현재 문서와 개발 이력은 `docs/`에서 확인할 수 있습니다.
 
 <details>
 <summary>프로젝트 전체 파일 펼치기</summary>
@@ -55,182 +54,132 @@ MyCommuteAndroid/
 ├── .gradle/ (올라가지 않음) — 재생성되는 Gradle 캐시
 ├── .idea/ (올라가지 않음) — 로컬 Android Studio 프로젝트 설정
 ├── app/
-│   ├── build.gradle (올라가 있음)
-│   ├── build/ (올라가지 않음) — APK와 자동 생성 소스, 테스트·Lint 보고서
+│   ├── build.gradle (업데이트됨)
+│   ├── build/ (올라가지 않음) — APK와 자동 생성 소스, Lint 보고서
 │   ├── google-services.json (올라가지 않음) — 환경별 Firebase 연결 설정
 │   ├── libs/
 │   │   └── com.skt.Tmap_1.77.jar (올라가지 않음) — 별도로 설치하는 공급사 SDK
 │   ├── lint.xml (올라가 있음)
 │   └── src/
-│       ├── debug/
-│       │   ├── AndroidManifest.xml (올라가 있음)
-│       │   └── java/
-│       │       └── com/
-│       │           └── example/
-│       │               └── mycommute/
-│       │                   └── debug/
-│       │                       ├── AlertLabActivity.java (올라가 있음)
-│       │                       ├── AlertLabSuite.java (올라가 있음)
-│       │                       ├── ApiProbe.java (올라가 있음)
-│       │                       ├── RouteGpsLabActivity.java (올라가 있음)
-│       │                       ├── RouteRecommendationLabActivity.java (올라가 있음)
-│       │                       └── SubwayEtaSurvey.java (올라가 있음)
-│       ├── main/
-│       │   ├── AndroidManifest.xml (올라가 있음)
-│       │   ├── java/
-│       │   │   └── com/
-│       │   │       └── example/
-│       │   │           └── mycommute/
-│       │   │               ├── alarms/
-│       │   │               │   ├── AlertCopy.java (올라가 있음)
-│       │   │               │   ├── AlertLabMode.java (올라가 있음)
-│       │   │               │   ├── AlertLedger.java (올라가 있음)
-│       │   │               │   ├── AutoCommute.java (올라가 있음)
-│       │   │               │   ├── BootReceiver.java (올라가 있음)
-│       │   │               │   ├── NotificationHelper.java (업데이트됨)
-│       │   │               │   ├── ReminderReceiver.java (올라가 있음)
-│       │   │               │   ├── ReminderScheduler.java (올라가 있음)
-│       │   │               │   └── TravelAlertMonitor.java (올라가 있음)
-│       │   │               ├── CommuteApplication.java (올라가 있음)
-│       │   │               ├── data/
-│       │   │               │   ├── AlarmLogDao.java (올라가 있음)
-│       │   │               │   ├── AlarmLogEntity.java (올라가 있음)
-│       │   │               │   ├── AlarmLogRepository.java (올라가 있음)
-│       │   │               │   ├── AlarmSettingsStore.java (올라가 있음)
-│       │   │               │   ├── ClockPreference.java (올라가 있음)
-│       │   │               │   ├── CommuteDatabase.java (올라가 있음)
-│       │   │               │   ├── FirestoreSync.java (올라가 있음)
-│       │   │               │   ├── PinnedRouteRefresh.java (올라가 있음)
-│       │   │               │   ├── RouteRefreshJob.java (올라가 있음)
-│       │   │               │   ├── RoutineStore.java (업데이트됨)
-│       │   │               │   ├── Session.java (올라가 있음)
-│       │   │               │   ├── TransitRouteCache.java (올라가 있음)
-│       │   │               │   └── TransitRouteMemory.java (올라가 있음)
-│       │   │               ├── engine/
-│       │   │               │   ├── AlertThresholds.java (올라가 있음)
-│       │   │               │   ├── BoardingFeasibilityEngine.java (올라가 있음)
-│       │   │               │   ├── CommuteWindow.java (업데이트됨)
-│       │   │               │   ├── LiveDepartureAdvisor.java (올라가 있음)
-│       │   │               │   ├── PlanSchedule.java (올라가 있음)
-│       │   │               │   ├── RoutePlanner.java (올라가 있음)
-│       │   │               │   ├── RouteSignature.java (올라가 있음)
-│       │   │               │   ├── StagePositionMatcher.java (올라가 있음)
-│       │   │               │   └── WeatherRouteRanker.java (올라가 있음)
-│       │   │               ├── location/
-│       │   │               │   └── TrackingService.java (업데이트됨)
-│       │   │               ├── model/
-│       │   │               │   ├── Place.java (올라가 있음)
-│       │   │               │   ├── Routine.java (올라가 있음)
-│       │   │               │   ├── TransitArrival.java (올라가 있음)
-│       │   │               │   ├── TransitRoute.java (올라가 있음)
-│       │   │               │   └── Waypoint.java (올라가 있음)
-│       │   │               ├── network/
-│       │   │               │   ├── ArrivalApiError.java (올라가 있음)
-│       │   │               │   ├── ArrivalMatcher.java (올라가 있음)
-│       │   │               │   ├── KmaWeatherClient.java (올라가 있음)
-│       │   │               │   ├── LiveArrivalClient.java (올라가 있음)
-│       │   │               │   ├── SeoulBusClient.java (올라가 있음)
-│       │   │               │   ├── SeoulXmlParser.java (올라가 있음)
-│       │   │               │   ├── TmapPoiClient.java (올라가 있음)
-│       │   │               │   ├── TmapTransitClient.java (올라가 있음)
-│       │   │               │   ├── TmapWalkingClient.java (올라가 있음)
-│       │   │               │   └── TmapWaypointRouteClient.java (올라가 있음)
-│       │   │               └── ui/
-│       │   │                   ├── AlarmLogActivity.java (올라가 있음)
-│       │   │                   ├── CommuteLiveCoordinator.java (올라가 있음)
-│       │   │                   ├── CustomActivity.java (올라가 있음)
-│       │   │                   ├── LoginActivity.java (올라가 있음)
-│       │   │                   ├── MainActivity.java (올라가 있음)
-│       │   │                   ├── MapActivity.java (올라가 있음)
-│       │   │                   ├── Navigation.java (올라가 있음)
-│       │   │                   ├── PlaceSearchActivity.java (올라가 있음)
-│       │   │                   ├── RouteSchematicLabels.java (올라가 있음)
-│       │   │                   ├── RouteSchematicView.java (올라가 있음)
-│       │   │                   ├── SettingsActivity.java (업데이트됨)
-│       │   │                   ├── TmapRasterMapAdapter.java (올라가 있음)
-│       │   │                   ├── TrackingActivity.java (업데이트됨)
-│       │   │                   └── UiNotice.java (올라가 있음)
-│       │   └── res/
-│       │       ├── color/
-│       │       │   ├── weekday_fill.xml (올라가 있음)
-│       │       │   └── weekday_text.xml (올라가 있음)
-│       │       ├── drawable/
-│       │       │   ├── bg_card.xml (올라가 있음)
-│       │       │   ├── bg_route_selected.xml (올라가 있음)
-│       │       │   └── ic_notification.xml (올라가 있음)
-│       │       ├── layout/
-│       │       │   ├── activity_alarm_log.xml (올라가 있음)
-│       │       │   ├── activity_custom.xml (올라가 있음)
-│       │       │   ├── activity_login.xml (올라가 있음)
-│       │       │   ├── activity_main.xml (올라가 있음)
-│       │       │   ├── activity_map.xml (올라가 있음)
-│       │       │   ├── activity_place_search.xml (올라가 있음)
-│       │       │   ├── activity_settings.xml (업데이트됨)
-│       │       │   ├── activity_tracking.xml (업데이트됨)
-│       │       │   ├── item_route_result.xml (올라가 있음)
-│       │       │   └── view_bottom_nav.xml (올라가 있음)
-│       │       ├── values/
-│       │       │   ├── colors.xml (올라가 있음)
-│       │       │   ├── strings.xml (올라가 있음)
-│       │       │   └── themes.xml (올라가 있음)
-│       │       └── xml/
-│       │           └── network_security_config.xml (올라가 있음)
-│       └── test/
-│           └── java/
-│               └── com/
-│                   └── example/
-│                       └── mycommute/
-│                           ├── engine/
-│                           │   ├── AlertThresholdsTest.java (올라가 있음)
-│                           │   ├── BoardingFeasibilityEngineTest.java (올라가 있음)
-│                           │   ├── CommuteWindowTest.java (업데이트됨)
-│                           │   ├── LiveDepartureAdvisorTest.java (올라가 있음)
-│                           │   ├── PlanScheduleTest.java (올라가 있음)
-│                           │   ├── RouteSignatureTest.java (올라가 있음)
-│                           │   ├── StagePositionMatcherTest.java (올라가 있음)
-│                           │   └── WeatherRouteRankerTest.java (올라가 있음)
-│                           ├── model/
-│                           │   ├── NamedTransitCacheTest.java (올라가 있음)
-│                           │   ├── PlaceTest.java (올라가 있음)
-│                           │   ├── TransitArrivalFollowUpTest.java (올라가 있음)
-│                           │   ├── TransitArrivalTest.java (올라가 있음)
-│                           │   └── TransitRouteTest.java (올라가 있음)
-│                           ├── network/
-│                           │   ├── ArrivalApiErrorTest.java (올라가 있음)
-│                           │   ├── ArrivalMatcherTest.java (올라가 있음)
-│                           │   ├── KmaWeatherGridTest.java (올라가 있음)
-│                           │   ├── SubwayArrivalStatusTest.java (올라가 있음)
-│                           │   └── SubwayUnverifiedDirectionTest.java (올라가 있음)
-│                           └── ui/
-│                               └── RouteSchematicLabelsTest.java (올라가 있음)
+│       └── main/
+│           ├── AndroidManifest.xml (올라가 있음)
+│           ├── java/
+│           │   └── com/
+│           │       └── example/
+│           │           └── mycommute/
+│           │               ├── alarms/
+│           │               │   ├── AlertCopy.java (업데이트됨)
+│           │               │   ├── AlertLedger.java (올라가 있음)
+│           │               │   ├── AutoCommute.java (업데이트됨)
+│           │               │   ├── BootReceiver.java (올라가 있음)
+│           │               │   ├── NotificationHelper.java (업데이트됨)
+│           │               │   ├── ReminderReceiver.java (업데이트됨)
+│           │               │   ├── ReminderScheduler.java (업데이트됨)
+│           │               │   └── TravelAlertMonitor.java (올라가 있음)
+│           │               ├── CommuteApplication.java (올라가 있음)
+│           │               ├── data/
+│           │               │   ├── AlarmLogDao.java (업데이트됨)
+│           │               │   ├── AlarmLogEntity.java (올라가 있음)
+│           │               │   ├── AlarmLogRepository.java (업데이트됨)
+│           │               │   ├── AlarmSettingsStore.java (올라가 있음)
+│           │               │   ├── ClockPreference.java (올라가 있음)
+│           │               │   ├── CommuteDatabase.java (업데이트됨)
+│           │               │   ├── FirestoreSync.java (올라가 있음)
+│           │               │   ├── PinnedRouteRefresh.java (올라가 있음)
+│           │               │   ├── RouteRefreshJob.java (업데이트됨)
+│           │               │   ├── RoutineStore.java (올라가 있음)
+│           │               │   ├── Session.java (올라가 있음)
+│           │               │   ├── TransitRouteCache.java (올라가 있음)
+│           │               │   └── TransitRouteMemory.java (올라가 있음)
+│           │               ├── engine/
+│           │               │   ├── AlertThresholds.java (올라가 있음)
+│           │               │   ├── BoardingFeasibilityEngine.java (올라가 있음)
+│           │               │   ├── CommuteWindow.java (올라가 있음)
+│           │               │   ├── LiveDepartureAdvisor.java (올라가 있음)
+│           │               │   ├── PlanSchedule.java (올라가 있음)
+│           │               │   ├── RoutePlanner.java (올라가 있음)
+│           │               │   ├── RouteSignature.java (올라가 있음)
+│           │               │   ├── StagePositionMatcher.java (올라가 있음)
+│           │               │   └── WeatherRouteRanker.java (업데이트됨)
+│           │               ├── location/
+│           │               │   └── TrackingService.java (업데이트됨)
+│           │               ├── model/
+│           │               │   ├── Place.java (올라가 있음)
+│           │               │   ├── Routine.java (올라가 있음)
+│           │               │   ├── TransitArrival.java (올라가 있음)
+│           │               │   ├── TransitRoute.java (올라가 있음)
+│           │               │   └── Waypoint.java (올라가 있음)
+│           │               ├── network/
+│           │               │   ├── ArrivalApiError.java (올라가 있음)
+│           │               │   ├── ArrivalMatcher.java (업데이트됨)
+│           │               │   ├── KmaWeatherClient.java (올라가 있음)
+│           │               │   ├── LiveArrivalClient.java (올라가 있음)
+│           │               │   ├── SeoulBusClient.java (올라가 있음)
+│           │               │   ├── SeoulXmlParser.java (올라가 있음)
+│           │               │   ├── TmapPoiClient.java (올라가 있음)
+│           │               │   ├── TmapTransitClient.java (올라가 있음)
+│           │               │   ├── TmapWalkingClient.java (올라가 있음)
+│           │               │   └── TmapWaypointRouteClient.java (올라가 있음)
+│           │               └── ui/
+│           │                   ├── AlarmLogActivity.java (올라가 있음)
+│           │                   ├── CommuteLiveCoordinator.java (올라가 있음)
+│           │                   ├── CustomActivity.java (올라가 있음)
+│           │                   ├── LoginActivity.java (올라가 있음)
+│           │                   ├── MainActivity.java (올라가 있음)
+│           │                   ├── MapActivity.java (올라가 있음)
+│           │                   ├── Navigation.java (올라가 있음)
+│           │                   ├── PlaceSearchActivity.java (올라가 있음)
+│           │                   ├── RouteSchematicLabels.java (올라가 있음)
+│           │                   ├── RouteSchematicView.java (업데이트됨)
+│           │                   ├── SettingsActivity.java (업데이트됨)
+│           │                   ├── TmapRasterMapAdapter.java (올라가 있음)
+│           │                   ├── TrackingActivity.java (업데이트됨)
+│           │                   └── UiNotice.java (올라가 있음)
+│           └── res/
+│               ├── color/
+│               │   ├── weekday_fill.xml (올라가 있음)
+│               │   └── weekday_text.xml (올라가 있음)
+│               ├── drawable/
+│               │   ├── bg_card.xml (올라가 있음)
+│               │   ├── bg_route_selected.xml (올라가 있음)
+│               │   └── ic_notification.xml (올라가 있음)
+│               ├── layout/
+│               │   ├── activity_alarm_log.xml (올라가 있음)
+│               │   ├── activity_custom.xml (올라가 있음)
+│               │   ├── activity_login.xml (올라가 있음)
+│               │   ├── activity_main.xml (올라가 있음)
+│               │   ├── activity_map.xml (올라가 있음)
+│               │   ├── activity_place_search.xml (올라가 있음)
+│               │   ├── activity_settings.xml (올라가 있음)
+│               │   ├── activity_tracking.xml (업데이트됨)
+│               │   ├── item_route_result.xml (올라가 있음)
+│               │   └── view_bottom_nav.xml (올라가 있음)
+│               ├── values/
+│               │   ├── colors.xml (올라가 있음)
+│               │   ├── strings.xml (올라가 있음)
+│               │   └── themes.xml (올라가 있음)
+│               └── xml/
+│                   └── network_security_config.xml (올라가 있음)
 ├── build.gradle (올라가 있음)
 ├── docs/
 │   ├── ALARM_FEATURES.md (업데이트됨)
-│   ├── ALERT_LAB.md (업데이트됨)
-│   ├── API_SETUP.md (업데이트됨) — 새 문서
+│   ├── API_SETUP.md (올라가 있음)
 │   ├── ARCHITECTURE_CURRENT.md (업데이트됨)
 │   ├── history/
-│   │   ├── ALERT_LAB_2026-11-20.md (업데이트됨) — 이전 문서에서 이동 또는 보관
-│   │   ├── API_INTEGRATION_VERIFIED.md (업데이트됨) — 이전 문서에서 이동 또는 보관
-│   │   ├── DEVELOPMENT_HISTORY.md (업데이트됨) — 이전 문서에서 이동 또는 보관
-│   │   ├── HANDOFF.md (업데이트됨) — 이전 문서에서 이동 또는 보관
-│   │   ├── README.md (업데이트됨) — 새 문서
-│   │   ├── STATUS_2026-11-19.md (업데이트됨) — 이전 문서에서 이동 또는 보관
-│   │   └── UI_LAYOUT_2026-11-19.md (업데이트됨) — 이전 문서에서 이동 또는 보관
+│   │   ├── API_INTEGRATION_VERIFIED.md (업데이트됨)
+│   │   ├── DEVELOPMENT_HISTORY.md (업데이트됨)
+│   │   ├── README.md (업데이트됨)
+│   │   ├── STATUS_2026-11-19.md (업데이트됨)
+│   │   └── UI_LAYOUT_2026-11-19.md (업데이트됨)
 │   ├── imported/
-│   │   ├── API_SETUP.md (올라가 있음)
-│   │   ├── ARCHITECTURE.md (올라가 있음)
-│   │   ├── FILE_MANIFEST.json (올라가 있음)
-│   │   ├── README_ORIGINAL.md (올라가 있음)
-│   │   ├── README.md (업데이트됨) — 새 문서
-│   │   ├── TEST_CASES.md (올라가 있음)
-│   │   └── VALIDATION.md (올라가 있음)
+│   │   ├── API_SETUP.md (업데이트됨)
+│   │   └── README.md (업데이트됨)
 │   ├── NEXT_STEPS.md (업데이트됨)
-│   ├── README.md (업데이트됨) — 새 문서
+│   ├── README.md (업데이트됨)
 │   ├── REQUIREMENTS_CURRENT.md (업데이트됨)
 │   ├── STATUS.md (업데이트됨)
-│   ├── UI_LAYOUT_QA.md (업데이트됨)
-│   └── USER_GUIDE.md (업데이트됨) — 새 문서
+│   ├── UI_LAYOUT_QA.md (올라가 있음)
+│   └── USER_GUIDE.md (올라가 있음)
 ├── firestore.rules (올라가 있음)
 ├── gradle.properties (올라가 있음)
 ├── gradle/
@@ -242,8 +191,6 @@ MyCommuteAndroid/
 ├── local.properties (올라가지 않음) — 기기별 SDK 경로와 서비스 키 설정
 ├── local.properties.example (올라가 있음)
 ├── README.md (업데이트됨)
-├── scripts/
-│   └── test-core.ps1 (올라가 있음)
 └── settings.gradle (올라가 있음)
 ```
 

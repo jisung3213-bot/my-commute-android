@@ -17,7 +17,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.example.mycommute.R;
-import com.example.mycommute.alarms.AlertLabMode;
 import com.example.mycommute.alarms.AutoCommute;
 import com.example.mycommute.alarms.ReminderScheduler;
 import android.location.LocationManager;
@@ -210,13 +209,6 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     private void startTracking(){
-        if(AlertLabMode.enabled(this)){
-            trackingStarting=false;
-            trackingStatus="알림 테스트 모드 · 위치 추적 중지";
-            render();
-            toast("위치 추적을 사용하려면 알림 테스트 모드를 해제해야 합니다.");
-            return;
-        }
         if(!isDeviceLocationEnabled()){
             trackingStarting=false;
             trackingStatus="기기 위치 서비스(GPS) 꺼짐";
@@ -328,9 +320,7 @@ public class TrackingActivity extends AppCompatActivity {
             gpsState=seconds<=90?gpsState+" · 최근 "+seconds+"초 전":
                     "위치 갱신 대기";
         }
-        if(!tracking&&AlertLabMode.enabled(this)){
-            gpsState="알림 테스트 모드 활성화 · 설정에서 꺼야 위치 추적 가능";
-        }else if(!tracking&&!isDeviceLocationEnabled()){
+        if(!tracking&&!isDeviceLocationEnabled()){
             gpsState="기기 위치 서비스(GPS) 꺼짐";
         }
         if(running&&!tracking)gpsState="출발지 500m 이내 위치 확인 중";
@@ -444,8 +434,6 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     private void renderVehicle(long now,TransitRoute route,TransitArrival arrival,boolean tracking){
-        TextView diagnostic=label(R.id.liveArrivalDiagnostic);
-        diagnostic.setVisibility(View.GONE);
         TextView station=label(R.id.liveNextVehicle);
         TextView mode=label(R.id.liveVehicleMode);
         TextView eta=label(R.id.liveVehicleEta);
@@ -498,7 +486,6 @@ public class TrackingActivity extends AppCompatActivity {
         if(arrival==null||!arrival.available){
             eta.setText("");
             status.setText(arrival==null?"도착정보 확인 중":"실시간 도착정보 없음");
-            // Detailed provider/network errors are reserved for the debug API probe.
             return;
         }
         int remaining=arrival.currentSeconds(now);
@@ -514,8 +501,6 @@ public class TrackingActivity extends AppCompatActivity {
             next.setText(((second+59)/60)+"분 후");
             nextColumn.setVisibility(View.VISIBLE);
         }
-        if(arrival.direction!=null&&!arrival.direction.isEmpty())
-            diagnostic.setText(arrival.direction);
         int walk=live.walkSeconds();
         if(walk>=0){
             int slack=remaining-walk-120;

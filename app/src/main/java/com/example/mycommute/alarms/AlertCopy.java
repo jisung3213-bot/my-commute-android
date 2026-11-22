@@ -1,6 +1,6 @@
 package com.example.mycommute.alarms;
 
-/** Single source of notification copy used by production and debug fixtures. */
+/** Builds the title and body of commute notifications. */
 public final class AlertCopy {
     public static final class Message {
         public final String title,body;
