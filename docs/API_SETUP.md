@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | TMAP 장소 검색·보행 | `TMAP_APP_KEY` | 장소 검색, 이동의 승차지 보행시간 |
 | TMAP 대중교통 | `TMAP_TRANSIT_APP_KEY` | 루틴의 경로 검색과 후보 |
-| 기상청 단기예보 | `KMA_SERVICE_KEY` | 루틴의 기상 반영, 실시간 이동의 날씨 |
+| 기상청 단기예보 | `KMA_SERVICE_KEY` | 루틴의 추천과 기본 경로 출발 시각 보정, 실시간 이동의 날씨 |
 | 서울 지하철 | `SEOUL_SUBWAY_API_KEY` | 지하철 승차 구간의 실시간 이동 |
 | 서울 버스 | `SEOUL_BUS_SERVICE_KEY` | 서울 구간의 버스 도착 정보 |
 | 국토교통부 TAGO 버스 | `TAGO_BUS_SERVICE_KEY` | 서울 외 조회 대상 구간의 버스 도착 정보 |

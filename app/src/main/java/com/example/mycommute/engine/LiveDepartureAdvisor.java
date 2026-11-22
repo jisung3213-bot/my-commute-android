@@ -1,7 +1,6 @@
 package com.example.mycommute.engine;
 
 import com.example.mycommute.model.TransitArrival;
-import com.example.mycommute.model.TransitRoute;
 
 /** Distinguishes a TMAP plan estimate from the first live vehicle's reachability. */
 public final class LiveDepartureAdvisor {
@@ -19,13 +18,9 @@ public final class LiveDepartureAdvisor {
         }
     }
     private LiveDepartureAdvisor(){}
-    public static Advice compute(long now,long targetMillis,int marginMinutes,
-                                 TransitRoute route,int walkToStopSeconds,
+    public static Advice compute(long now,long depart,int durationMinutes,int walkToStopSeconds,
                                  TransitArrival arrival) {
-        if(route==null||route.totalSeconds<=0||targetMillis<=0)
-            return new Advice(-1,-1,Integer.MIN_VALUE,false,"경로 확인 대기","상세 경로 미확인");
-        long depart=targetMillis-marginMinutes*60000L-route.totalSeconds*1000L;
-        long ifNow=now+route.totalSeconds*1000L;
+        long ifNow=now+durationMinutes*60_000L;
         long delta=depart-now;
         String headline=delta>60_000L?"약 "+((delta+59999L)/60000L)+"분 뒤 출발":
                 delta>= -60_000L?"계획상 지금 출발":"계획 출발시각 경과";

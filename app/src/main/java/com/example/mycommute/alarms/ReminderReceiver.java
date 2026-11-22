@@ -6,12 +6,10 @@ import android.content.Intent;
 import com.example.mycommute.data.AlarmLogRepository;
 import com.example.mycommute.data.AlarmSettingsStore;
 import com.example.mycommute.data.ClockPreference;
+import com.example.mycommute.data.DepartureSchedule;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
-import com.example.mycommute.engine.PlanSchedule;
-import com.example.mycommute.engine.CommuteWindow;
 import com.example.mycommute.model.Routine;
-import java.util.Calendar;
 import java.util.function.Supplier;
 
 /** Scheduled events must remain local, never requiring a live API on wakeup. */
@@ -26,12 +24,12 @@ public final class ReminderReceiver extends BroadcastReceiver {
         if(!r.isConfigured()||!AlarmSettingsStore.enabled(c,type)||
                 !ReminderScheduler.selected(c,id))return;
         int duration=ReminderScheduler.effectiveDurationMinutes(c,r);
-        if(duration<1)return;
         ReminderScheduler.rescheduleEvent(c,id,type);
         long now=System.currentTimeMillis();
-        long departure=nextRelevantDeparture(r,now,duration);
-        if(departure<=0)return;
-        long target=departure+((long)duration+r.marginMinutes)*60_000L;
+        long target=intent.getLongExtra("target",0);
+        long departure=intent.getLongExtra("departure",0);
+        DepartureSchedule.Plan plan=DepartureSchedule.forTarget(c,r,duration,target);
+        if(plan==null||departure<=0||plan.weatherMinutes!=intent.getIntExtra("weatherMinutes",-1))return;
         boolean checkRequired=AutoCommute.enabled(c);
         if(checkRequired&&!AutoCommute.startVerified(c,r,target))return;
         boolean beforeDeparture=AlarmSettingsStore.PREPARE.equals(type)||AlarmSettingsStore.WEATHER.equals(type);
@@ -66,7 +64,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
         String trip=AlertLedger.tripKey(target);
         if(AlertLedger.finished(c,id,trip))return;
         AlertCopy.Message notice;
-        String forecast=forecast(c,id,now);
+        String forecast=forecast(c,r,target,now);
         if(AlarmSettingsStore.WEATHER.equals(type)){
             if(forecast.isEmpty()||AlarmSettingsStore.enabled(c,AlarmSettingsStore.PREPARE))return;
             notice=AlertCopy.weather(forecast);
@@ -82,28 +80,15 @@ public final class ReminderReceiver extends BroadcastReceiver {
                 requested?notice.body:"기기 알림 권한 확인 필요 · "+notice.body,true,logged.get());
     }
 
-    private static String forecast(Context c,String id,long now){
+    private static String forecast(Context c,Routine routine,long target,long now){
         if(!AlarmSettingsStore.enabled(c,AlarmSettingsStore.WEATHER))return "";
+        DepartureSchedule.Plan plan=DepartureSchedule.forTarget(c,routine,
+                ReminderScheduler.durationMinutes(c,routine),target);
+        if(plan!=null&&!plan.weatherNotice.isEmpty())return plan.weatherNotice;
+        String id=routine.id;
         long at=RoutineStore.prefs(c).getLong("alert_weather_at_"+id,0);
         return at>0&&now>=at&&now-at<=60*60_000L
                 ?RoutineStore.prefs(c).getString("alert_weather_text_"+id,""):"";
     }
 
-    /** Finds closest current day's departure; only used to validate fired intent. */
-    private static long nextRelevantDeparture(Routine r,long now,int duration){
-        Calendar base=CommuteWindow.seoulCalendar();
-        base.setTimeInMillis(now);
-        long best=-1;
-        long gap=Long.MAX_VALUE;
-        for(int offset=-1;offset<=1;offset++){
-            Calendar day=(Calendar)base.clone();
-            day.add(Calendar.DAY_OF_YEAR,offset);
-            if(!r.runsOn(day.get(Calendar.DAY_OF_WEEK)))continue;
-            long candidate=PlanSchedule.departureOn(day,r.arrivalTime,duration,
-                    r.marginMinutes).getTimeInMillis();
-            long delta=Math.abs(candidate-now);
-            if(delta<gap){gap=delta;best=candidate;}
-        }
-        return best;
-    }
 }

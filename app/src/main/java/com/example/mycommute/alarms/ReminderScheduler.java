@@ -7,16 +7,14 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import com.example.mycommute.data.AlarmSettingsStore;
+import com.example.mycommute.data.DepartureSchedule;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.data.TransitRouteCache;
-import com.example.mycommute.engine.PlanSchedule;
-import com.example.mycommute.engine.CommuteWindow;
+import com.example.mycommute.data.WeatherDepartureJob;
 import com.example.mycommute.engine.RoutePlanner;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitRoute;
-import java.util.Calendar;
-import java.util.List;
 
 /** Per-named-routine two-stage scheduled alerts. No internet calls in alarm receivers. */
 public final class ReminderScheduler {
@@ -33,6 +31,7 @@ public final class ReminderScheduler {
             if(selected!=null)schedule(c,selected);
         }
         AutoCommute.schedule(c);
+        WeatherDepartureJob.schedule(c);
     }
 
     private static Routine selectedForDirection(Context c,String direction){
@@ -50,6 +49,7 @@ public final class ReminderScheduler {
 
     public static void cancelCurrent(Context c){
         AutoCommute.cancel(c);
+        WeatherDepartureJob.cancel(c);
         for(String direction:RoutineStore.IDS)
             for(Routine routine:RoutineStore.list(c,direction))cancel(c,routine);
     }
@@ -97,12 +97,12 @@ public final class ReminderScheduler {
         int lead=(AlarmSettingsStore.PREPARE.equals(type)||
                 AlarmSettingsStore.WEATHER.equals(type))
                 ?AlarmSettingsStore.prepareMinutes(c):0;
-        long when=PlanSchedule.nextAlert(CommuteWindow.seoulCalendar(),routine.arrivalTime,
-                duration,routine.marginMinutes,lead,routine.days);
-        if(when<=System.currentTimeMillis())return;
+        DepartureSchedule.Plan plan=DepartureSchedule.next(c,routine,duration,lead,System.currentTimeMillis());
+        if(plan==null)return;
+        long when=plan.eventAt(lead);
         AlarmManager manager=c.getSystemService(AlarmManager.class);
         if(manager==null)return;
-        PendingIntent intent=pending(c,routine.id,type,null);
+        PendingIntent intent=pending(c,routine.id,type,plan);
         setWakeup(manager,when,intent);
     }
 
@@ -164,7 +164,7 @@ public final class ReminderScheduler {
                 .remove("dynamic_plan_at_"+id).apply();
     }
 
-    private static PendingIntent pending(Context c,String routineId,String type,String trip){
+    private static PendingIntent pending(Context c,String routineId,String type,DepartureSchedule.Plan plan){
         Intent intent=new Intent(c,ReminderReceiver.class);
         intent.setData(new Uri.Builder().scheme("commute").authority("scheduled")
                 .appendPath(Session.accountId(c)).appendPath(routineId)
@@ -172,6 +172,11 @@ public final class ReminderScheduler {
         intent.putExtra("account",Session.accountId(c));
         intent.putExtra("routineId",routineId);
         intent.putExtra("type",type);
+        if(plan!=null){
+            intent.putExtra("target",plan.target);
+            intent.putExtra("departure",plan.departure);
+            intent.putExtra("weatherMinutes",plan.weatherMinutes);
+        }
         return PendingIntent.getBroadcast(c,0,intent,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }

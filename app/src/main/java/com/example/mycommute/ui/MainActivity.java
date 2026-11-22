@@ -1,6 +1,7 @@
 package com.example.mycommute.ui;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,6 +9,7 @@ import android.view.View;
 import android.widget.TextView;
 import com.example.mycommute.alarms.AutoCommute;
 import com.example.mycommute.data.ClockPreference;
+import com.example.mycommute.data.DepartureSchedule;
 import com.example.mycommute.data.PinnedRouteRefresh;
 import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.engine.CommuteWindow;
@@ -22,8 +24,12 @@ import com.example.mycommute.model.Routine;
 public class MainActivity extends AppCompatActivity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable updateDirection=this::showUpcoming;
-    private String manualRoute;
     private String shownRoute;
+    private final SharedPreferences.OnSharedPreferenceChangeListener weatherChanged=(preferences,key)->{
+        if(shownRoute!=null&&DepartureSchedule.isWeatherPreference(key))render();
+    };
+    private SharedPreferences preferences;
+    private String manualRoute;
 
     @Override protected void onCreate(Bundle savedState) {
         super.onCreate(savedState);
@@ -39,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onResume() {
         super.onResume();
         if(!Session.signedIn(this))return;
+        preferences=RoutineStore.prefs(this);
+        preferences.registerOnSharedPreferenceChangeListener(weatherChanged);
         ReminderScheduler.scheduleCurrent(this);
         AutoCommute.resume(this,true);
         showUpcoming();
@@ -46,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onPause(){
         handler.removeCallbacks(updateDirection);
+        if(preferences!=null)preferences.unregisterOnSharedPreferenceChangeListener(weatherChanged);
         super.onPause();
     }
 
@@ -120,7 +129,10 @@ public class MainActivity extends AppCompatActivity {
         }
         int duration=ReminderScheduler.durationMinutes(this,r);
         String goal="목표 "+ClockPreference.time(this,r.arrivalTime);
-        String plan=duration>0?"출발 "+ClockPreference.time(this,r.plannedDeparture(duration))+" · "+goal:goal;
+        long target=CommuteWindow.nextArrival(r,System.currentTimeMillis());
+        DepartureSchedule.Plan departure=DepartureSchedule.forTarget(this,r,duration,target);
+        String plan=departure==null?goal:"출발 "+ClockPreference.time(this,departure.departure)
+                +" · "+goal+departure.weatherLabel();
         time.setVisibility(View.VISIBLE);
         time.setTextColor(getColor(R.color.text_secondary));
         time.setText(plan);

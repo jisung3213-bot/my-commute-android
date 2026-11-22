@@ -63,12 +63,21 @@ public final class KmaWeatherClient {
     }
 
     public static void forecast(final Routine r,final Callback cb) {
+        forecast(r, 0, cb);
+    }
+
+    public static void forecastForDeparture(Routine routine, long departure, Callback callback) {
+        forecast(routine, departure, callback);
+    }
+
+    private static void forecast(final Routine r, final long departure, final Callback cb) {
         Handler main = new Handler(Looper.getMainLooper());
         if(!enabled()) {main.post(()->cb.error("기상청 API 키 미설정 · 기상 정보 미반영"));return;}
         if(!r.validCoordinates()) {main.post(()->cb.error("기상 조회 위치 없음"));return;}
         NETWORK.execute(()-> {
             try {
-                Calendar at=targetArrival(r);
+                Calendar at=departure>0?Calendar.getInstance(KST):targetArrival(r);
+                if(departure>0)at.setTimeInMillis(departure);
                 Calendar issued=Calendar.getInstance(KST);
                 issued.add(Calendar.MINUTE,-40); // Wait for the latest released forecast.
                 int[] bases={2,5,8,11,14,17,20,23};
@@ -100,7 +109,7 @@ public final class KmaWeatherClient {
                         text=builder.toString();
                     }
                 } finally{connection.disconnect();}
-                Report report=parse(text,at);
+                Report report=parse(text,at,departure>0);
                 main.post(()->cb.success(report));
             }catch(Exception e) {
                 String message=e.getMessage()==null?"기상청 조회 실패":e.getMessage();
@@ -109,7 +118,7 @@ public final class KmaWeatherClient {
         });
     }
 
-    private static Report parse(String json,Calendar at) throws Exception {
+    static Report parse(String json,Calendar at,boolean exactHour) throws Exception {
         JSONObject response=new JSONObject(json).optJSONObject("response");
         JSONObject header=response==null?null:response.optJSONObject("header");
         if(header==null||!"00".equals(header.optString("resultCode")))
@@ -129,18 +138,22 @@ public final class KmaWeatherClient {
             if(key.length()!=12)continue;
             byHour.computeIfAbsent(key,k->new HashMap<>())
                     .put(item.optString("category"),item.optString("fcstValue"));
+            if(exactHour)continue;
             if(!"TMP".equals(item.optString("category"))&&!"PTY".equals(item.optString("category")))continue;
             long delta=Math.abs(parser.parse(key).getTime()-preferred);
             if(delta<distance){nearest=key;distance=delta;}
         }
-        if(nearest==null||distance>2*60*60*1000L)
+        if(exactHour){
+            nearest=date(at)+clock(at);
+            if(!byHour.containsKey(nearest))throw new IllegalStateException("해당 출발 시간대 예보 미제공");
+        }else if(nearest==null||distance>2*60*60*1000L)
             throw new IllegalStateException("해당 도착 시간대 예보 미제공");
         Map<String,String> entries=byHour.get(nearest);
         String pty=entries.get("PTY"),pop=entries.get("POP"),tmp=entries.get("TMP");
-        if(pty==null&&pop==null&&tmp==null)
-            throw new IllegalStateException("강수·기온 예보 확인 불가");
         int precipitation=number(pty,-1),chance=number(pop,-1);
         double temp=decimal(tmp,Double.NaN);
+        if(precipitation<0&&chance<0&&!Double.isFinite(temp))
+            throw new IllegalStateException("강수·기온 예보 확인 불가");
         boolean rain=(precipitation>0)||(chance>=60);
         boolean cold=Double.isFinite(temp)&&temp<=0;
         String label="기상청 "+nearest.substring(4,6)+"/"+nearest.substring(6,8)+" "

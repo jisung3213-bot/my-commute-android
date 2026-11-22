@@ -11,7 +11,7 @@ public class BootReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context,Intent intent) {
         String action=intent.getAction();
         if(action==null||!Session.signedIn(context))return;
-        if(Intent.ACTION_BOOT_COMPLETED.equals(action)){
+        if(Intent.ACTION_BOOT_COMPLETED.equals(action)||Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)){
             AutoCommute.restoreAfterBoot(context);
             ReminderScheduler.scheduleCurrent(context);
         }else if(Intent.ACTION_TIME_CHANGED.equals(action)||Intent.ACTION_TIMEZONE_CHANGED.equals(action))ReminderScheduler.scheduleCurrent(context);

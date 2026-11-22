@@ -59,6 +59,7 @@ public final class PinnedRouteRefresh {
                             saved=TransitRouteCache.save(app,latest,Collections.singletonList(routes.get(match)),0);
                             if(saved&&ReminderScheduler.selected(app,latest.id)){
                                 ReminderScheduler.schedule(app,latest);
+                                WeatherDepartureJob.schedule(app);
                                 AutoCommute.resume(app,false);
                             }
                         }

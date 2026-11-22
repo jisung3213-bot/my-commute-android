@@ -16,6 +16,7 @@
 - 홈은 반복 일정에서 가장 가까운 다음 목표 도착 방향을 표시합니다. 출근길·퇴근길 탭으로 전환하고 홈에서 알림 로그를 열 수 있습니다.
 - 루틴은 경유지를 최대 두 곳까지 지원하며, 도착일 기준 반복 요일을 한 줄에서 선택합니다. 강수와 기온 예보가 있으면 도보 부담을 경로 추천 순위에 반영합니다.
 - 선택한 경로는 루틴에 저장합니다. 상세 경로는 기기에 최대 23시간 보관하며, 유효한 상세 정보가 필요하면 TMAP에서 같은 경로를 다시 찾습니다.
+- 기본 출근길·퇴근길의 **기상정보 반영**을 켜면 출발 시간대 예보로 출발 권장 시각을 최대 15분 앞당깁니다. 준비·출발 알림과 자동 위치 확인도 같은 보정을 적용합니다. [계산 기준](docs/USER_GUIDE.md#기상에-따른-출발-시각)
 - 자동 추적을 켜면 기본 출발지 500m 이내 위치가 예정 출발 30분 전부터 출발 시각 사이에 확인된 회차만 자동 안내와 예약 알림을 시작합니다. 수동 안내도 최신 위치로 출발지 반경을 확인합니다.
 - 출발지 범위 밖에서 실시간 이동 화면을 열면 출근·퇴근 방향에 맞는 위치 안내가 표시됩니다. 설정의 **출퇴근 위치 안내 표시**를 끄면 시연 중 문구를 숨길 수 있습니다. 위치 조건은 계속 적용됩니다. 시간 표기는 12시간제와 24시간제 중 선택할 수 있습니다.
 
@@ -35,7 +36,7 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 
 ## 전체 파일 구조와 GitHub 반영 상태
 
-이번 변경의 파일 목록을 GitHub `main`의 `339dc1e`와 비교했습니다.
+이번 변경의 파일 목록을 직전 GitHub `main`의 `17d0ed4`와 비교했습니다.
 
 - **(업데이트됨)** 이번 업데이트에서 수정·추가·이동된 파일
 - **(올라가 있음)** 비교 기준과 내용이 같은 Git 관리 파일
@@ -54,7 +55,7 @@ MyCommuteAndroid/
 ├── .gradle/ (올라가지 않음) — 재생성되는 Gradle 캐시
 ├── .idea/ (올라가지 않음) — 로컬 Android Studio 프로젝트 설정
 ├── app/
-│   ├── build.gradle (업데이트됨)
+│   ├── build.gradle (올라가 있음)
 │   ├── build/ (올라가지 않음) — APK와 자동 생성 소스, Lint 보고서
 │   ├── google-services.json (올라가지 않음) — 환경별 Firebase 연결 설정
 │   ├── libs/
@@ -62,57 +63,59 @@ MyCommuteAndroid/
 │   ├── lint.xml (올라가 있음)
 │   └── src/
 │       └── main/
-│           ├── AndroidManifest.xml (올라가 있음)
+│           ├── AndroidManifest.xml (업데이트됨)
 │           ├── java/
 │           │   └── com/
 │           │       └── example/
 │           │           └── mycommute/
 │           │               ├── alarms/
-│           │               │   ├── AlertCopy.java (업데이트됨)
+│           │               │   ├── AlertCopy.java (올라가 있음)
 │           │               │   ├── AlertLedger.java (올라가 있음)
 │           │               │   ├── AutoCommute.java (업데이트됨)
-│           │               │   ├── BootReceiver.java (올라가 있음)
-│           │               │   ├── NotificationHelper.java (업데이트됨)
+│           │               │   ├── BootReceiver.java (업데이트됨)
+│           │               │   ├── NotificationHelper.java (올라가 있음)
 │           │               │   ├── ReminderReceiver.java (업데이트됨)
 │           │               │   ├── ReminderScheduler.java (업데이트됨)
 │           │               │   └── TravelAlertMonitor.java (올라가 있음)
 │           │               ├── CommuteApplication.java (올라가 있음)
 │           │               ├── data/
-│           │               │   ├── AlarmLogDao.java (업데이트됨)
+│           │               │   ├── AlarmLogDao.java (올라가 있음)
 │           │               │   ├── AlarmLogEntity.java (올라가 있음)
-│           │               │   ├── AlarmLogRepository.java (업데이트됨)
+│           │               │   ├── AlarmLogRepository.java (올라가 있음)
 │           │               │   ├── AlarmSettingsStore.java (올라가 있음)
 │           │               │   ├── ClockPreference.java (올라가 있음)
-│           │               │   ├── CommuteDatabase.java (업데이트됨)
+│           │               │   ├── CommuteDatabase.java (올라가 있음)
+│           │               │   ├── DepartureSchedule.java (업데이트됨) — 새 파일
 │           │               │   ├── FirestoreSync.java (올라가 있음)
-│           │               │   ├── PinnedRouteRefresh.java (올라가 있음)
-│           │               │   ├── RouteRefreshJob.java (업데이트됨)
+│           │               │   ├── PinnedRouteRefresh.java (업데이트됨)
+│           │               │   ├── RouteRefreshJob.java (올라가 있음)
 │           │               │   ├── RoutineStore.java (올라가 있음)
 │           │               │   ├── Session.java (올라가 있음)
 │           │               │   ├── TransitRouteCache.java (올라가 있음)
-│           │               │   └── TransitRouteMemory.java (올라가 있음)
+│           │               │   ├── TransitRouteMemory.java (올라가 있음)
+│           │               │   └── WeatherDepartureJob.java (업데이트됨) — 새 파일
 │           │               ├── engine/
 │           │               │   ├── AlertThresholds.java (올라가 있음)
 │           │               │   ├── BoardingFeasibilityEngine.java (올라가 있음)
-│           │               │   ├── CommuteWindow.java (올라가 있음)
-│           │               │   ├── LiveDepartureAdvisor.java (올라가 있음)
+│           │               │   ├── CommuteWindow.java (업데이트됨)
+│           │               │   ├── LiveDepartureAdvisor.java (업데이트됨)
 │           │               │   ├── PlanSchedule.java (올라가 있음)
 │           │               │   ├── RoutePlanner.java (올라가 있음)
 │           │               │   ├── RouteSignature.java (올라가 있음)
 │           │               │   ├── StagePositionMatcher.java (올라가 있음)
-│           │               │   └── WeatherRouteRanker.java (업데이트됨)
+│           │               │   └── WeatherRouteRanker.java (올라가 있음)
 │           │               ├── location/
-│           │               │   └── TrackingService.java (업데이트됨)
+│           │               │   └── TrackingService.java (올라가 있음)
 │           │               ├── model/
 │           │               │   ├── Place.java (올라가 있음)
-│           │               │   ├── Routine.java (올라가 있음)
+│           │               │   ├── Routine.java (업데이트됨)
 │           │               │   ├── TransitArrival.java (올라가 있음)
 │           │               │   ├── TransitRoute.java (올라가 있음)
 │           │               │   └── Waypoint.java (올라가 있음)
 │           │               ├── network/
 │           │               │   ├── ArrivalApiError.java (올라가 있음)
-│           │               │   ├── ArrivalMatcher.java (업데이트됨)
-│           │               │   ├── KmaWeatherClient.java (올라가 있음)
+│           │               │   ├── ArrivalMatcher.java (올라가 있음)
+│           │               │   ├── KmaWeatherClient.java (업데이트됨)
 │           │               │   ├── LiveArrivalClient.java (올라가 있음)
 │           │               │   ├── SeoulBusClient.java (올라가 있음)
 │           │               │   ├── SeoulXmlParser.java (올라가 있음)
@@ -125,13 +128,13 @@ MyCommuteAndroid/
 │           │                   ├── CommuteLiveCoordinator.java (올라가 있음)
 │           │                   ├── CustomActivity.java (올라가 있음)
 │           │                   ├── LoginActivity.java (올라가 있음)
-│           │                   ├── MainActivity.java (올라가 있음)
+│           │                   ├── MainActivity.java (업데이트됨)
 │           │                   ├── MapActivity.java (올라가 있음)
 │           │                   ├── Navigation.java (올라가 있음)
 │           │                   ├── PlaceSearchActivity.java (올라가 있음)
 │           │                   ├── RouteSchematicLabels.java (올라가 있음)
-│           │                   ├── RouteSchematicView.java (업데이트됨)
-│           │                   ├── SettingsActivity.java (업데이트됨)
+│           │                   ├── RouteSchematicView.java (올라가 있음)
+│           │                   ├── SettingsActivity.java (올라가 있음)
 │           │                   ├── TmapRasterMapAdapter.java (올라가 있음)
 │           │                   ├── TrackingActivity.java (업데이트됨)
 │           │                   └── UiNotice.java (올라가 있음)
@@ -145,13 +148,13 @@ MyCommuteAndroid/
 │               │   └── ic_notification.xml (올라가 있음)
 │               ├── layout/
 │               │   ├── activity_alarm_log.xml (올라가 있음)
-│               │   ├── activity_custom.xml (올라가 있음)
+│               │   ├── activity_custom.xml (업데이트됨)
 │               │   ├── activity_login.xml (올라가 있음)
 │               │   ├── activity_main.xml (올라가 있음)
 │               │   ├── activity_map.xml (올라가 있음)
 │               │   ├── activity_place_search.xml (올라가 있음)
 │               │   ├── activity_settings.xml (올라가 있음)
-│               │   ├── activity_tracking.xml (업데이트됨)
+│               │   ├── activity_tracking.xml (올라가 있음)
 │               │   ├── item_route_result.xml (올라가 있음)
 │               │   └── view_bottom_nav.xml (올라가 있음)
 │               ├── values/
@@ -163,23 +166,23 @@ MyCommuteAndroid/
 ├── build.gradle (올라가 있음)
 ├── docs/
 │   ├── ALARM_FEATURES.md (업데이트됨)
-│   ├── API_SETUP.md (올라가 있음)
+│   ├── API_SETUP.md (업데이트됨)
 │   ├── ARCHITECTURE_CURRENT.md (업데이트됨)
 │   ├── history/
-│   │   ├── API_INTEGRATION_VERIFIED.md (업데이트됨)
-│   │   ├── DEVELOPMENT_HISTORY.md (업데이트됨)
-│   │   ├── README.md (업데이트됨)
-│   │   ├── STATUS_2026-11-19.md (업데이트됨)
-│   │   └── UI_LAYOUT_2026-11-19.md (업데이트됨)
+│   │   ├── API_INTEGRATION_VERIFIED.md (올라가 있음)
+│   │   ├── DEVELOPMENT_HISTORY.md (올라가 있음)
+│   │   ├── README.md (올라가 있음)
+│   │   ├── STATUS_2026-11-19.md (올라가 있음)
+│   │   └── UI_LAYOUT_2026-11-19.md (올라가 있음)
 │   ├── imported/
-│   │   ├── API_SETUP.md (업데이트됨)
-│   │   └── README.md (업데이트됨)
-│   ├── NEXT_STEPS.md (업데이트됨)
-│   ├── README.md (업데이트됨)
-│   ├── REQUIREMENTS_CURRENT.md (업데이트됨)
+│   │   ├── API_SETUP.md (올라가 있음)
+│   │   └── README.md (올라가 있음)
+│   ├── NEXT_STEPS.md (올라가 있음)
+│   ├── README.md (올라가 있음)
+│   ├── REQUIREMENTS_CURRENT.md (올라가 있음)
 │   ├── STATUS.md (업데이트됨)
 │   ├── UI_LAYOUT_QA.md (올라가 있음)
-│   └── USER_GUIDE.md (올라가 있음)
+│   └── USER_GUIDE.md (업데이트됨)
 ├── firestore.rules (올라가 있음)
 ├── gradle.properties (올라가 있음)
 ├── gradle/

@@ -53,32 +53,12 @@ public final class CommuteWindow {
         return Long.MAX_VALUE;
     }
 
-    public static long nextTrackingStart(Routine routine,int duration,long now) {
-        return nextDeparture(routine,duration,TRACKING_LEAD_MINUTES,now);
-    }
-
     public static long nextDeparture(Routine routine,int duration,int lead,long now) {
         if(duration<=0)return -1;
         Calendar calendar=seoulCalendar();
         calendar.setTimeInMillis(now);
         return PlanSchedule.nextAlert(calendar,routine.arrivalTime,duration,
                 routine.marginMinutes,lead,routine.days);
-    }
-
-    /** Arrival timestamp of the tracking window that contains now. */
-    public static long trackingTarget(Routine routine,int duration,long now) {
-        if(duration<=0||!PlanSchedule.validTime(routine.arrivalTime))return -1;
-        Calendar calendar=seoulCalendar();
-        calendar.setTimeInMillis(now);
-        long lead=(duration+(long)routine.marginMinutes+TRACKING_LEAD_MINUTES)*60_000L;
-        for(int offset=-1;offset<=1;offset++) {
-            Calendar day=(Calendar)calendar.clone();
-            day.add(Calendar.DAY_OF_YEAR,offset);
-            if(!routine.runsOn(day.get(Calendar.DAY_OF_WEEK)))continue;
-            long target=PlanSchedule.arrivalOn(day,routine.arrivalTime).getTimeInMillis();
-            if(now>=target-lead&&now<target+TRACKING_GRACE_MS)return target;
-        }
-        return -1;
     }
 
     /** Closest scheduled target, including a recently passed target. */

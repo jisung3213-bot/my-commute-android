@@ -40,10 +40,6 @@ public class Routine {
         for (String v: days.split(",")) if (v.trim().equals(String.valueOf(calendarDay))) return true;
         return false;
     }
-    public String plannedDeparture(int duration) {
-        if(!isConfigured()||duration<1)return "미정";
-        return com.example.mycommute.engine.PlanSchedule.time(com.example.mycommute.engine.PlanSchedule.departureOn(Calendar.getInstance(),arrivalTime,duration,marginMinutes));
-    }
     public boolean isActiveNow(Calendar now) {
         return !apiBased && isConfigured() && com.example.mycommute.engine.PlanSchedule.active(now,arrivalTime,estimatedMinutes,marginMinutes,days);
     }

@@ -23,6 +23,7 @@ import android.location.LocationManager;
 import androidx.core.location.LocationManagerCompat;
 import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.ClockPreference;
+import com.example.mycommute.data.DepartureSchedule;
 import com.example.mycommute.data.PinnedRouteRefresh;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.engine.BoardingFeasibilityEngine;
@@ -355,18 +356,18 @@ public class TrackingActivity extends AppCompatActivity {
             label(R.id.liveArrivalPlan).setText("");
             return;
         }
+        int duration=ReminderScheduler.durationMinutes(this,routine);
         if(!live.activeWindow()){
-            int duration=ReminderScheduler.durationMinutes(this,routine);
-            long depart=CommuteWindow.nextDeparture(routine,duration,0,now);
-            if(depart>0){
-                label(R.id.liveDepartureHeadline).setText("다음 출발 "+clock(depart));
-                target=depart+(duration+routine.marginMinutes)*60_000L;
-            }else label(R.id.liveDepartureHeadline).setText("예정 출발 미확인");
-            label(R.id.liveDepartureDetail).setText("목표 도착 "+clock(target));
+            DepartureSchedule.Plan upcoming=DepartureSchedule.next(this,routine,duration,0,now);
+            label(R.id.liveDepartureHeadline).setText(upcoming==null?"예정 출발 미확인"
+                    :"다음 출발 "+clock(upcoming.departure));
+            label(R.id.liveDepartureDetail).setText(upcoming==null?"목표 도착 "+clock(target)
+                    :"목표 도착 "+clock(upcoming.target)+upcoming.weatherLabel());
             label(R.id.liveArrivalPlan).setText("");
             return;
         }
-        if(route==null){
+        DepartureSchedule.Plan plan=DepartureSchedule.forTarget(this,routine,duration,target);
+        if(plan==null){
             label(R.id.liveDepartureHeadline).setText("출발시각 미확인");
             label(R.id.liveDepartureDetail).setText("경로 갱신 필요");
             label(R.id.liveArrivalPlan).setText("목표 도착 "+clock(target));
@@ -374,13 +375,13 @@ public class TrackingActivity extends AppCompatActivity {
         }
         int walk=live.walkSeconds();
         LiveDepartureAdvisor.Advice advice=LiveDepartureAdvisor.compute(
-                now,target,routine.marginMinutes,route,walk,vehicle);
-        boolean transfer=live.boardingLegIndex()>LiveArrivalClient.firstBoardingIndex(route);
+                now,plan.departure,plan.durationMinutes,walk,vehicle);
+        boolean transfer=route!=null&&live.boardingLegIndex()>LiveArrivalClient.firstBoardingIndex(route);
         label(R.id.liveDepartureHeadline).setText(
                 transfer?"환승 구간":advice.headline);
         label(R.id.liveDepartureDetail).setText(
                 "계획 출발 "+clock(advice.planDepartureMillis)
-                +" · 예상 이동 "+TransitRoute.minutes(route.totalSeconds)+"분");
+                +" · 예상 이동 "+plan.durationMinutes+"분"+plan.weatherLabel());
         label(R.id.liveArrivalPlan).setText("목표 "+clock(target)
                 +" · 지금 출발 시 "+clock(advice.planArrivalIfLeavingNowMillis)+" 예상");
     }
@@ -401,7 +402,8 @@ public class TrackingActivity extends AppCompatActivity {
         }
         java.util.List<String> notices=new java.util.ArrayList<>();
         if(report!=null){
-            if(report.conditions.rain)notices.add("비 예보 · 우산 준비");
+            if(report.precipitationType==2||report.precipitationType==3)notices.add("눈 예보 · 미끄럼 주의");
+            else if(report.conditions.rain)notices.add("비 예보 · 우산 준비");
             if(report.conditions.lowTemperature)notices.add("영하 기온 · 보온 주의");
         }
         if(notices.isEmpty())

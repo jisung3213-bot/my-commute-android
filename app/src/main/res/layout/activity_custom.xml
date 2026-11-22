@@ -176,6 +176,9 @@
                 android:id="@+id/switchWeather" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="기상정보 반영"
                 android:padding="10dp"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="경로 추천과 기본 경로의 출발 시각에 예보를 반영합니다."
+                android:textSize="13sp" android:textColor="@color/text_secondary"/>
             <TextView android:id="@+id/textWeatherStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:padding="8dp"
                 android:text="" android:visibility="gone"

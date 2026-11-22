@@ -13,6 +13,7 @@ import android.os.Build;
 import android.util.Log;
 import androidx.core.content.ContextCompat;
 import androidx.core.location.LocationManagerCompat;
+import com.example.mycommute.data.DepartureSchedule;
 import com.example.mycommute.data.PinnedRouteRefresh;
 import com.example.mycommute.data.RouteRefreshJob;
 import com.example.mycommute.data.RoutineStore;
@@ -64,9 +65,12 @@ public final class AutoCommute extends BroadcastReceiver {
             int duration=ReminderScheduler.durationMinutes(context,routine);
             if(!refresh&&(!enabled(context)||duration<=0))continue;
             int planningDuration=duration>0?duration:REFRESH_ONLY_DURATION;
-            long when=CommuteWindow.nextTrackingStart(routine,planningDuration,now);
-            long target=CommuteWindow.trackingTarget(routine,planningDuration,now);
-            if(catchUp&&target>0&&RoutineStore.prefs(context).getLong("auto_wake_"+direction,0)!=target)
+            int lead=CommuteWindow.TRACKING_LEAD_MINUTES;
+            DepartureSchedule.Plan next=DepartureSchedule.next(context,routine,planningDuration,lead,now);
+            DepartureSchedule.Plan current=DepartureSchedule.currentTracking(context,routine,planningDuration,now);
+            long when=next==null?-1:next.eventAt(lead);
+            if(catchUp&&current!=null
+                    &&RoutineStore.prefs(context).getLong("auto_wake_"+direction,0)!=current.target)
                 when=now+1000L;
             if(when>now)ReminderScheduler.setWakeup(manager,when,alarm);
         }
@@ -112,12 +116,13 @@ public final class AutoCommute extends BroadcastReceiver {
         if(!RoutineStore.OUTBOUND.equals(direction)&&!RoutineStore.RETURN.equals(direction))return;
         Routine routine=pinned(context,direction);
         int duration=ReminderScheduler.durationMinutes(context,routine);
-        long target=CommuteWindow.trackingTarget(routine,duration>0?duration:REFRESH_ONLY_DURATION,
+        DepartureSchedule.Plan plan=DepartureSchedule.currentTracking(context,routine,
+                duration>0?duration:REFRESH_ONLY_DURATION,
                 System.currentTimeMillis());
-        if(target>0){
-            RoutineStore.prefs(context).edit().putLong("auto_wake_"+direction,target).apply();
+        if(plan!=null){
+            RoutineStore.prefs(context).edit().putLong("auto_wake_"+direction,plan.target).apply();
             if(PinnedRouteRefresh.canRefresh(routine))
-                RouteRefreshJob.enqueue(context,direction,target+CommuteWindow.TRACKING_GRACE_MS);
+                RouteRefreshJob.enqueue(context,direction,plan.target+CommuteWindow.TRACKING_GRACE_MS);
         }
         schedule(context,false);
         resume(context,false);
@@ -130,26 +135,25 @@ public final class AutoCommute extends BroadcastReceiver {
         LocationManager manager=context.getSystemService(LocationManager.class);
         if(manager==null||!LocationManagerCompat.isLocationEnabled(manager))return;
         long now=System.currentTimeMillis();
-        long target=Long.MAX_VALUE;
-        long departure=-1;
+        DepartureSchedule.Plan plan=null;
         Routine chosen=null;
         for(String direction:RoutineStore.IDS){
             Routine routine=pinned(context,direction);
             if(!routine.isConfigured()||!routine.validCoordinates())continue;
             int duration=ReminderScheduler.durationMinutes(context,routine);
-            long candidate=CommuteWindow.trackingTarget(routine,duration,now);
-            if(candidate<=0||candidate>=target||wasStopped(context,routine.id,candidate))continue;
-            long planned=CommuteWindow.plannedDeparture(routine,duration,candidate);
-            if(!startVerified(context,routine,candidate)&&!CommuteWindow.inStartCheck(planned,now))continue;
+            DepartureSchedule.Plan candidate=DepartureSchedule.currentTracking(context,routine,duration,now);
+            if(candidate==null||(plan!=null&&candidate.target>=plan.target)
+                    ||wasStopped(context,routine.id,candidate.target))continue;
+            if(!startVerified(context,routine,candidate.target)
+                    &&!CommuteWindow.inStartCheck(candidate.departure,now))continue;
             chosen=routine;
-            target=candidate;
-            departure=planned;
+            plan=candidate;
         }
         if(chosen==null)return;
         try {
             ContextCompat.startForegroundService(context,new Intent(context,TrackingService.class)
-                    .putExtra("routineId",chosen.id).putExtra("target",target)
-                    .putExtra("departure",departure));
+                    .putExtra("routineId",chosen.id).putExtra("target",plan.target)
+                    .putExtra("departure",plan.departure));
         }catch(SecurityException|IllegalStateException error){
             Log.w("AutoCommute","Scheduled location could not start",error);
         }
