@@ -118,14 +118,14 @@ public final class TravelAlertMonitor {
             if(AlertThresholds.walkDue(seconds,walkingSeconds,120,
                     AlarmSettingsStore.walkSlackMinutes(context))){
                 send(AlarmSettingsStore.WALK,String.valueOf(arrivalLeg),
-                        "승차지 출발",leg.startName+" · 남은 여유 약 "+((slack+59)/60)+"분",
+                        AlertCopy.walk(leg.startName,slack),
                         now,Long.MAX_VALUE);
                 return;
             }
         }
         if(AlertThresholds.vehicleDue(seconds,AlarmSettingsStore.vehicleMinutes(context))){
             send(AlarmSettingsStore.VEHICLE,String.valueOf(arrivalLeg),
-                    "차량 도착 임박",leg.startName+" · 약 "+((seconds+59)/60)+"분 후",
+                    AlertCopy.vehicle(leg.startName,seconds),
                     now,Long.MAX_VALUE);
         }
     }
@@ -142,8 +142,7 @@ public final class TravelAlertMonitor {
         boolean delayed=AlertThresholds.delayed(projected,target,
                 AlarmSettingsStore.delayMinutes(context));
         if(delayed&&!delayActive)
-            send(AlarmSettingsStore.DELAY,"trip","도착 지연 가능",
-                    "목표보다 "+((projected-target+59_999)/60_000)+"분 늦을 수 있음",
+            send(AlarmSettingsStore.DELAY,"trip",AlertCopy.delay((projected-target+59_999)/60_000),
                     now,5*60_000L);
         delayActive=delayed;
     }
@@ -156,8 +155,7 @@ public final class TravelAlertMonitor {
             if(deviatedSince==0)deviatedSince=now;
             if(AlertThresholds.offRoute(meters,accuracy,now-deviatedSince)
                     &&!deviationActive){
-                send(AlarmSettingsStore.DEVIATION,"route","경로 이탈",
-                        "현재 위치가 저장된 경로에서 벗어남",now,5*60_000L);
+                send(AlarmSettingsStore.DEVIATION,"route",AlertCopy.deviation(),now,5*60_000L);
                 deviationActive=true;
             }
         }else{
@@ -182,7 +180,7 @@ public final class TravelAlertMonitor {
                 if(candidateTransfer!=i){candidateTransfer=i;nearTransferSince=now;}
                 if(now-nearTransferSince>=15_000L)
                     send(AlarmSettingsStore.TRANSFER,String.valueOf(i),
-                            "환승 준비",next.startName+" · "+next.routeName,now,Long.MAX_VALUE);
+                            AlertCopy.transfer(next.startName,next.routeName),now,Long.MAX_VALUE);
                 return;
             }
         }
@@ -200,7 +198,7 @@ public final class TravelAlertMonitor {
                 if(candidateExit!=i){candidateExit=i;nearExitSince=now;}
                 if(now-nearExitSince>=15_000L)
                     send(AlarmSettingsStore.EXIT,String.valueOf(i),
-                            "하차 준비",leg.endName+" · 다음 정류장 하차",now,Long.MAX_VALUE);
+                            AlertCopy.exit(leg.endName),now,Long.MAX_VALUE);
                 return;
             }
         }
@@ -221,15 +219,16 @@ public final class TravelAlertMonitor {
         if("none".equals(trip)||AlertLedger.finished(context,routine.id,trip))return;
         if(AlarmSettingsStore.enabled(context,AlarmSettingsStore.FINISH))
             send(AlarmSettingsStore.FINISH,"destination",
-                    "목적지 도착",routine.endName+" · 실시간 안내 종료",
+                    AlertCopy.finish(routine.endName),
                     now,Long.MAX_VALUE);
         AlertLedger.finish(context,routine.id,trip);
         completed=true;
         finishedCallback.complete();
     }
 
-    private void send(String type,String qualifier,String title,String body,
+    private void send(String type,String qualifier,AlertCopy.Message copy,
                       long now,long cooldown){
+        String title=copy.title,body=copy.body;
         if(!AlarmSettingsStore.enabled(context,type))return;
         String trip=trip(now);
         if("none".equals(trip)||AlertLedger.finished(context,routine.id,trip))return;

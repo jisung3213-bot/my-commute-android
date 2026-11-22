@@ -3,26 +3,51 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical">
     <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:fillViewport="true">
+        android:layout_weight="1" android:fillViewport="true"
+        android:clipToPadding="false">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="18dp">
+            android:orientation="vertical" android:padding="16dp">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="설정" android:textSize="26sp" android:textStyle="bold"
                 android:textColor="@color/text_primary"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="16dp" android:padding="16dp"
+                android:layout_marginTop="10dp" android:padding="12dp"
+                android:background="@drawable/bg_card" android:orientation="vertical">
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchAutoTracking" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:minHeight="48dp"
+                    android:text="출퇴근 자동 위치 추적" android:textColor="@color/text_primary"/>
+                <TextView android:id="@+id/autoTrackingStatus" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:textSize="13sp"
+                    android:textColor="@color/text_secondary"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnAutoLocation"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="위치 권한 설정" android:visibility="gone"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchAmPm" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:minHeight="48dp"
+                    android:layout_marginTop="4dp" android:text="12시간제 (AM/PM)"
+                    android:textColor="@color/text_primary"/>
+                <TextView android:id="@+id/clockExample" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:textSize="13sp"
+                    android:textColor="@color/text_secondary"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" android:padding="12dp"
                 android:background="@drawable/bg_card" android:orientation="vertical">
                 <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/switchAllAlerts"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:text="전체 알림" android:textSize="17sp"
                     android:textColor="@color/text_primary"/>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp" android:text="알림 종류"
-                    android:textStyle="bold" android:textColor="@color/text_primary"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnAlertTypes"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="알림 종류 펼치기"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
                 <LinearLayout android:id="@+id/alertSwitchList"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical"/>
+                    android:orientation="vertical" android:visibility="gone"/>
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="12dp" android:padding="16dp"

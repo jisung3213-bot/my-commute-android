@@ -15,7 +15,7 @@ public final class RoutePlanner {
  }
  public static Plan select(Routine r,WeatherRouteRanker.Conditions weather){
   String source=weather.known ? "기상정보 반영: " : "기상정보 미연동 · 날씨 상태 미확인. ";
-  if(r.apiBased)return new Plan("대중교통", "API 경로는 검색 시에만 유효해. 현재 경로를 다시 조회하기 전에는 출발 알림을 예약하지 않아.",0,0,0,false);
+  if(r.apiBased)return new Plan("대중교통", "API 경로 정보 확인 필요",0,0,0,false);
   if(r.estimatedMinutes<1||r.normalWalkMinutes<0||r.normalWalkMinutes>r.estimatedMinutes)
    return new Plan(r.transportMode,"이동시간을 확인하세요",0,0,0,false);
   WeatherRouteRanker.Candidate route=new WeatherRouteRanker.Candidate(

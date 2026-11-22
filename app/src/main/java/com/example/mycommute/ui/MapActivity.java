@@ -11,9 +11,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.mycommute.BuildConfig;
 import com.example.mycommute.R;
 import com.example.mycommute.data.RoutineStore;
+import com.example.mycommute.data.PinnedRouteRefresh;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.data.TransitRouteMemory;
 import com.example.mycommute.data.TransitRouteCache;
+import com.example.mycommute.location.TrackingService;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.Waypoint;
 import com.example.mycommute.model.TransitRoute;
@@ -150,7 +152,7 @@ public class MapActivity extends AppCompatActivity {
     }
 
     private void loadRoute() {
-        ++requestGeneration;
+        int generation=++requestGeneration;
         if(!show.isChecked()||!routine.isConfigured()||!routine.validCoordinates())return;
         TransitRoute selected=TransitRouteMemory.selected(Session.accountId(this),routine);
         if(selected==null) {
@@ -159,8 +161,14 @@ public class MapActivity extends AppCompatActivity {
         }
         if(selected!=null){
             renderTransitRoute(selected);
+        }else if(PinnedRouteRefresh.request(this,routine,System.currentTimeMillis(),ok->{
+            if(generation!=requestGeneration||isFinishing()||isDestroyed())return;
+            if(ok)loadRoute();
+            else showStatus("상세 경로 확인 불가");
+        })){
+            UiNotice.show(status,UiNotice.State.LOADING,"상세 경로 갱신 중…");
         }else{
-            showStatus("상세 경로 없음 · 경로 검색 필요");
+            showStatus(PinnedRouteRefresh.canRefresh(routine)?"상세 경로 확인 불가":"루틴에서 상세 경로 선택");
         }
     }
 
@@ -199,7 +207,9 @@ public class MapActivity extends AppCompatActivity {
     @Override protected void onResume() {
         super.onResume();
         Routine pending=TransitRouteMemory.preview(Session.accountId(this));
-        routine=pending==null?RoutineStore.read(this):pending;
+        String requested=getIntent().getStringExtra("routineId");
+        routine=requested!=null?RoutineStore.read(this,requested)
+                :pending!=null?pending:RoutineStore.read(this);
         if(tmapMap!=null) {
             tmapMap.onResume();
             try {tmapMap.clearMarkers();tmapMap.clearRoute();}

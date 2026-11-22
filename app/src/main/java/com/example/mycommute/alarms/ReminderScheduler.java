@@ -1,6 +1,7 @@
 package com.example.mycommute.alarms;
 
 import android.app.AlarmManager;
+import com.example.mycommute.alarms.AlertLabMode;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +12,7 @@ import com.example.mycommute.data.RoutineStore;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.engine.PlanSchedule;
+import com.example.mycommute.engine.CommuteWindow;
 import com.example.mycommute.engine.RoutePlanner;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitRoute;
@@ -25,22 +27,19 @@ public final class ReminderScheduler {
     private ReminderScheduler(){}
 
     public static void scheduleCurrent(Context c){
+        if(AlertLabMode.enabled(c))return;
         if(!Session.signedIn(c))return;
         for(String direction:RoutineStore.IDS){
             for(Routine routine:RoutineStore.list(c,direction))cancel(c,routine);
             Routine selected=selectedForDirection(c,direction);
             if(selected!=null)schedule(c,selected);
         }
+        AutoCommute.schedule(c);
     }
 
     private static Routine selectedForDirection(Context c,String direction){
-        String id=RoutineStore.prefs(c).getString("selected_profile_"+direction,"");
-        for(Routine routine:RoutineStore.list(c,direction))
-            if(routine.id.equals(id))return routine;
-        String fallback=RoutineStore.defaultId(c,direction);
-        for(Routine routine:RoutineStore.list(c,direction))
-            if(routine.id.equals(fallback))return routine;
-        return null;
+        Routine routine=RoutineStore.read(c,RoutineStore.defaultId(c,direction));
+        return routine.isConfigured()?routine:null;
     }
 
     public static boolean selected(Context c,String id){
@@ -52,6 +51,7 @@ public final class ReminderScheduler {
     }
 
     public static void cancelCurrent(Context c){
+        AutoCommute.cancel(c);
         for(String direction:RoutineStore.IDS)
             for(Routine routine:RoutineStore.list(c,direction))cancel(c,routine);
     }
@@ -74,6 +74,7 @@ public final class ReminderScheduler {
     }
     /** Reschedules only the event that just fired; preserves other same-time events. */
     public static void rescheduleEvent(Context c,String id,String type){
+        if(AlertLabMode.enabled(c))return;
         if(id==null||type==null)return;
         Routine routine=RoutineStore.read(c,id);
         if(!routine.isConfigured())return;
@@ -84,6 +85,7 @@ public final class ReminderScheduler {
     }
 
     public static void schedule(Context c,Routine routine){
+        if(AlertLabMode.enabled(c))return;
         cancel(c,routine);
         if(!Session.signedIn(c)||!AlarmSettingsStore.overall(c)
                 ||routine==null||!routine.isConfigured())return;
@@ -99,12 +101,16 @@ public final class ReminderScheduler {
         int lead=(AlarmSettingsStore.PREPARE.equals(type)||
                 AlarmSettingsStore.WEATHER.equals(type))
                 ?AlarmSettingsStore.prepareMinutes(c):0;
-        long when=PlanSchedule.nextAlert(Calendar.getInstance(),routine.arrivalTime,
+        long when=PlanSchedule.nextAlert(CommuteWindow.seoulCalendar(),routine.arrivalTime,
                 duration,routine.marginMinutes,lead,routine.days);
         if(when<=System.currentTimeMillis())return;
         AlarmManager manager=c.getSystemService(AlarmManager.class);
         if(manager==null)return;
         PendingIntent intent=pending(c,routine.id,type,null);
+        setWakeup(manager,when,intent);
+    }
+
+    static void setWakeup(AlarmManager manager,long when,PendingIntent intent){
         try{
             if(Build.VERSION.SDK_INT<31||manager.canScheduleExactAlarms())
                 manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,intent);

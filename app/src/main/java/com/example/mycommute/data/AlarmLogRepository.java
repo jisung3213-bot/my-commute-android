@@ -6,6 +6,7 @@ import android.os.Looper;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.IntConsumer;
 
 public final class AlarmLogRepository {
     public interface Callback { void onLoaded(List<AlarmLogEntity> rows); }
@@ -29,5 +30,13 @@ public final class AlarmLogRepository {
         Context app=context.getApplicationContext();String account=Session.accountId(context);
         DB.execute(() -> { CommuteDatabase.get(app).logs().markAllRead(account);
             new Handler(Looper.getMainLooper()).post(done); });
+    }
+    public static void countByTypePrefix(Context context, String prefix, IntConsumer callback) {
+        Context app = context.getApplicationContext();
+        String account = Session.accountId(app);
+        DB.execute(() -> {
+            int count = CommuteDatabase.get(app).logs().countByTypePrefix(account, prefix);
+            new Handler(Looper.getMainLooper()).post(() -> callback.accept(count));
+        });
     }
 }

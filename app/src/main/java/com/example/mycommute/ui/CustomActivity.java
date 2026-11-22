@@ -2,15 +2,18 @@ package com.example.mycommute.ui;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.graphics.Typeface;
+import android.content.res.ColorStateList;
+import com.google.android.material.card.MaterialCardView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -19,10 +22,13 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.example.mycommute.R;
 import com.example.mycommute.alarms.ReminderScheduler;
 import com.example.mycommute.data.RoutineStore;
+import com.example.mycommute.data.ClockPreference;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.data.TransitRouteCache;
 import com.example.mycommute.data.TransitRouteMemory;
 import com.example.mycommute.engine.RouteSignature;
+import com.example.mycommute.engine.PlanSchedule;
+import com.example.mycommute.location.TrackingService;
 import com.example.mycommute.engine.WeatherRouteRanker;
 import com.example.mycommute.model.Routine;
 import com.example.mycommute.model.TransitRoute;
@@ -41,15 +47,19 @@ public class CustomActivity extends AppCompatActivity {
             R.id.dayFri,R.id.daySat,R.id.daySun};
     private static final int[] CAL_DAYS={2,3,4,5,6,7,1};
     private String direction;
+    private String selectedArrival;
     private Routine draft;
     private List<TransitRoute> routes=Collections.emptyList();
     private final List<Integer> order=new ArrayList<>();
+    private final java.util.Set<Integer> expandedRoutes=new java.util.HashSet<>();
     private int selected=-1;
+    private long routesFetchedAt;
     private boolean searching,restoring,weatherKnown;
     private int requestGeneration,weatherGeneration;
     private WeatherRouteRanker.Conditions weather=new WeatherRouteRanker.Conditions(false,false,false);
     private TextView weatherStatus,resultStatus;
-    private LinearLayout cards,savedList;
+    private LinearLayout cards,otherCards,savedList;
+    private boolean otherRoutesExpanded;
 
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
@@ -58,14 +68,21 @@ public class CustomActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_custom);
         Navigation.bind(this);
+        for(int id:DAYS)((MaterialButton)findViewById(id)).setCheckable(true);
         weatherStatus=findViewById(R.id.textWeatherStatus);
         resultStatus=findViewById(R.id.textTransitResult);
         cards=findViewById(R.id.transitCards);
+        otherCards=findViewById(R.id.otherTransitCards);
+        findViewById(R.id.btnOtherRoutes).setOnClickListener(v->{
+            otherRoutesExpanded=!otherRoutesExpanded;
+            renderCandidates();
+        });
         savedList=findViewById(R.id.savedRoutineList);
         direction=RoutineStore.activeDirection(this);
         draft=RoutineStore.read(this);
         if(!draft.isConfigured())draft=newConfiguredDraft(direction);
         restoreDraft();
+        findViewById(R.id.editDeparture).setOnClickListener(v->pickArrival());
         findViewById(R.id.btnDirectionOut).setOnClickListener(v->changeDirection(RoutineStore.OUTBOUND));
         findViewById(R.id.btnDirectionBack).setOnClickListener(v->changeDirection(RoutineStore.RETURN));
         findViewById(R.id.btnNewRoutine).setOnClickListener(v->{
@@ -108,7 +125,7 @@ public class CustomActivity extends AppCompatActivity {
     }
 
     private boolean isTracking(){
-        return RoutineStore.prefs(this).getBoolean("tracking_active",false);
+        return TrackingService.running();
     }
     private boolean isSaved(String id){
         for(Routine r:RoutineStore.list(this,direction))if(id.equals(r.id))return true;
@@ -136,59 +153,157 @@ public class CustomActivity extends AppCompatActivity {
 
     private void restoreDraft(){
         restoring=true;
+        updateDirectionTabs();
         ((TextView)findViewById(R.id.textActiveRoutine)).setText(
-                "현재 경로 · "+(direction.equals(RoutineStore.OUTBOUND)?"출근":"퇴근"));
-        ((MaterialButton)findViewById(R.id.btnDirectionOut)).setEnabled(!direction.equals(RoutineStore.OUTBOUND));
-        ((MaterialButton)findViewById(R.id.btnDirectionBack)).setEnabled(!direction.equals(RoutineStore.RETURN));
+                "선택된 "+(direction.equals(RoutineStore.OUTBOUND)?"출근길":"퇴근길")
+                +" · "+(draft.name==null||draft.name.trim().isEmpty()
+                        ?"새 경로":draft.name.trim()));
         ((EditText)findViewById(R.id.editRouteName)).setText(draft.name);
-        ((EditText)findViewById(R.id.editDeparture)).setText(
-                draft.arrivalTime.isEmpty()?"09:00":draft.arrivalTime);
+        selectedArrival=PlanSchedule.validTime(draft.arrivalTime)?draft.arrivalTime:"09:00";
+        renderArrival();
         ((EditText)findViewById(R.id.editMargin)).setText(String.valueOf(draft.marginMinutes));
         for(int i=0;i<DAYS.length;i++)
-            ((CheckBox)findViewById(DAYS[i])).setChecked(draft.runsOn(CAL_DAYS[i]));
+            ((MaterialButton)findViewById(DAYS[i])).setChecked(draft.runsOn(CAL_DAYS[i]));
         ((SwitchMaterial)findViewById(R.id.switchWeather)).setChecked(draft.weatherEnabled);
         restoring=false;
         renderStops();renderSaved();
         showCached();
     }
 
+    private void updateDirectionTabs(){
+        boolean out=RoutineStore.OUTBOUND.equals(direction);
+        Navigation.direction(this,R.id.btnDirectionOut,out);
+        Navigation.direction(this,R.id.btnDirectionBack,!out);
+    }
+
+    private void pickArrival(){
+        String[] hm=selectedArrival.split(":");
+        new TimePickerDialog(this,(picker,hour,minute)->{
+            selectedArrival=String.format(java.util.Locale.ROOT,"%02d:%02d",hour,minute);
+            renderArrival();
+        },Integer.parseInt(hm[0]),Integer.parseInt(hm[1]),!ClockPreference.amPm(this)).show();
+    }
+
+    private void renderArrival(){
+        ((TextView)findViewById(R.id.editDeparture)).setText(ClockPreference.time(this,selectedArrival));
+    }
+
     private void renderSaved(){
         savedList.removeAllViews();
         List<Routine> profiles=RoutineStore.list(this,direction);
-        if(profiles.isEmpty()){
-            TextView text=new TextView(this);
-            text.setText("저장된 경로 없음");
-            text.setPadding(12,12,12,12);
-            savedList.addView(text);
-        }
         String defaultId=RoutineStore.defaultId(this,direction);
+        boolean saved=isSaved(draft.id);
+        MaterialButton makeDefault=findViewById(R.id.btnMakeDefault);
+        makeDefault.setVisibility(saved&&!draft.id.equals(defaultId)?View.VISIBLE:View.GONE);
+        if(profiles.isEmpty()){
+            TextView empty=new TextView(this);
+            empty.setText("저장된 경로 없음");
+            empty.setTextSize(14);
+            empty.setTextColor(getColor(R.color.text_secondary));
+            empty.setPadding(dp(12),dp(18),dp(12),dp(18));
+            savedList.addView(empty);
+            return;
+        }
         for(Routine profile:profiles){
             boolean current=profile.id.equals(draft.id);
-            MaterialButton button=new MaterialButton(this);
-            button.setAllCaps(false);
-            button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-            button.setText((profile.id.equals(defaultId)?"★ 기본 · ":"")
-                    +(current?"[선택] ":"")+profile.name+"\n"+
-                    profile.startName+" → "+profile.endName);
-            button.setTextSize(13);
-            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
-            lp.bottomMargin=7;savedList.addView(button,lp);
-            button.setOnClickListener(v->loadProfile(profile.id));
+            boolean isDefault=profile.id.equals(defaultId);
+            MaterialCardView card=new MaterialCardView(this);
+            card.setRadius(dp(14));
+            card.setCardElevation(0);
+            card.setCardBackgroundColor(getColor(current?R.color.primary_light:R.color.surface));
+            card.setStrokeColor(getColor(current?R.color.primary:R.color.border));
+            card.setStrokeWidth(dp(current?2:1));
+            card.setClickable(true);
+            card.setFocusable(true);
+
+            LinearLayout content=new LinearLayout(this);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(dp(16),dp(14),dp(16),dp(14));
+            card.addView(content);
+
+            LinearLayout heading=new LinearLayout(this);
+            heading.setOrientation(LinearLayout.HORIZONTAL);
+            heading.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            content.addView(heading);
+
+            TextView title=new TextView(this);
+            title.setText(profile.name==null||profile.name.trim().isEmpty()
+                    ?"이름 없는 경로":profile.name);
+            title.setTextSize(16);
+            title.setTypeface(null,Typeface.BOLD);
+            title.setTextColor(getColor(R.color.text_primary));
+            title.setMaxLines(2);
+            heading.addView(title,new LinearLayout.LayoutParams(0,-2,1f));
+
+            if(isDefault){
+                TextView badge=new TextView(this);
+                badge.setText("기본");
+                badge.setTextSize(12);
+                badge.setTypeface(null,Typeface.BOLD);
+                badge.setTextColor(getColor(R.color.primary_dark));
+                badge.setBackgroundResource(R.drawable.bg_route_selected);
+                badge.setPadding(dp(10),dp(5),dp(10),dp(5));
+                LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(-2,-2);
+                badgeParams.leftMargin=dp(8);
+                heading.addView(badge,badgeParams);
+            }
+            if(current){
+                TextView selected=new TextView(this);
+                selected.setText("선택 중");
+                selected.setTextSize(12);
+                selected.setTextColor(getColor(R.color.primary_dark));
+                LinearLayout.LayoutParams selectedParams=new LinearLayout.LayoutParams(-2,-2);
+                selectedParams.leftMargin=dp(8);
+                heading.addView(selected,selectedParams);
+            }
+
+            String start=profile.startName==null?"":profile.startName.trim();
+            String end=profile.endName==null?"":profile.endName.trim();
+            String summary=start+" → "+end;
+            if(profile.name==null||!profile.name.contains(summary.trim())){
+                TextView detail=new TextView(this);
+                detail.setText(summary);
+                detail.setTextSize(13);
+                detail.setTextColor(getColor(R.color.text_secondary));
+                detail.setMaxLines(2);
+                LinearLayout.LayoutParams detailParams=new LinearLayout.LayoutParams(-1,-2);
+                detailParams.topMargin=dp(7);
+                content.addView(detail,detailParams);
+            }
+
+            LinearLayout.LayoutParams cardParams=new LinearLayout.LayoutParams(-1,-2);
+            cardParams.bottomMargin=dp(10);
+            savedList.addView(card,cardParams);
+            card.setOnClickListener(v->loadProfile(profile.id));
         }
     }
 
     private void renderStops(){
         ((MaterialButton)findViewById(R.id.btnStartPlace)).setText(
-                draft.startName.isEmpty()?"출발지 검색":"출발 · "+draft.startName);
+                draft.startName.isEmpty()?"출발지 선택":draft.startName);
         ((MaterialButton)findViewById(R.id.btnEndPlace)).setText(
-                draft.endName.isEmpty()?"도착지 검색":"도착 · "+draft.endName);
-        StringBuilder text=new StringBuilder();
-        for(Waypoint w:draft.waypoints)if(w.hasCoordinates()){
-            if(text.length()>0)text.append(" → ");
-            text.append(w.name);
+                draft.endName.isEmpty()?"도착지 선택":draft.endName);
+        com.google.android.material.chip.ChipGroup group=findViewById(R.id.waypointChips);
+        group.removeAllViews();
+        boolean any=false;
+        for(int i=0;i<draft.waypoints.size();i++){
+            Waypoint w=draft.waypoints.get(i);
+            if(!w.hasCoordinates())continue;
+            any=true;
+            final int position=i;
+            com.google.android.material.chip.Chip chip=new com.google.android.material.chip.Chip(this);
+            chip.setText((i+1)+". "+w.name);
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v->{
+                if(isTracking()){toast("위치 추적 중 · 경유지 변경 불가");return;}
+                draft.waypoints.remove(position);
+                invalidateRoutes();
+                renderStops();
+            });
+            group.addView(chip);
         }
         ((TextView)findViewById(R.id.textWaypoints)).setText(
-                text.length()==0?"경유지 없음":"경유 순서: "+text);
+                any?"선택 순서대로 경유":"등록된 경유지 없음");
     }
 
     private void startPlace(int request){
@@ -216,16 +331,12 @@ public class CustomActivity extends AppCompatActivity {
     private boolean readInputs(){
         String name=((EditText)findViewById(R.id.editRouteName)).getText().toString().trim();
         if(name.isEmpty()){toast("경로 이름을 입력하세요");return false;}
-        String time=((EditText)findViewById(R.id.editDeparture)).getText().toString().trim();
-        if(!time.matches("(?:[01]\\d|2[0-3]):[0-5]\\d")){
-            toast("도착시각은 HH:mm 형식");return false;
-        }
         int margin;
         try{margin=Integer.parseInt(((EditText)findViewById(R.id.editMargin)).getText().toString().trim());}
         catch(Exception e){toast("여유시간은 숫자로 입력");return false;}
         if(margin<0||margin>180){toast("여유시간은 0~180분");return false;}
         StringBuilder days=new StringBuilder();
-        for(int i=0;i<DAYS.length;i++)if(((CheckBox)findViewById(DAYS[i])).isChecked()){
+        for(int i=0;i<DAYS.length;i++)if(((MaterialButton)findViewById(DAYS[i])).isChecked()){
             if(days.length()>0)days.append(",");
             days.append(CAL_DAYS[i]);
         }
@@ -233,7 +344,7 @@ public class CustomActivity extends AppCompatActivity {
         if(!draft.validCoordinates()||draft.startName.isEmpty()||draft.endName.isEmpty()){
             toast("출발지·도착지 선택 필요");return false;
         }
-        draft.name=name;draft.arrivalTime=time;draft.marginMinutes=margin;
+        draft.name=name;draft.arrivalTime=selectedArrival;draft.marginMinutes=margin;
         draft.days=days.toString();
         draft.weatherEnabled=((SwitchMaterial)findViewById(R.id.switchWeather)).isChecked();
         draft.apiBased=true;draft.mapVisible=true;draft.transportMode="대중교통";
@@ -244,8 +355,10 @@ public class CustomActivity extends AppCompatActivity {
         ++requestGeneration;++weatherGeneration;
         searching=false;
         findViewById(R.id.btnSearchTransit).setEnabled(true);
-        routes=Collections.emptyList();selected=-1;order.clear();
-        cards.removeAllViews();
+        routes=Collections.emptyList();selected=-1;routesFetchedAt=0;order.clear();expandedRoutes.clear();
+        cards.removeAllViews();otherCards.removeAllViews();otherRoutesExpanded=false;
+        findViewById(R.id.btnOtherRoutes).setVisibility(View.GONE);
+        findViewById(R.id.textRecommendationReason).setVisibility(View.GONE);
         UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
         findViewById(R.id.btnPreviewMap).setEnabled(false);
         TransitRouteMemory.clear();
@@ -262,7 +375,7 @@ public class CustomActivity extends AppCompatActivity {
             else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
             return;
         }
-        routes=snap.routes;selected=snap.selected;
+        routes=snap.routes;selected=snap.selected;routesFetchedAt=snap.timestamp;
         UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
         renderCandidates();
     }
@@ -285,6 +398,7 @@ public class CustomActivity extends AppCompatActivity {
                 if(token!=requestGeneration||isFinishing()||isDestroyed())return;
                 searching=false;findViewById(R.id.btnSearchTransit).setEnabled(true);
                 routes=candidates;
+                routesFetchedAt=System.currentTimeMillis();
                 UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
                 renderCandidates();
                 if(draft.weatherEnabled)refreshWeather();
@@ -321,47 +435,128 @@ public class CustomActivity extends AppCompatActivity {
         });
     }
 
+    private int dp(int value){
+        return (int)(value*getResources().getDisplayMetrics().density+0.5f);
+    }
+
+    private void chooseCandidate(int index){
+        selected=index;
+        if(saveDraft(true)) {
+            boolean cached=TransitRouteCache.save(this,draft,routes,selected,routesFetchedAt);
+            TransitRouteMemory.put(Session.accountId(this),draft,routes);
+            TransitRouteMemory.choose(Session.accountId(this),draft,selected);
+            com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
+            if(!cached){
+                UiNotice.show(resultStatus,UiNotice.State.ERROR,"경로 상세 저장 불가");
+                toast("기본 설정만 저장됨");
+            }else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
+        }
+        renderCandidates();
+    }
+
     private void renderCandidates(){
-        cards.removeAllViews();order.clear();
-        if(routes.isEmpty())return;
-        for(int i=0;i<routes.size();i++)order.add(i);
-        if(draft.weatherEnabled&&weatherKnown)order.sort((a,b)->
-                Double.compare(score(routes.get(a)),score(routes.get(b))));
-        else order.sort(Comparator.comparingInt(i->routes.get(i).totalSeconds));
-        for(int index:order){
+        cards.removeAllViews();otherCards.removeAllViews();order.clear();
+        if(routes.isEmpty()){
+            findViewById(R.id.btnOtherRoutes).setVisibility(View.GONE);
+            findViewById(R.id.textRecommendationReason).setVisibility(View.GONE);
+            return;
+        }
+        List<WeatherRouteRanker.Candidate> candidates=new ArrayList<>();
+        for(int i=0;i<routes.size();i++){
+            TransitRoute route=routes.get(i);
+            candidates.add(candidate(route));
+        }
+        WeatherRouteRanker.Conditions effectiveWeather=
+                draft.weatherEnabled&&weatherKnown?weather:
+                        new WeatherRouteRanker.Conditions(false,false,false);
+        order.addAll(WeatherRouteRanker.rank(candidates,effectiveWeather,draft.marginMinutes));
+        final int allowedExtra=WeatherRouteRanker.acceptableExtraMinutes(draft.marginMinutes);
+        TextView explanation=findViewById(R.id.textRecommendationReason);
+        explanation.setVisibility(View.VISIBLE);
+        String reason=(!draft.weatherEnabled)?"이동시간·환승 횟수를 고려한 추천":
+                !weatherKnown?"기상정보 확인 전 · 이동시간과 환승 횟수를 고려한 추천":
+                weather.rain||weather.coldAlert?"비·한파 상황을 고려해 도보 부담을 낮춘 추천":
+                weather.lowTemperature?"낮은 기온을 고려해 도보 부담을 낮춘 추천":
+                "현재 기상정보와 환승 횟수를 고려한 추천";
+        explanation.setText(reason+" · 최단 경로 대비 "+allowedExtra+"분 이내의 대안을 우선 검토");
+        View otherButton=findViewById(R.id.btnOtherRoutes);
+        otherButton.setVisibility(order.size()>1?View.VISIBLE:View.GONE);
+        otherCards.setVisibility(otherRoutesExpanded?View.VISIBLE:View.GONE);
+        ((MaterialButton)otherButton).setText(otherRoutesExpanded
+                ?"다른 경로 접기":"다른 경로 "+Math.max(0,order.size()-1)+"개 보기");
+        for(int orderPosition=0;orderPosition<order.size();orderPosition++){
+            if(orderPosition>0&&!otherRoutesExpanded)continue;
+            int index=order.get(orderPosition);
             TransitRoute route=routes.get(index);
-            MaterialButton button=new MaterialButton(this);
-            button.setAllCaps(false);
-            button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-            button.setTextSize(13);
-            button.setText((selected==index?"[선택된 경로] ":"")+
-                    route.summary(index+1)+"\n"+route.stepsSummary());
-            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
-            lp.bottomMargin=8;cards.addView(button,lp);
-            button.setOnClickListener(v->{
-                selected=index;
-                if(saveDraft(true)) {
-                    boolean cached=TransitRouteCache.save(this,draft,routes,selected);
-                    TransitRouteMemory.put(Session.accountId(this),draft,routes);
-                    TransitRouteMemory.choose(Session.accountId(this),draft,selected);
-                    com.example.mycommute.alarms.ReminderScheduler.scheduleCurrent(this);
-                    if(!cached){
-                        UiNotice.show(resultStatus,UiNotice.State.ERROR,"경로 상세 저장 불가");
-                        toast("기본 설정만 저장됨");
-                    }else UiNotice.show(resultStatus,UiNotice.State.IDLE,"");
+            LinearLayout destination=orderPosition==0?cards:otherCards;
+            View card=getLayoutInflater().inflate(R.layout.item_route_result,destination,false);
+            com.google.android.material.card.MaterialCardView surface=
+                    (com.google.android.material.card.MaterialCardView)card;
+            surface.setStrokeColor(getColor(selected==index?R.color.primary:R.color.border));
+            surface.setStrokeWidth(dp(selected==index?2:1));
+            TextView rank=card.findViewById(R.id.routeCardIndex);
+            TextView flag=card.findViewById(R.id.routeCardSelected);
+            TextView duration=card.findViewById(R.id.routeCardTime);
+            TextView meta=card.findViewById(R.id.routeCardMeta);
+            LinearLayout segments=card.findViewById(R.id.routeCardLegs);
+            MaterialButton expand=card.findViewById(R.id.routeCardExpand);
+            MaterialButton choose=card.findViewById(R.id.routeCardChoose);
+            rank.setText(orderPosition==0?"추천 경로":(index+1)+"번 경로");
+            flag.setVisibility(selected==index?View.VISIBLE:View.GONE);
+            duration.setText(TransitRoute.minutes(route.totalSeconds)+"분");
+            String info="도보 "+TransitRoute.minutes(route.walkSeconds)+"분 ("+route.walkMeters+"m)"
+                    +" · 환승 "+route.transfers+"회";
+            if(route.fareWon>0)
+                info+=" · "+String.format(java.util.Locale.KOREA,"%,d원",route.fareWon);
+            meta.setText(info);
+            boolean expanded=expandedRoutes.contains(index);
+            segments.setVisibility(expanded?View.VISIBLE:View.GONE);
+            expand.setText(expanded?"구간 접기":"구간 상세 보기");
+            if(expanded){
+                for(TransitRoute.Leg leg:route.legs){
+                    LinearLayout entry=new LinearLayout(this);
+                    entry.setOrientation(LinearLayout.HORIZONTAL);
+                    entry.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                    entry.setPadding(0,dp(8),0,dp(8));
+                    TextView icon=new TextView(this);
+                    icon.setGravity(android.view.Gravity.CENTER);
+                    icon.setText("BUS".equals(leg.mode)?"버스":
+                            "SUBWAY".equals(leg.mode)?"철도":"도보");
+                    icon.setTextSize(12);
+                    icon.setTextColor(getColor(R.color.primary_dark));
+                    icon.setBackgroundResource(R.drawable.bg_route_selected);
+                    icon.setPadding(dp(9),dp(7),dp(9),dp(7));
+                    entry.addView(icon,new LinearLayout.LayoutParams(dp(55),-2));
+                    TextView detail=new TextView(this);
+                    detail.setText((leg.routeName.isEmpty()?"":leg.routeName+" · ")
+                            +TransitRoute.minutes(leg.seconds)+"분\n"
+                            +leg.startName+" → "+leg.endName);
+                    detail.setTextSize(14);
+                    detail.setTextColor(getColor(R.color.text_primary));
+                    LinearLayout.LayoutParams infoParams=new LinearLayout.LayoutParams(0,-2,1f);
+                    infoParams.leftMargin=dp(12);
+                    entry.addView(detail,infoParams);
+                    segments.addView(entry,new LinearLayout.LayoutParams(-1,-2));
                 }
+            }
+            expand.setOnClickListener(v->{
+                if(expandedRoutes.contains(index))expandedRoutes.remove(index);
+                else expandedRoutes.add(index);
                 renderCandidates();
             });
+            choose.setText(selected==index?"선택된 경로":"이 경로 선택");
+            choose.setOnClickListener(v->chooseCandidate(index));
+            card.setOnClickListener(v->chooseCandidate(index));
+            destination.addView(card,new LinearLayout.LayoutParams(-1,-2));
         }
         findViewById(R.id.btnPreviewMap).setEnabled(selected>=0&&selected<routes.size());
     }
 
-    private double score(TransitRoute r){
-        int duration=TransitRoute.minutes(r.totalSeconds);
-        int walk=Math.min(TransitRoute.minutes(r.walkSeconds),Math.max(1,duration));
-        return WeatherRouteRanker.score(
-                new WeatherRouteRanker.Candidate("route","대중교통",Math.max(1,duration),
-                        walk,0,r.transfers,false),weather);
+    private WeatherRouteRanker.Candidate candidate(TransitRoute r){
+        int duration=Math.max(1,TransitRoute.minutes(r.totalSeconds));
+        int walk=Math.min(TransitRoute.minutes(r.walkSeconds),duration);
+        return new WeatherRouteRanker.Candidate("route","대중교통",duration,
+                walk,0,r.transfers,false);
     }
 
     /** Save human-authored settings independently from any paid API request. */
@@ -372,9 +567,9 @@ public class CustomActivity extends AppCompatActivity {
         if(withSelectedRoute&&selected>=0&&selected<routes.size()){
             draft.selectedRouteSignature=RouteSignature.of(routes.get(selected));
             draft.preferredMode="대중교통";
-        }else if(!previous.selectedRouteSignature.isEmpty()&&
-                !samePlaces(previous,draft)){
+        }else if(!samePlaces(previous,draft)){
             draft.selectedRouteSignature="";
+            draft.estimatedMinutes=0;
             TransitRouteCache.clear(this,draft.id);
         }
         // Persist a user-selected PLAN duration for future offline alarms.

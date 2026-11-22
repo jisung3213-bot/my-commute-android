@@ -46,7 +46,7 @@ public final class UiNotice {
                 text.contains("connection")||text.contains("network"))
             return "네트워크 연결 오류";
         if(text.contains("검색 결과")||text.contains("경로 후보")||
-                text.contains("데이터 없음")||text.contains("정보가 없어"))
+                text.contains("데이터 없음")||text.contains("정보 없음")||text.contains("목록 없음"))
             return "검색 결과 없음";
         return "정보를 불러오지 못했습니다";
     }

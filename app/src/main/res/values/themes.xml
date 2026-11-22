@@ -18,4 +18,14 @@
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/text_secondary</item>
     </style>
+    <style name="Widget.Commute.Weekday" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:layout_marginHorizontal">3dp</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="cornerRadius">9dp</item>
+        <item name="backgroundTint">@color/weekday_fill</item>
+        <item name="android:textColor">@color/weekday_text</item>
+        <item name="strokeColor">@color/border</item>
+    </style>
 </resources>

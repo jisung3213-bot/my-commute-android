@@ -104,7 +104,7 @@ public final class RoutineStore {
         String direction=directionOf(id);
         boolean found=false;
         for(Routine r:list(c,direction))if(id.equals(r.id)){found=true;break;}
-        if(!found)throw new IllegalArgumentException("저장되지 않은 경로는 기본값으로 설정할 수 없어");
+        if(!found)throw new IllegalArgumentException("먼저 경로를 저장해야 기본값으로 지정할 수 있습니다.");
         prefs(c).edit().putString("default_profile_"+direction,id).apply();
         FirestoreSync.uploadPreferences(c);
     }
@@ -132,7 +132,7 @@ public final class RoutineStore {
 
     public static void saveLocal(Context c,Routine r){
         if(r==null||r.id==null||r.id.trim().isEmpty())
-            throw new IllegalArgumentException("루틴 ID가 필요해");
+            throw new IllegalArgumentException("루틴 ID 필요");
         try {
             SharedPreferences p=prefs(c);
             String direction=directionOf(r.id);

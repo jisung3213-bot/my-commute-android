@@ -57,7 +57,7 @@ public final class TransitRoute {
      * The sum is an estimate; includes no guaranteed transfer synchronization.
      */
     public static TransitRoute combine(List<TransitRoute> sections) {
-        if(sections==null||sections.isEmpty())throw new IllegalArgumentException("경로 구간이 없어");
+        if(sections==null||sections.isEmpty())throw new IllegalArgumentException("경로 구간 없음");
         int duration=0,walk=0,meters=0,transfers=0,fare=0;
         List<Leg> out=new ArrayList<>();
         for(TransitRoute section:sections){

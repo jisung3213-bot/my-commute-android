@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import com.example.mycommute.R;
+import com.example.mycommute.BuildConfig;
 import com.example.mycommute.ui.TrackingActivity;
 
 public final class NotificationHelper {
@@ -39,6 +40,11 @@ public final class NotificationHelper {
                 .setContentIntent(trackingIntent(context)).setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
     }
+    public static NotificationCompat.Builder startCheckBuilder(Context context) {
+        return trackingBuilder(context).setContentTitle("출발지 위치 확인 중")
+                .setContentText("예정 출발 시각까지 출발지 500m 이내인지 확인합니다.")
+                .setSilent(true);
+    }
     public static boolean show(Context context,String title,String message,int uniqueId,String routineId) {
         ensureChannels(context);
         if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(context,Manifest.permission.POST_NOTIFICATIONS)
@@ -46,7 +52,10 @@ public final class NotificationHelper {
         NotificationManager manager=context.getSystemService(NotificationManager.class);
         if(!NotificationManagerCompat.from(context).areNotificationsEnabled())return false;
         if(manager!=null&&manager.getNotificationChannel(REMINDER)!=null&&manager.getNotificationChannel(REMINDER).getImportance()==NotificationManager.IMPORTANCE_NONE)return false;
-        Intent open=new Intent(context,TrackingActivity.class);open.putExtra("routineId",routineId);
+        Intent open=(BuildConfig.DEBUG&&"lab-fixture".equals(routineId))
+                ?new Intent().setClassName(context,"com.example.mycommute.debug.AlertLabActivity")
+                :new Intent(context,TrackingActivity.class);
+        if(!"lab-fixture".equals(routineId))open.putExtra("routineId",routineId);
         PendingIntent destination=PendingIntent.getActivity(context,routineId.hashCode(),open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         try {
             NotificationCompat.Builder n=new NotificationCompat.Builder(context,REMINDER)

@@ -28,11 +28,12 @@ public final class KmaWeatherClient {
     public interface Callback {void success(Report report);void error(String reason);}
     public static final class Report {
         public final WeatherRouteRanker.Conditions conditions;
-        public final String label, forecastAt;
+        public final String label;
+        public final long forecastAt;
         public final double temperatureC;
         public final int rainProbability, precipitationType;
         Report(WeatherRouteRanker.Conditions conditions,String label,
-               String forecastAt,double temperatureC,int rainProbability,int precipitationType) {
+               long forecastAt,double temperatureC,int rainProbability,int precipitationType) {
             this.conditions=conditions;this.label=label;this.forecastAt=forecastAt;
             this.temperatureC=temperatureC;this.rainProbability=rainProbability;
             this.precipitationType=precipitationType;
@@ -53,7 +54,6 @@ public final class KmaWeatherClient {
         }
     }
     private static final ExecutorService NETWORK=Executors.newSingleThreadExecutor();
-    private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static final TimeZone KST=TimeZone.getTimeZone("Asia/Seoul");
     private KmaWeatherClient(){}
 
@@ -63,8 +63,9 @@ public final class KmaWeatherClient {
     }
 
     public static void forecast(final Routine r,final Callback cb) {
-        if(!enabled()) {MAIN.post(()->cb.error("기상청 API 키가 없어. 기상정보를 적용하지 않았어"));return;}
-        if(!r.validCoordinates()) {MAIN.post(()->cb.error("기상 조회 위치가 없어"));return;}
+        Handler main = new Handler(Looper.getMainLooper());
+        if(!enabled()) {main.post(()->cb.error("기상청 API 키 미설정 · 기상 정보 미반영"));return;}
+        if(!r.validCoordinates()) {main.post(()->cb.error("기상 조회 위치 없음"));return;}
         NETWORK.execute(()-> {
             try {
                 Calendar at=targetArrival(r);
@@ -100,10 +101,10 @@ public final class KmaWeatherClient {
                     }
                 } finally{connection.disconnect();}
                 Report report=parse(text,at);
-                MAIN.post(()->cb.success(report));
+                main.post(()->cb.success(report));
             }catch(Exception e) {
                 String message=e.getMessage()==null?"기상청 조회 실패":e.getMessage();
-                MAIN.post(()->cb.error(message));
+                main.post(()->cb.error(message));
             }
         });
     }
@@ -133,11 +134,11 @@ public final class KmaWeatherClient {
             if(delta<distance){nearest=key;distance=delta;}
         }
         if(nearest==null||distance>2*60*60*1000L)
-            throw new IllegalStateException("해당 도착시간대 예보가 아직 제공되지 않아");
+            throw new IllegalStateException("해당 도착 시간대 예보 미제공");
         Map<String,String> entries=byHour.get(nearest);
         String pty=entries.get("PTY"),pop=entries.get("POP"),tmp=entries.get("TMP");
         if(pty==null&&pop==null&&tmp==null)
-            throw new IllegalStateException("강수·기온 예보를 확인할 수 없어");
+            throw new IllegalStateException("강수·기온 예보 확인 불가");
         int precipitation=number(pty,-1),chance=number(pop,-1);
         double temp=decimal(tmp,Double.NaN);
         boolean rain=(precipitation>0)||(chance>=60);
@@ -148,8 +149,7 @@ public final class KmaWeatherClient {
         if(chance>=0)label+=" · 강수확률 "+chance+"%";
         if(precipitation>=0)label+=" · 강수형태 "+(precipitation==0?"없음":"있음");
         return new Report(new WeatherRouteRanker.Conditions(true,rain,false,cold),
-                label,nearest.substring(4,6)+"/"+nearest.substring(6,8)+" "
-                        +nearest.substring(8,10)+":00",
+                label,parser.parse(nearest).getTime(),
                 temp,chance,precipitation);
     }
 
@@ -161,7 +161,7 @@ public final class KmaWeatherClient {
     private static Calendar targetArrival(Routine r) throws Exception {
         long now=System.currentTimeMillis();
         long nearest=CommuteWindow.nearestTarget(r,now);
-        if(nearest<0)throw new IllegalStateException("유효한 목표 도착시각이 없어");
+        if(nearest<0)throw new IllegalStateException("유효한 목표 도착 시각 없음");
         // The dashboard is useful outside the commute window too.
         // For distant schedules the provider has no forecast yet: show today's
         // local forecast rather than reporting a broken API connection.

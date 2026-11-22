@@ -10,11 +10,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.mycommute.R;
 import com.example.mycommute.data.AlarmLogEntity;
 import com.example.mycommute.data.AlarmLogRepository;
+import com.example.mycommute.data.ClockPreference;
 import com.example.mycommute.data.Session;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class AlarmLogActivity extends AppCompatActivity {
     private LinearLayout list;
@@ -33,7 +31,6 @@ public class AlarmLogActivity extends AppCompatActivity {
     private void render(List<AlarmLogEntity> rows) {
         list.removeAllViews();
         if(rows.isEmpty()) {TextView empty=text("알림 내역 없음",15);empty.setPadding(14,32,14,0);list.addView(empty);return;}
-        SimpleDateFormat fmt=new SimpleDateFormat("yyyy.MM.dd E HH:mm",Locale.KOREA);
         for(AlarmLogEntity e:rows) {
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
             card.setBackgroundResource(R.drawable.bg_card);card.setPadding(20,18,20,18);
@@ -43,7 +40,7 @@ public class AlarmLogActivity extends AppCompatActivity {
             header.setTypeface(null,e.read?Typeface.NORMAL:Typeface.BOLD);
             if(e.important)header.setTextColor(getColor(R.color.warning));card.addView(header);
             TextView body=text(e.message,14);body.setPadding(0,6,0,6);card.addView(body);
-            TextView date=text(fmt.format(new Date(e.createdAt))+(e.read?" · 읽음":" · 미확인"),12);
+            TextView date=text(ClockPreference.dateTime(this,e.createdAt)+(e.read?" · 읽음":" · 미확인"),12);
             date.setTextColor(getColor(R.color.text_secondary));card.addView(date);
         }
     }

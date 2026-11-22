@@ -15,9 +15,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.example.mycommute.R;
+import com.example.mycommute.alarms.AlertLabMode;
+import com.example.mycommute.alarms.AutoCommute;
+import com.example.mycommute.alarms.ReminderScheduler;
+import android.location.LocationManager;
+import androidx.core.location.LocationManagerCompat;
 import com.example.mycommute.data.RoutineStore;
+import com.example.mycommute.data.ClockPreference;
+import com.example.mycommute.data.PinnedRouteRefresh;
 import com.example.mycommute.data.Session;
 import com.example.mycommute.engine.BoardingFeasibilityEngine;
+import com.example.mycommute.engine.CommuteWindow;
 import com.example.mycommute.engine.LiveDepartureAdvisor;
 import com.example.mycommute.engine.StagePositionMatcher;
 import com.example.mycommute.engine.RoutePlanner;
@@ -31,10 +39,6 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import android.location.Location;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
 
 /** Foreground-only live commute dashboard. External information is always labeled. */
 public class TrackingActivity extends AppCompatActivity {
@@ -42,6 +46,8 @@ public class TrackingActivity extends AppCompatActivity {
     private CommuteLiveCoordinator live;
     private boolean listening;
     private boolean expandedRouteDetails;
+    private String trackingStatus="";
+    private boolean trackingStarting;
     private CancellationTokenSource locationToken;
     private double latestLat=Double.NaN,latestLon=Double.NaN;
     private long gpsTime;
@@ -49,7 +55,17 @@ public class TrackingActivity extends AppCompatActivity {
     private final BroadcastReceiver locations=new BroadcastReceiver(){
         @Override public void onReceive(Context c,Intent intent){
             if(TrackingService.ACTION_STATE.equals(intent.getAction())){
-                if(intent.getBooleanExtra("finished",false)&&live!=null)live.stop();
+                boolean active=intent.getBooleanExtra("active",false);
+                trackingStarting=false;
+                if(active){
+                    trackingStatus=TrackingService.guiding()?"GPS 수신 대기 중":"출발지 500m 이내 위치 확인 중";
+                    bindRoutine();
+                }else{
+                    String reason=intent.getStringExtra("reason");
+                    trackingStatus=reason==null||reason.isEmpty()
+                            ?"위치 추적 종료됨":reason;
+                    if(intent.getBooleanExtra("finished",false)&&live!=null)live.stop();
+                }
                 render();
                 return;
             }
@@ -57,8 +73,9 @@ public class TrackingActivity extends AppCompatActivity {
             latestLon=intent.getDoubleExtra("lon",Double.NaN);
             gpsTime=intent.getLongExtra("timestamp",0);
             accuracy=intent.getFloatExtra("accuracyMeters",Float.NaN);
-            if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,
-                    RoutineStore.prefs(TrackingActivity.this).getBoolean("tracking_active",false));
+            boolean tracking=TrackingService.guiding();
+            if(tracking)trackingStatus="위치 수신됨 · 정확도 "+(Float.isFinite(accuracy)?Math.round(accuracy)+"m":"미확인");
+            if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,tracking);
             render();
         }
     };
@@ -69,8 +86,7 @@ public class TrackingActivity extends AppCompatActivity {
             startActivity(new Intent(this,LoginActivity.class));finish();return;
         }
         String requested=getIntent().getStringExtra("routineId");
-        if(requested!=null&&
-                !RoutineStore.prefs(this).getBoolean("tracking_active",false))
+        if(requested!=null&&!TrackingService.running())
             RoutineStore.select(this,requested);
         setContentView(R.layout.activity_tracking);Navigation.bind(this);
         findViewById(R.id.liveStartTracking).setOnClickListener(v->startTracking());
@@ -80,7 +96,7 @@ public class TrackingActivity extends AppCompatActivity {
             render();
         });
         findViewById(R.id.liveOpenMap).setOnClickListener(v->
-                startActivity(new Intent(this,MapActivity.class)));
+                startActivity(new Intent(this,MapActivity.class).putExtra("routineId",routine.id)));
         findViewById(R.id.liveRouteSteps).setOnClickListener(v->{
             expandedRouteDetails=!expandedRouteDetails;
             render();
@@ -89,7 +105,7 @@ public class TrackingActivity extends AppCompatActivity {
 
     @Override protected void onResume(){
         super.onResume();
-        routine=RoutineStore.read(this);
+        if(!Session.signedIn(this))return;
         IntentFilter trackingFilter=new IntentFilter(TrackingService.ACTION_LOCATION);
         trackingFilter.addAction(TrackingService.ACTION_STATE);
         if(Build.VERSION.SDK_INT>=33)
@@ -100,21 +116,26 @@ public class TrackingActivity extends AppCompatActivity {
         latestLat=RoutineStore.prefs(this).getFloat("lastLat",Float.NaN);
         latestLon=RoutineStore.prefs(this).getFloat("lastLon",Float.NaN);
         accuracy=RoutineStore.prefs(this).getFloat("lastAccuracy",Float.NaN);
-        live=new CommuteLiveCoordinator(this,routine,Session.accountId(this),this::render);
-        live.start();
-        live.onPosition(latestLat,latestLon,gpsTime,accuracy,
-                RoutineStore.prefs(this).getBoolean("tracking_active",false));
-        if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)
-                ==PackageManager.PERMISSION_GRANTED||
-           ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)
-                ==PackageManager.PERMISSION_GRANTED) {
+        bindRoutine();
+        AutoCommute.resume(this,true);
+        if(!AutoCommute.enabled(this)&&AutoCommute.hasLocation(this)
+                &&!TrackingService.running()&&live.activeWindow()){
             readForegroundLocation();
-        }else if(!RoutineStore.prefs(this).getBoolean("foreground_location_asked",false)){
-            RoutineStore.prefs(this).edit().putBoolean("foreground_location_asked",true).apply();
-            ActivityCompat.requestPermissions(this,new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},309);
         }
         render();
+    }
+
+    private void bindRoutine(){
+        String active=TrackingService.activeRoutineId();
+        Routine display=active==null?RoutineStore.read(this):RoutineStore.read(this,active);
+        if(live!=null&&display.id.equals(routine.id))return;
+        if(routine!=null&&!display.id.equals(routine.id))gpsTime=0;
+        if(live!=null)live.stop();
+        routine=display;
+        live=new CommuteLiveCoordinator(this,routine,Session.accountId(this),this::render);
+        live.start();
+        boolean waiting=TrackingService.running()&&!TrackingService.guiding();
+        live.onPosition(latestLat,latestLon,waiting?0:gpsTime,accuracy,TrackingService.guiding());
     }
 
     @Override protected void onPause(){
@@ -148,7 +169,7 @@ public class TrackingActivity extends AppCompatActivity {
                         gpsTime=fix.getTime();
                         accuracy=fix.hasAccuracy()?fix.getAccuracy():Float.NaN;
                         live.onPosition(latestLat,latestLon,gpsTime,accuracy,
-                                RoutineStore.prefs(this).getBoolean("tracking_active",false));
+                                TrackingService.guiding());
                         render();
                     })
                     .addOnFailureListener(this,error->{
@@ -161,14 +182,29 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     private void stopTracking(){
-        stopService(new Intent(this,TrackingService.class));
-        RoutineStore.prefs(this).edit().putBoolean("tracking_active",false).apply();
+        TrackingService.stopTrip(this);
+        trackingStarting=false;
+        trackingStatus="위치 추적 종료";
         toast("위치 추적 종료");
         if(live!=null)live.onPosition(latestLat,latestLon,gpsTime,accuracy,false);
         render();
     }
 
     private void startTracking(){
+        if(AlertLabMode.enabled(this)){
+            trackingStarting=false;
+            trackingStatus="알림 테스트 모드 · 위치 추적 중지";
+            render();
+            toast("위치 추적을 사용하려면 알림 테스트 모드를 해제해야 합니다.");
+            return;
+        }
+        if(!isDeviceLocationEnabled()){
+            trackingStarting=false;
+            trackingStatus="기기 위치 서비스(GPS) 꺼짐";
+            render();
+            toast(trackingStatus);
+            return;
+        }
         if(routine==null||!routine.isConfigured()){
             toast("출퇴근 경로 등록 필요");return;
         }
@@ -185,17 +221,25 @@ public class TrackingActivity extends AppCompatActivity {
             return;
         }
         try{
-            ContextCompat.startForegroundService(this,new Intent(this,TrackingService.class));
+            trackingStarting=true;
+            trackingStatus="위치 추적 서비스 시작 요청 중";
+            ContextCompat.startForegroundService(this,new Intent(this,TrackingService.class)
+                    .putExtra("routineId",routine.id));
             readForegroundLocation();
-            toast("위치 추적 시작");
-        }catch(Exception e){toast("위치 추적 시작 실패");}
+            render();
+        }catch(Exception e){
+            trackingStarting=false;
+            trackingStatus="위치 추적 시작 실패: "+(e.getMessage()==null
+                    ?e.getClass().getSimpleName():e.getMessage());
+            render();
+            toast(trackingStatus);
+        }
     }
     @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){
         super.onRequestPermissionsResult(code,permissions,grants);
         boolean granted=grants.length>0&&
                 (grants[0]==PackageManager.PERMISSION_GRANTED||
                  grants.length>1&&grants[1]==PackageManager.PERMISSION_GRANTED);
-        if(code==309&&granted)readForegroundLocation();
         if(code==308&&granted){
             readForegroundLocation();
             startTracking();
@@ -203,21 +247,30 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     private String clock(long timestamp){
-        SimpleDateFormat f=new SimpleDateFormat("HH:mm",Locale.KOREA);
-        f.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
-        return f.format(new Date(timestamp));
+        return ClockPreference.time(this,timestamp);
     }
     private TextView label(int id){return findViewById(id);}
     private void toast(String message){Toast.makeText(this,message,Toast.LENGTH_SHORT).show();}
 
+    private boolean isDeviceLocationEnabled() {
+        LocationManager manager = getSystemService(LocationManager.class);
+        return manager != null && LocationManagerCompat.isLocationEnabled(manager);
+    }
+
     private void render(){
         if(live==null||routine==null||isFinishing()||isDestroyed())return;
         long now=System.currentTimeMillis();
-        boolean tracking=RoutineStore.prefs(this).getBoolean("tracking_active",false);
+        boolean running=TrackingService.running();
+        boolean tracking=TrackingService.guiding();
+        String direction=RoutineStore.RETURN.equals(RoutineStore.directionOf(routine.id))?"퇴근길":"출근길";
         label(R.id.liveRouteTitle).setText(routine.isConfigured()
-                ?routine.startName+" → "+routine.endName:"등록된 경로 없음");
-        findViewById(R.id.liveStartTracking).setEnabled(!tracking);
-        findViewById(R.id.liveStopTracking).setEnabled(tracking);
+                ?direction+" · "+routine.name+"\n"+routine.startName+" → "+routine.endName
+                :direction+" · 등록된 경로 없음");
+        findViewById(R.id.liveStartTracking).setEnabled(!running&&!trackingStarting);
+        findViewById(R.id.liveStartTracking).setVisibility(running?View.GONE:View.VISIBLE);
+        TextView stop=findViewById(R.id.liveStopTracking);
+        stop.setVisibility(running?View.VISIBLE:View.GONE);
+        stop.setText(tracking?"이번 이동 추적 종료":"출발지 확인 중지");
         TransitRoute route=live.route();
         TransitArrival vehicle=live.arrival();
         long target=live.targetArrivalMillis();
@@ -225,8 +278,9 @@ public class TrackingActivity extends AppCompatActivity {
         if(!routine.isConfigured())
             UiNotice.show(status,UiNotice.State.EMPTY,"출퇴근 경로 등록 필요");
         else if(route==null)
-            UiNotice.show(status,UiNotice.State.UNAVAILABLE,
-                    "경로 갱신 필요 · 루틴에서 경로 검색");
+            UiNotice.show(status,live.refreshingRoute()?UiNotice.State.LOADING:UiNotice.State.UNAVAILABLE,
+                    live.refreshingRoute()?"상세 경로 갱신 중…"
+                            :PinnedRouteRefresh.canRefresh(routine)?"상세 경로 확인 불가":"루틴에서 상세 경로 선택");
         else UiNotice.show(status,UiNotice.State.IDLE,"");
         boolean loading=route!=null&&(
                 (vehicle==null&&live.boardingLegIndex()>=0)||
@@ -236,6 +290,9 @@ public class TrackingActivity extends AppCompatActivity {
         schematic.setRoute(route);
         StagePositionMatcher.Match stage=live.stage();
         schematic.setCurrentLeg(stage!=null&&stage.known()?stage.legIndex:-1);
+        // A recent, accurate location matched to an unambiguous route leg.
+        // GPS data may be a foreground one-shot fix; continuous tracking is optional.
+        schematic.setGpsPosition(latestLat,latestLon,stage!=null&&stage.known());
         TextView stageLabel=label(R.id.liveCurrentStage);
         if(stage!=null&&stage.known()) {
             stageLabel.setVisibility(View.VISIBLE);
@@ -245,12 +302,22 @@ public class TrackingActivity extends AppCompatActivity {
         renderWeather();
         renderRoute(route);
         renderVehicle(now,route,vehicle,tracking);
-        String gpsState=tracking?"위치 추적 중":"위치 추적 꺼짐";
+        String gpsState=tracking?(TrackingService.automatic()?"출퇴근 자동 추적 중":"위치 추적 중")
+                :AutoCommute.enabled(this)?"출퇴근 자동 추적 대기":"위치 추적 꺼짐";
         if(gpsTime>0&&tracking){
             long seconds=Math.max(0,(now-gpsTime)/1000);
-            gpsState=seconds<=90?"위치 추적 중 · 최근 "+seconds+"초 전":
+            gpsState=seconds<=90?gpsState+" · 최근 "+seconds+"초 전":
                     "위치 갱신 대기";
         }
+        if(!tracking&&AlertLabMode.enabled(this)){
+            gpsState="알림 테스트 모드 활성화 · 설정에서 꺼야 위치 추적 가능";
+        }else if(!tracking&&!isDeviceLocationEnabled()){
+            gpsState="기기 위치 서비스(GPS) 꺼짐";
+        }
+        if(running&&!tracking)gpsState="출발지 500m 이내 위치 확인 중";
+        else if(trackingStarting&&!tracking)gpsState=trackingStatus;
+        else if(!trackingStatus.isEmpty()&&!tracking)gpsState=trackingStatus;
+        else if(tracking&&!trackingStatus.isEmpty()&&gpsTime<=0)gpsState=trackingStatus;
         label(R.id.livePosition).setText(gpsState);
     }
 
@@ -262,7 +329,12 @@ public class TrackingActivity extends AppCompatActivity {
             return;
         }
         if(!live.activeWindow()){
-            label(R.id.liveDepartureHeadline).setText("다음 이동 "+clock(target));
+            int duration=ReminderScheduler.durationMinutes(this,routine);
+            long depart=CommuteWindow.nextDeparture(routine,duration,0,now);
+            if(depart>0){
+                label(R.id.liveDepartureHeadline).setText("다음 출발 "+clock(depart));
+                target=depart+(duration+routine.marginMinutes)*60_000L;
+            }else label(R.id.liveDepartureHeadline).setText("예정 출발 미확인");
             label(R.id.liveDepartureDetail).setText("목표 도착 "+clock(target));
             label(R.id.liveArrivalPlan).setText("");
             return;
@@ -298,7 +370,7 @@ public class TrackingActivity extends AppCompatActivity {
         }else{
             label(R.id.liveWeather).setText(report.temperatureText());
             label(R.id.liveWeatherDetails).setText(report.conditionText());
-            label(R.id.liveWeatherTime).setText("예보 "+report.forecastAt);
+            label(R.id.liveWeatherTime).setText("예보 "+ClockPreference.monthDayTime(this,report.forecastAt));
         }
         java.util.List<String> notices=new java.util.ArrayList<>();
         if(report!=null){
@@ -337,72 +409,98 @@ public class TrackingActivity extends AppCompatActivity {
     private void renderVehicle(long now,TransitRoute route,TransitArrival arrival,boolean tracking){
         TextView diagnostic=label(R.id.liveArrivalDiagnostic);
         diagnostic.setVisibility(View.GONE);
+        TextView station=label(R.id.liveNextVehicle);
+        TextView mode=label(R.id.liveVehicleMode);
+        TextView eta=label(R.id.liveVehicleEta);
+        TextView next=label(R.id.liveVehicleNext);
+        TextView status=label(R.id.liveBoarding);
+        TextView walkLabel=label(R.id.liveVehicleWalk);
+        TextView slackLabel=label(R.id.liveVehicleSlack);
+        View etaRow=findViewById(R.id.liveVehicleEtaRow);
+        View etaDivider=findViewById(R.id.liveVehicleEtaDivider);
+        View nextColumn=findViewById(R.id.liveVehicleNextColumn);
+        View auxRow=findViewById(R.id.liveVehicleAuxRow);
+        // Suppress unavailable arrival time areas entirely, not just the text.
+        etaRow.setVisibility(View.GONE);
+        etaDivider.setVisibility(View.GONE);
+        nextColumn.setVisibility(View.GONE);
+        auxRow.setVisibility(View.GONE);
+        mode.setText("교통"); station.setText("정보 확인 중");
+        // No fabricated ETA or placeholder when the provider did not supply one.
+        eta.setText("");next.setText("");
+        status.setText("도착정보 확인 중");
+        walkLabel.setText("");slackLabel.setText("");
         if(route==null){
-            label(R.id.liveNextVehicle).setText("—");
-            label(R.id.liveBoarding).setText("경로 갱신 필요");return;
+            station.setText("경로 갱신 필요");
+            status.setText("경로 정보 확인 필요");
+            return;
         }
         int index=live.boardingLegIndex();
         if(index<0||index>=route.legs.size()){
-            label(R.id.liveNextVehicle).setText("도보 이동");
-            label(R.id.liveBoarding).setText("");return;
+            mode.setText("도보");station.setText("도보 이동");
+            status.setText("다음 탑승 차량 없음");
+            return;
         }
         TransitRoute.Leg leg=route.legs.get(index);
+        mode.setText("BUS".equals(leg.mode)?"버스":"SUBWAY".equals(leg.mode)?"지하철":"교통");
+        station.setText(leg.startName+" · "+leg.routeName);
         if(arrival!=null&&arrival.statusOnly){
-            label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
             if(arrival.hasFreshStatus(now)){
-                label(R.id.liveBoarding).setText(
-                        arrival.direction+"\n"+arrival.statusText
-                        +" · "+clock(arrival.statusObservedMillis)+" 기준"
-                        +"\n도착 예정시간 미확인");
+                status.setText(arrival.statusText);
+                eta.setText("");
+                next.setText("");
+                if(arrival.direction!=null&&!arrival.direction.isEmpty()){
+                    walkLabel.setText(arrival.direction);
+                    auxRow.setVisibility(View.VISIBLE);
+                }
             }else{
-                label(R.id.liveBoarding).setText("이전 정보 만료 · 갱신 대기");
+                status.setText("상태정보 만료 · 갱신 대기");
             }
             return;
         }
         if(arrival==null||!arrival.available){
-            label(R.id.liveNextVehicle).setText(leg.startName+" · "+leg.routeName);
-            if(arrival==null){
-                label(R.id.liveBoarding).setText("도착정보 확인 중…");
-            }else{
-                label(R.id.liveBoarding).setText("도착시간 미확인");
-                String display=UiNotice.error(arrival.message);
-                UiNotice.show(diagnostic,UiNotice.classify(arrival.message),display);
-            }
+            eta.setText("");
+            status.setText(arrival==null?"도착정보 확인 중":"실시간 도착정보 없음");
+            // Detailed provider/network errors are reserved for the debug API probe.
             return;
         }
         int remaining=arrival.currentSeconds(now);
         if(remaining<=0){
-            label(R.id.liveNextVehicle).setText("도착정보 갱신 대기");
-            label(R.id.liveBoarding).setText("이전 정보 만료");
+            eta.setText("");status.setText("이전 도착 정보 만료");
             return;
         }
-        String primary=leg.startName+" · "+arrival.line+" · 약 "+((remaining+59)/60)+"분 후";
         int second=arrival.nextRemainingSeconds(now);
-        if(second>remaining)primary+="\n다음 차량 약 "+((second+59)/60)+"분 후";
-        label(R.id.liveNextVehicle).setText(primary);
+        eta.setText(remaining<60?"1분 이내":((remaining+59)/60)+"분 후");
+        etaRow.setVisibility(View.VISIBLE);
+        etaDivider.setVisibility(View.VISIBLE);
+        if(second>remaining){
+            next.setText(((second+59)/60)+"분 후");
+            nextColumn.setVisibility(View.VISIBLE);
+        }
+        if(arrival.direction!=null&&!arrival.direction.isEmpty())
+            diagnostic.setText(arrival.direction);
         int walk=live.walkSeconds();
         if(walk>=0){
             int slack=remaining-walk-120;
-            String message=slack>=180?"승차 가능성 높음":
-                    slack>=0?"탑승 시간 촉박":
-                            "현재 차량 탑승 어려움";
-            label(R.id.liveBoarding).setText(message+"\n승차지까지 "+
-                    ((walk+59)/60)+"분 · 여유 "+(slack>=0?"+":"")+
-                    ((slack>=0?slack+59:slack-59)/60)+"분" +(tracking?"":" · 계획 기준"));
+            String message=slack>=180?"승차 여유 있음":
+                    slack>=0?"탑승 시간 촉박":"현재 차량 탑승 어려움";
+            status.setText(message+(tracking?"":" · 계획 기준"));
+            walkLabel.setText("승차지까지 "+((walk+59)/60)+"분");
+            auxRow.setVisibility(View.VISIBLE);
+            int minute=(int)Math.ceil(Math.abs(slack)/60.0);
+            slackLabel.setText("여유 "+(slack>=0?"+":"-")+minute+"분");
             return;
         }
         if(!tracking){
-            label(R.id.liveBoarding).setText("승차지 이동시간 미확인");
+            status.setText("승차지 이동시간 미확인");
             return;
         }
         BoardingFeasibilityEngine.Assessment estimate=BoardingFeasibilityEngine.assess(
                 now,latestLat,latestLon,gpsTime,accuracy,
                 leg.startLat,leg.startLon,arrival.fetchedAtMillis,
-                // Use the ORIGINAL provider ETA at its fetch timestamp.
-                // 'remaining' has already been age-corrected and would double-decrement.
                 arrival.seconds-(int)Math.max(0,(now-arrival.fetchedAtMillis)/1000L)>0
                         ?arrival.seconds:arrival.nextSeconds);
-        label(R.id.liveBoarding).setText(estimate.describe());
+        status.setText(estimate.describe());
     }
 
 

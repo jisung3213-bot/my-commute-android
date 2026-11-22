@@ -87,7 +87,7 @@ public final class ArrivalMatcher {
     /** TAGO's nearby-stop API returns citycode+nodeid, not TMAP's stationID. */
     public static Stop chooseNearbyStop(String json,TransitRoute.Leg leg) throws JSONException {
         if(!Double.isFinite(leg.startLat)||!Double.isFinite(leg.startLon))
-            throw new JSONException("TMAP 승차 정류장 좌표가 없어");
+            throw new JSONException("TMAP 승차 정류장 좌표 없음");
         JSONArray entries=items(new JSONObject(json));
         Stop first=null;double best=Double.MAX_VALUE,second=Double.MAX_VALUE;
         String target=normalizeStation(leg.startName);
@@ -118,7 +118,7 @@ public final class ArrivalMatcher {
     public static TransitArrival busArrival(String json,TransitRoute.Leg leg,Stop stop,long now)
             throws JSONException {
         String label=transitLine(leg.routeName);
-        if(label.isEmpty())return TransitArrival.unavailable("TMAP 버스 노선명이 없어 조회할 수 없어",now);
+        if(label.isEmpty())return TransitArrival.unavailable("TMAP 버스 노선명 누락 · 조회 불가",now);
         JSONArray data=items(new JSONObject(json));
         java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         int remaining=-1,closest=Integer.MAX_VALUE;
@@ -140,7 +140,7 @@ public final class ArrivalMatcher {
             }
         }
         if(arrivals.isEmpty())
-            return TransitArrival.unavailable(stop.name+" · "+label+"번 버스의 실시간 도착정보가 없어",now);
+            return TransitArrival.unavailable(stop.name+" · "+label+"번 버스 실시간 도착 정보 없음",now);
         int first=arrivals.first();
         Integer second=arrivals.higher(first);
         return TransitArrival.found(stop.name,label+"번 버스","TAGO 기준",first,remaining,
@@ -155,14 +155,20 @@ public final class ArrivalMatcher {
         if(line.isEmpty())return TransitArrival.unavailable(
                 "지하철 호선 식별 실패 · "+leg.routeName,now);
         if(target.isEmpty())return TransitArrival.unavailable(
-                "TMAP 승차역 정보가 없어 도착정보를 검색할 수 없어",now);
+                "TMAP 승차역 정보 누락 · 도착 정보 조회 불가",now);
         JSONObject root=new JSONObject(json);
         JSONObject error=root.optJSONObject("errorMessage");
-        if(error!=null&&!error.optString("status","").equals("200"))
+        if(error!=null&&!error.optString("status","").equals("200")){
+            String code=error.optString("code","");
+            String message=error.optString("message","조회 실패");
+            if("INFO-200".equals(code)||message.contains("해당하는 데이터가 없습니다"))
+                return TransitArrival.unavailable("해당 역의 실시간 열차 정보 없음 (조회 시점 기준)",now);
             return TransitArrival.unavailable(
-                    "서울 지하철 API: "+error.optString("message","조회 실패"),now);
+                    "서울 지하철 API: "+code+" · "+message,now);
+        }
         JSONArray list=root.optJSONArray("realtimeArrivalList");
-        if(list==null)return TransitArrival.unavailable("해당 역의 실시간 열차 정보가 없어",now);
+        if(list==null||list.length()==0)
+            return TransitArrival.unavailable("실시간 열차 목록 없음 (운행 시간·역 이름 확인)",now);
         java.util.TreeSet<Integer> arrivals=new java.util.TreeSet<>();
         String direction="";
         long latestStatusAt=0;
@@ -184,7 +190,12 @@ public final class ArrivalMatcher {
             // Preserve parentheses in the destination/direction field:
             // "구로행 (석계방면)" must keep the word 석계.
             String trainDirection=item.optString("trainLineNm","");
+            // Provider formats vary: e.g. "청량리행 (석계방면)".
+            // Only a verified next-station cue is sufficient to claim the
+            // selected route's train. Terminus / updnLine alone is ambiguous.
             String directionText=normalizeDirection(trainDirection);
+            // arvlMsg3 describes observed approach/location, not the route direction.
+            // Do not infer direction from an arbitrary station in that field.
             if(next.isEmpty()||!directionText.contains(next)) {
                 freshButDirectionUnconfirmed++;
                 continue;
@@ -197,7 +208,12 @@ public final class ArrivalMatcher {
                 continue;
             }
 
-            int raw=item.optInt("barvlDt",-1);
+            // Prefer provider ETA (seconds). Some rows have 0/empty barvlDt
+            // even though they include a human-readable ETA in arvlMsg2.
+            int providerSeconds=item.optInt("barvlDt",-1);
+            int raw=providerSeconds;
+            if(raw<=0)raw=explicitSubwayEtaSeconds(item.optString("arvlMsg3",""));
+            if(raw<=0)raw=explicitSubwayEtaSeconds(item.optString("arvlMsg2",""));
             if(raw>0){
                 int corrected=raw-(int)Math.max(0,age/1000L);
                 if(corrected>0){
@@ -225,6 +241,7 @@ public final class ArrivalMatcher {
             }
             if(generated>latestStatusAt){
                 latestStatusAt=generated;
+                // Provider diagnostics belong in the debug survey, not commuter UI.
                 statusText=message;
                 statusDirection=trainDirection;
             }
@@ -246,6 +263,24 @@ public final class ArrivalMatcher {
                 +" · 오래된 정보 "+staleRecords+"건"
                 +(next.isEmpty()?" · TMAP 다음역 정보 없음":" · 기대 방면 "+next),
                 now);
+    }
+
+    /** Only explicit minute/second ETA text; station counts are not times. */
+    private static int explicitSubwayEtaSeconds(String message) {
+        if(message==null||message.isEmpty())return -1;
+        java.util.regex.Matcher minutes=java.util.regex.Pattern
+                .compile("(\\d{1,3})\\s*분\\s*(?:후|뒤)").matcher(message);
+        if(minutes.find()){
+            int n=Integer.parseInt(minutes.group(1));
+            if(n>0&&n<=120)return n*60;
+        }
+        java.util.regex.Matcher seconds=java.util.regex.Pattern
+                .compile("(\\d{1,4})\\s*초\\s*(?:후|뒤)").matcher(message);
+        if(seconds.find()){
+            int n=Integer.parseInt(seconds.group(1));
+            if(n>0&&n<=7200)return n;
+        }
+        return -1;
     }
 
     private static long timestamp(String text) {

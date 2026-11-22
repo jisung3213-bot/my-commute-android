@@ -59,4 +59,105 @@ public class ArrivalMatcherTest {
                 leg,System.currentTimeMillis());
         assertFalse(arrival.available);
     }
+
+    private TransitRoute.Leg subwayLegWithNext() throws Exception {
+        String route="{\"metaData\":{\"plan\":{\"itineraries\":[{\"totalTime\":1200,\"legs\":["
+                +"{\"mode\":\"SUBWAY\",\"route\":\"수도권 1호선\","
+                +"\"start\":{\"name\":\"시청역\",\"lat\":37.564,\"lon\":126.978},"
+                +"\"end\":{\"name\":\"서울역\"},"
+                +"\"passStopList\":{\"stationList\":[{\"stationName\":\"시청\"},"
+                +"{\"stationName\":\"서울역\"}]}}]}]}}}";
+        return TransitRoute.parse(route).get(0).legs.get(0);
+    }
+
+    @Test public void subwayMatchesVerifiedNextStationInTrainDirection() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat time=new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        time.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=time.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":["
+                +"{\"subwayId\":\"1001\",\"statnNm\":\"시청\",\"trainLineNm\":\"청량리행 (서울역방면)\","
+                +"\"bstatnNm\":\"청량리\",\"recptnDt\":\""+received+"\",\"barvlDt\":210},"
+                +"{\"subwayId\":\"1001\",\"statnNm\":\"시청\",\"trainLineNm\":\"인천행 (종각방면)\","
+                +"\"bstatnNm\":\"인천\",\"recptnDt\":\""+received+"\",\"barvlDt\":20}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertTrue(result.available);
+        assertEquals(210,result.seconds);
+    }
+
+    @Test public void subwayRejectsArrivalStatusAsDirectionEvidence() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat time=new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        time.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=time.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":["
+                +"{\"subwayId\":\"1001\",\"statnNm\":\"시청\",\"trainLineNm\":\"청량리행\","
+                +"\"arvlMsg3\":\"서울역 방면\",\"recptnDt\":\""+received+"\",\"barvlDt\":180}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertFalse(result.available);
+        assertTrue(result.message.contains("방향 미검증"));
+    }
+
+    @Test public void subwayInfo200MeansNoProviderDataNotAuthFailure() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        String json="{\"errorMessage\":{\"status\":500,\"code\":\"INFO-200\","
+                +"\"message\":\"해당하는 데이터가 없습니다.\"}}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,System.currentTimeMillis());
+        assertFalse(result.available);
+        assertTrue(result.message.contains("실시간 열차 정보 없음"));
+    }
+
+
+    @Test public void subwayDoesNotConvertStationCountIntoMinutes() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat formatter=
+                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        formatter.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=formatter.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":[{\"subwayId\":\"1001\","
+                +"\"statnNm\":\"시청\",\"trainLineNm\":\"인천행 (서울역방면)\","
+                +"\"recptnDt\":\""+received+"\",\"barvlDt\":0,"
+                +"\"arvlMsg2\":\"[16]번째 전역 (동두천중앙)\"}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertFalse(result.available);
+        assertTrue(result.statusOnly);
+    }
+
+    @Test public void subwayUsesExplicitMinuteEtaWhenProviderSecondsMissing() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat formatter=
+                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        formatter.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=formatter.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":[{\"subwayId\":\"1001\","
+                +"\"statnNm\":\"시청\",\"trainLineNm\":\"인천행 (서울역방면)\","
+                +"\"recptnDt\":\""+received+"\",\"barvlDt\":0,"
+                +"\"arvlMsg2\":\"약 6분 후 도착\"}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertTrue(result.available);
+        assertTrue(result.seconds>0&&result.seconds<=360);
+    }
+
+
+    @Test public void subwayUsesExplicitEtaFromThirdArrivalMessage() throws Exception {
+        TransitRoute.Leg leg=subwayLegWithNext();
+        long now=System.currentTimeMillis();
+        java.text.SimpleDateFormat formatter=
+                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",java.util.Locale.US);
+        formatter.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+        String received=formatter.format(new java.util.Date(now));
+        String json="{\"realtimeArrivalList\":[{\"subwayId\":\"1001\","
+                +"\"statnNm\":\"시청\",\"trainLineNm\":\"인천행 (서울역방면)\","
+                +"\"recptnDt\":\""+received+"\",\"barvlDt\":0,"
+                +"\"arvlMsg2\":\"[16]번째 전역\","
+                +"\"arvlMsg3\":\"약 7분 후 도착\"}]}";
+        TransitArrival result=ArrivalMatcher.subwayArrival(json,leg,now);
+        assertTrue(result.available);
+        assertTrue(result.seconds>0&&result.seconds<=420);
+    }
+
 }

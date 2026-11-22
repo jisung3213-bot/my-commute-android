@@ -3,5 +3,6 @@
     <!-- Seoul subway provider still documents an HTTP endpoint. Allow only this host. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">swopenAPI.seoul.go.kr</domain>
+        <domain includeSubdomains="false">ws.bus.go.kr</domain>
     </domain-config>
 </network-security-config>

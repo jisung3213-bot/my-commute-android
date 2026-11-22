@@ -21,13 +21,21 @@ public final class TmapWaypointRouteClient {
     }
 
     public static void search(Routine routine,Callback callback){
+        search(routine,3,callback);
+    }
+
+    public static void searchForRefresh(Routine routine,Callback callback){
+        search(routine,27,callback);
+    }
+
+    private static void search(Routine routine,int limit,Callback callback){
         if(routine==null||!routine.validCoordinates()){
-            callback.error("출발·도착 장소 좌표가 필요해");return;
+            callback.error("출발·도착 장소 좌표 필요");return;
         }
         List<Waypoint> points=new ArrayList<>();
         for(Waypoint w:routine.waypoints)if(w.hasCoordinates())points.add(w);
         if(points.size()>MAX_WAYPOINTS){
-            callback.error("대중교통 경로 연결은 경유지 최대 "+MAX_WAYPOINTS+"개까지 가능해");return;
+            callback.error("대중교통 경로의 경유지는 최대 "+MAX_WAYPOINTS+"곳입니다.");return;
         }
         if(points.isEmpty()){
             TmapTransitClient.search(routine,new TmapTransitClient.Callback(){
@@ -49,25 +57,25 @@ public final class TmapWaypointRouteClient {
             segments.add(piece);
             lat=endLat;lon=endLon;name=endName;
         }
-        collect(segments,0,new ArrayList<>(),callback);
+        collect(segments,0,new ArrayList<>(),limit,callback);
     }
 
     private static void collect(List<Routine> segments,int i,
-                                List<List<TransitRoute>> options,Callback callback){
+                                List<List<TransitRoute>> options,int limit,Callback callback){
         if(i==segments.size()){
             List<TransitRoute> all=new ArrayList<>();
             buildCombinations(options,0,new ArrayList<>(),all);
             all.sort(java.util.Comparator.comparingInt(r->r.totalSeconds));
-            if(all.isEmpty())callback.error("경유지를 잇는 경로가 없어");
-            else callback.success(new ArrayList<>(all.subList(0,Math.min(all.size(),3))),
+            if(all.isEmpty())callback.error("경유지를 연결하는 경로 없음");
+            else callback.success(new ArrayList<>(all.subList(0,Math.min(all.size(),limit))),
                     segments.size());
             return;
         }
         TmapTransitClient.search(segments.get(i),new TmapTransitClient.Callback(){
             @Override public void success(List<TransitRoute> result){
-                if(result.isEmpty()){callback.error((i+1)+"번째 구간에서 경로를 찾지 못했어");return;}
+                if(result.isEmpty()){callback.error((i+1)+"번째 구간 경로 검색 결과 없음");return;}
                 options.add(result);
-                collect(segments,i+1,options,callback);
+                collect(segments,i+1,options,limit,callback);
             }
             @Override public void error(String reason){
                 callback.error((i+1)+"/"+segments.size()+"번째 경유 구간 검색 실패: "+reason);
