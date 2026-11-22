@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -49,6 +51,14 @@ public class TrackingActivity extends AppCompatActivity {
     private String trackingStatus="";
     private boolean trackingStarting;
     private CancellationTokenSource locationToken;
+    private final Handler positionHandler=new Handler(Looper.getMainLooper());
+    private final Runnable refreshOrigin=new Runnable(){
+        @Override public void run(){
+            if(live==null)return;
+            if(canCheckOrigin()&&!TrackingService.running())readForegroundLocation();
+            positionHandler.postDelayed(this,30_000L);
+        }
+    };
     private double latestLat=Double.NaN,latestLon=Double.NaN;
     private long gpsTime;
     private float accuracy=Float.NaN;
@@ -93,6 +103,7 @@ public class TrackingActivity extends AppCompatActivity {
         findViewById(R.id.liveStopTracking).setOnClickListener(v->stopTracking());
         findViewById(R.id.liveRefresh).setOnClickListener(v->{
             if(live!=null)live.refreshNow();
+            if(canCheckOrigin())readForegroundLocation();
             render();
         });
         findViewById(R.id.liveOpenMap).setOnClickListener(v->
@@ -112,13 +123,14 @@ public class TrackingActivity extends AppCompatActivity {
             registerReceiver(locations,trackingFilter,Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(locations,trackingFilter);
         listening=true;
-        gpsTime=RoutineStore.prefs(this).getLong("lastFixTime",0);
+        gpsTime=TrackingService.guiding()?RoutineStore.prefs(this).getLong("lastFixTime",0):0;
         latestLat=RoutineStore.prefs(this).getFloat("lastLat",Float.NaN);
         latestLon=RoutineStore.prefs(this).getFloat("lastLon",Float.NaN);
         accuracy=RoutineStore.prefs(this).getFloat("lastAccuracy",Float.NaN);
         bindRoutine();
         AutoCommute.resume(this,true);
-        if(!AutoCommute.enabled(this)&&AutoCommute.hasLocation(this)
+        positionHandler.post(refreshOrigin);
+        if(!RoutineStore.showOriginNotice(this)&&!AutoCommute.enabled(this)&&AutoCommute.hasLocation(this)
                 &&!TrackingService.running()&&live.activeWindow()){
             readForegroundLocation();
         }
@@ -139,10 +151,17 @@ public class TrackingActivity extends AppCompatActivity {
     }
 
     @Override protected void onPause(){
+        positionHandler.removeCallbacks(refreshOrigin);
         if(locationToken!=null){locationToken.cancel();locationToken=null;}
         if(live!=null){live.stop();live=null;}
         if(listening){unregisterReceiver(locations);listening=false;}
         super.onPause();
+    }
+
+    private boolean canCheckOrigin(){
+        return routine!=null&&routine.isConfigured()&&routine.validCoordinates()
+                &&RoutineStore.showOriginNotice(this)&&!TrackingService.guiding()
+                &&AutoCommute.hasLocation(this)&&isDeviceLocationEnabled();
     }
 
     /**
@@ -208,6 +227,9 @@ public class TrackingActivity extends AppCompatActivity {
         if(routine==null||!routine.isConfigured()){
             toast("출퇴근 경로 등록 필요");return;
         }
+        if(!routine.validCoordinates()){
+            toast("출발지 위치 설정 필요");return;
+        }
         if(!routine.apiBased&&!RoutePlanner.select(routine).available){
             toast("경로 재설정 필요");return;
         }
@@ -225,7 +247,6 @@ public class TrackingActivity extends AppCompatActivity {
             trackingStatus="위치 추적 서비스 시작 요청 중";
             ContextCompat.startForegroundService(this,new Intent(this,TrackingService.class)
                     .putExtra("routineId",routine.id));
-            readForegroundLocation();
             render();
         }catch(Exception e){
             trackingStarting=false;
@@ -240,10 +261,7 @@ public class TrackingActivity extends AppCompatActivity {
         boolean granted=grants.length>0&&
                 (grants[0]==PackageManager.PERMISSION_GRANTED||
                  grants.length>1&&grants[1]==PackageManager.PERMISSION_GRANTED);
-        if(code==308&&granted){
-            readForegroundLocation();
-            startTracking();
-        }
+        if(code==308&&granted)startTracking();
     }
 
     private String clock(long timestamp){
@@ -266,6 +284,7 @@ public class TrackingActivity extends AppCompatActivity {
         label(R.id.liveRouteTitle).setText(routine.isConfigured()
                 ?direction+" · "+routine.name+"\n"+routine.startName+" → "+routine.endName
                 :direction+" · 등록된 경로 없음");
+        renderOriginNotice(now);
         findViewById(R.id.liveStartTracking).setEnabled(!running&&!trackingStarting);
         findViewById(R.id.liveStartTracking).setVisibility(running?View.GONE:View.VISIBLE);
         TextView stop=findViewById(R.id.liveStopTracking);
@@ -319,6 +338,24 @@ public class TrackingActivity extends AppCompatActivity {
         else if(!trackingStatus.isEmpty()&&!tracking)gpsState=trackingStatus;
         else if(tracking&&!trackingStatus.isEmpty()&&gpsTime<=0)gpsState=trackingStatus;
         label(R.id.livePosition).setText(gpsState);
+    }
+
+    private void renderOriginNotice(long now){
+        TextView notice=label(R.id.liveOriginNotice);
+        String message="";
+        if(routine.isConfigured()&&routine.validCoordinates()
+                &&RoutineStore.showOriginNotice(this)&&!TrackingService.guiding()){
+            if(!AutoCommute.hasLocation(this))message="현재 위치 확인에 위치 권한이 필요합니다.";
+            else if(CommuteWindow.usableStartFix(now,gpsTime,accuracy)&&isDeviceLocationEnabled()){
+                float distance=TrackingService.distanceFromStart(routine,latestLat,latestLon);
+                if(Float.isFinite(distance)&&!CommuteWindow.withinStartRadius(distance)){
+                    boolean returning=RoutineStore.RETURN.equals(RoutineStore.directionOf(routine.id));
+                    message=returning?"현재 퇴근 위치가 아닙니다.":"현재 출근 위치가 아닙니다.";
+                }
+            }
+        }
+        if(!message.contentEquals(notice.getText()))
+            UiNotice.show(notice,message.isEmpty()?UiNotice.State.IDLE:UiNotice.State.UNAVAILABLE,message);
     }
 
     private void renderDeparture(long now,long target,TransitRoute route,TransitArrival vehicle){

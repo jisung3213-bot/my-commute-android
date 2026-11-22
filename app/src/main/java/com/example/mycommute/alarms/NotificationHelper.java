@@ -42,7 +42,7 @@ public final class NotificationHelper {
     }
     public static NotificationCompat.Builder startCheckBuilder(Context context) {
         return trackingBuilder(context).setContentTitle("출발지 위치 확인 중")
-                .setContentText("예정 출발 시각까지 출발지 500m 이내인지 확인합니다.")
+                .setContentText("등록된 출발지 500m 이내인지 확인합니다.")
                 .setSilent(true);
     }
     public static boolean show(Context context,String title,String message,int uniqueId,String routineId) {

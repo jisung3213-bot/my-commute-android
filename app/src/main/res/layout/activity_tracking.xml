@@ -12,6 +12,10 @@
             <TextView android:id="@+id/liveRouteTitle" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="3dp"
                 android:text="" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/liveOriginNotice" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:accessibilityLiveRegion="polite" android:textStyle="bold"
+                android:visibility="gone"/>
             <TextView android:id="@+id/liveSyncStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="6dp"
                 android:text="" android:visibility="gone" android:textColor="@color/text_secondary" android:textSize="12sp"/>

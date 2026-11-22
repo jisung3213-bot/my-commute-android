@@ -1,6 +1,6 @@
 # 개발 변천사·브랜치 분리·변경 의사결정
 
-> 기준: 2026-11-20. 이 문서는 GitHub의 기존 `README.md`, `docs/STATUS.md`, 코드 변경 비교 및 대화에서 확인된 작업을 시간순으로 재정리한 자료다. 기능의 **과거 개발 단계**와 **현재 최종 동작**을 혼동하지 말 것. 현재 기능의 파일별 구조는 [ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md)에 기술한다.
+> 기준: 2026-11-20. 이 문서는 GitHub의 기존 `README.md`, `docs/STATUS.md`, 코드 변경 비교 및 대화에서 확인된 작업을 시간순으로 재정리한 자료다. 기능의 **과거 개발 단계**와 **현재 최종 동작**을 혼동하지 말 것. 현재 기능의 파일별 구조는 [ARCHITECTURE_CURRENT.md](../ARCHITECTURE_CURRENT.md)에 기술한다.
 
 ## 1. 브랜치 현황과 분리 이유
 
@@ -102,11 +102,11 @@ src/test/   = 로컬 JUnit 테스트 (APK 실행 화면과 별개)
 
 ## 6. 문서 기준
 
-- [현재 아키텍처](ARCHITECTURE_CURRENT.md): 현재 코드 구조·역할·계산식·검증/제약의 기준
-- [상태 기록](STATUS.md): 시점별 구현 요약과 당시 미완성 항목(최신 상태와 혼동 금지)
-- [알림 상세](ALARM_FEATURES.md) / [알림 모의실험](ALERT_LAB.md)
+- [현재 아키텍처](../ARCHITECTURE_CURRENT.md): 현재 코드 구조·역할·계산식·검증/제약의 기준
+- [상태 기록](STATUS_2026-11-19.md): 시점별 구현 요약과 당시 미완성 항목(최신 상태와 혼동 금지)
+- [알림 상세](../ALARM_FEATURES.md) / [알림 모의실험](ALERT_LAB_2026-11-20.md)
 - [API 검증](API_INTEGRATION_VERIFIED.md)
-- [UI 변경 기록](UI_LAYOUT_QA.md)
+- [UI 변경 기록](UI_LAYOUT_2026-11-19.md)
 - `README.md`에는 현재 실행 방법과 기능을 정리했다. 이전 단계별 설명은 저장소의 커밋 이력에서 확인할 수 있다.
 
 **원칙: 어떤 시점에 구현한 내용인지와 현재 최종 동작인지 구분한다.** 새 변경 시 `ARCHITECTURE_CURRENT.md`에 현재 구조를 갱신하고, 주요 결정과 실측 근거를 이 문서에 추가한다.

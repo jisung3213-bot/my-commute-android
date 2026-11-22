@@ -21,6 +21,14 @@ public final class RoutineStore {
         return c.getSharedPreferences("commute_local_"+Session.accountId(c),Context.MODE_PRIVATE);
     }
 
+    public static boolean showOriginNotice(Context c){
+        return prefs(c).getBoolean("show_commute_origin_notice",true);
+    }
+
+    public static void setShowOriginNotice(Context c,boolean show){
+        prefs(c).edit().putBoolean("show_commute_origin_notice",show).apply();
+    }
+
     public static String directionOf(String id){
         return id!=null&&(id.equals(RETURN)||id.startsWith(RETURN+"_"))?RETURN:OUTBOUND;
     }

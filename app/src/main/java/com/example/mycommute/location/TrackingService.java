@@ -37,9 +37,10 @@ public class TrackingService extends Service {
     public static final String ACTION_LOCATION="com.example.mycommute.LOCATION_UPDATED";
     public static final String ACTION_STOP="com.example.mycommute.STOP_TRACKING";
     public static final String ACTION_STATE="com.example.mycommute.TRACKING_STATE";
+    private static final long MANUAL_CHECK_MS=30_000L;
     private static TrackingService active;
     private String account;
-    private long automaticTarget,automaticDeparture,routeFetchedAt;
+    private long automaticTarget,automaticDeparture,manualCheckEnd,routeFetchedAt;
     private boolean guiding;
     private FusedLocationProviderClient provider;
     private android.content.SharedPreferences trackingPrefs;
@@ -59,7 +60,7 @@ public class TrackingService extends Service {
                 beginMonitoring();
                 pollLiveData();
             }
-            long remaining=automaticTarget>0?deadline()-System.currentTimeMillis():15_000L;
+            long remaining=deadline()-System.currentTimeMillis();
             handler.postDelayed(this,Math.max(1,Math.min(15_000L,remaining)));
         }
     };
@@ -68,6 +69,13 @@ public class TrackingService extends Service {
     public static String activeRoutineId(){return active==null?null:active.monitoredRoutine.id;}
     public static boolean automatic(){return active!=null&&active.automaticTarget>0;}
     public static boolean guiding(){return active!=null&&active.guiding;}
+
+    public static float distanceFromStart(Routine routine,double lat,double lon){
+        if(!routine.validCoordinates()||!Double.isFinite(lat)||!Double.isFinite(lon))return Float.NaN;
+        float[] distance=new float[1];
+        Location.distanceBetween(routine.startLat,routine.startLon,lat,lon,distance);
+        return distance[0];
+    }
 
     public static void stopAutomatic(android.content.Context context){
         if(automatic())context.stopService(new Intent(context,TrackingService.class));
@@ -85,6 +93,7 @@ public class TrackingService extends Service {
     }
 
     private long deadline(){
+        if(automaticTarget<=0)return guiding?Long.MAX_VALUE:manualCheckEnd;
         return guiding?automaticTarget+CommuteWindow.TRACKING_GRACE_MS:automaticDeparture+1;
     }
 
@@ -93,6 +102,10 @@ public class TrackingService extends Service {
             stopSelf();return false;
         }
         long now=System.currentTimeMillis();
+        if(automaticTarget<=0&&!guiding&&now>=manualCheckEnd){
+            stopReason="출발지 위치 미확인";
+            stopSelf();return false;
+        }
         if(automaticTarget>0&&(!AutoCommute.enabled(this)||now>=deadline()
                 ||(!guiding&&!CommuteWindow.inStartCheck(automaticDeparture,now)))){
             stopReason=guiding?"출퇴근 자동 추적 종료":"출발지 500m 이내 위치 미확인";
@@ -109,14 +122,22 @@ public class TrackingService extends Service {
 
     private boolean checkStart(Location fix,long now){
         if(guiding)return true;
-        float[] distance=new float[1];
-        Location.distanceBetween(monitoredRoutine.startLat,monitoredRoutine.startLon,
-                fix.getLatitude(),fix.getLongitude(),distance);
-        if(!CommuteWindow.qualifiesAtStart(automaticDeparture,now,fix.getTime(),
-                fix.hasAccuracy()?fix.getAccuracy():Float.NaN,distance[0]))return false;
+        float distance=distanceFromStart(monitoredRoutine,fix.getLatitude(),fix.getLongitude());
+        float accuracy=fix.hasAccuracy()?fix.getAccuracy():Float.NaN;
+        if(automaticTarget>0){
+            if(!CommuteWindow.qualifiesAtStart(automaticDeparture,now,fix.getTime(),accuracy,distance))return false;
+        }else{
+            if(!CommuteWindow.usableStartFix(now,fix.getTime(),accuracy))return false;
+            if(!CommuteWindow.withinStartRadius(distance)){
+                stopReason="위치 확인 종료";
+                stopSelf();return false;
+            }
+        }
         guiding=true;
-        AutoCommute.verifyStart(this,monitoredRoutine,automaticTarget,automaticDeparture);
-        AutoCommute.scheduleEnd(this,automaticTarget,deadline());
+        if(automaticTarget>0){
+            AutoCommute.verifyStart(this,monitoredRoutine,automaticTarget,automaticDeparture);
+            AutoCommute.scheduleEnd(this,automaticTarget,deadline());
+        }
         startGuidance();
         broadcastState(true,"");
         return true;
@@ -234,8 +255,9 @@ public class TrackingService extends Service {
         monitoredRoutine=routineId==null?RoutineStore.read(this):RoutineStore.read(this,routineId);
         automaticTarget=intent==null?0:intent.getLongExtra("target",0);
         automaticDeparture=intent==null?0:intent.getLongExtra("departure",0);
-        guiding=automaticTarget<=0||AutoCommute.startVerified(this,monitoredRoutine,automaticTarget);
-        if(!monitoredRoutine.isConfigured()||!canContinue()){
+        manualCheckEnd=System.currentTimeMillis()+MANUAL_CHECK_MS;
+        guiding=automaticTarget>0&&AutoCommute.startVerified(this,monitoredRoutine,automaticTarget);
+        if(!monitoredRoutine.isConfigured()||!monitoredRoutine.validCoordinates()||!canContinue()){
             stopSelf();return START_NOT_STICKY;
         }
         try {
@@ -247,17 +269,21 @@ public class TrackingService extends Service {
                     .remove("lastAccuracy").apply();
             handler.post(ticker);
             if(callback==null) {
-                LocationRequest request=new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,15000)
-                        .setMinUpdateIntervalMillis(5000).build();
+                LocationRequest.Builder request=new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,15000)
+                        .setMinUpdateIntervalMillis(5000);
+                if(automaticTarget<=0)request.setMaxUpdateAgeMillis(0);
                 callback=new LocationCallback() {
                     @Override public void onLocationResult(LocationResult result) {
                         if(!canContinue()||result.getLastLocation()==null)return;
                         Location fix=result.getLastLocation();
                         double lat=fix.getLatitude(),lon=fix.getLongitude();
                         long now=System.currentTimeMillis(),time=fix.getTime();
-                        if(!checkStart(fix,now))return;
-                        if(time<=0||time>now+30000L)time=now;
                         float accuracy=fix.hasAccuracy()?fix.getAccuracy():Float.NaN;
+                        if(!checkStart(fix,now)){
+                            broadcastPosition(lat,lon,time,accuracy);
+                            return;
+                        }
+                        if(time<=0||time>now+30000L)time=now;
                         trackingPrefs.edit().putFloat("lastLat",(float)lat)
                                 .putFloat("lastLon",(float)lon).putLong("lastFixTime",time)
                                 .putFloat("lastAccuracy",accuracy).apply();
@@ -266,13 +292,10 @@ public class TrackingService extends Service {
                             monitor.onPosition(lat,lon,time,accuracy);
                             pollLiveData();
                         }
-                        Intent event=new Intent(ACTION_LOCATION);event.setPackage(getPackageName());
-                        event.putExtra("lat",lat);event.putExtra("lon",lon);event.putExtra("timestamp",time);
-                        event.putExtra("accuracyMeters",accuracy);
-                        sendBroadcast(event);
+                        broadcastPosition(lat,lon,time,accuracy);
                     }
                 };
-                provider.requestLocationUpdates(request,callback,getMainLooper())
+                provider.requestLocationUpdates(request.build(),callback,getMainLooper())
                         .addOnSuccessListener(v->broadcastState(true,""))
                         .addOnFailureListener(error->{
                             stopReason="GPS 위치 업데이트 등록 실패: "
@@ -288,6 +311,12 @@ public class TrackingService extends Service {
         return START_NOT_STICKY;
     }
     private boolean allowed(String permission) {return ContextCompat.checkSelfPermission(this,permission)==PackageManager.PERMISSION_GRANTED;}
+    private void broadcastPosition(double lat,double lon,long time,float accuracy){
+        Intent event=new Intent(ACTION_LOCATION).setPackage(getPackageName());
+        event.putExtra("lat",lat).putExtra("lon",lon).putExtra("timestamp",time)
+                .putExtra("accuracyMeters",accuracy);
+        sendBroadcast(event);
+    }
     private void broadcastState(boolean active,String reason){
         Intent changed=new Intent(ACTION_STATE);
         changed.setPackage(getPackageName());

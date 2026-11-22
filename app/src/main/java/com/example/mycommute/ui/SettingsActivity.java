@@ -45,6 +45,10 @@ public class SettingsActivity extends AppCompatActivity {
             updateTrackingPermission();
         });
         findViewById(R.id.btnAutoLocation).setOnClickListener(v->requestTrackingPermission());
+        SwitchMaterial originNotice=findViewById(R.id.switchOriginNotice);
+        originNotice.setChecked(RoutineStore.showOriginNotice(this));
+        originNotice.setOnCheckedChangeListener((button,enabled)->
+                RoutineStore.setShowOriginNotice(this,enabled));
         SwitchMaterial amPm=findViewById(R.id.switchAmPm);
         amPm.setChecked(ClockPreference.amPm(this));
         amPm.setOnCheckedChangeListener((button,enabled)->{

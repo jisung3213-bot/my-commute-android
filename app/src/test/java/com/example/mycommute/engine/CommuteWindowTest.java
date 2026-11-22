@@ -67,6 +67,17 @@ public class CommuteWindowTest {
         assertFalse(CommuteWindow.qualifiesAtStart(departure,start,start,Float.NaN,10));
     }
 
+    @Test public void originPreviewUsesTheSameFreshnessAndRadiusAsScheduledTracking() {
+        long now=at(2026,11,16,8,0);
+        assertTrue(CommuteWindow.usableStartFix(now,now-60_000,100));
+        assertFalse(CommuteWindow.usableStartFix(now,now-60_001,20));
+        assertFalse(CommuteWindow.usableStartFix(now,now+1,20));
+        assertFalse(CommuteWindow.usableStartFix(now,now,101));
+        assertTrue(CommuteWindow.withinStartRadius(500));
+        assertFalse(CommuteWindow.withinStartRadius(500.1f));
+        assertFalse(CommuteWindow.withinStartRadius(Float.NaN));
+    }
+
     @Test public void nextArrivalSwapsDirectionAtTheTwoTargetTimes() {
         Routine outbound=configuredAt("09:00");
         Routine inbound=configuredAt("16:00");

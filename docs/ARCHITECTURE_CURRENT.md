@@ -1,6 +1,6 @@
 # 나만의 출퇴근 — 현재 아키텍처·기능·파일 역할
 
-> 기준: 2026-11-20, `feat/isolated-alert-lab`의 코드 및 저장소 문서. 이 문서는 **현재 구현 상태**를 설명하며, 구버전의 누적 개발 기록은 [개발 변천사와 브랜치](DEVELOPMENT_HISTORY.md)를 참고한다. 실제 앱 빌드·실기기 전체 동작을 보증하는 문서가 아니다.
+> 2026-11-23 로컬 앱 0.2.0 기준입니다. [현재 검증 결과](STATUS.md)와 [개발 이력](history/DEVELOPMENT_HISTORY.md)을 함께 참고하세요.
 
 ## 1. 목적과 범위
 
@@ -15,7 +15,7 @@
 
 ```text
 Firebase 로그인 / 회원가입
-  └─ 메인: 출근·퇴근별 기본 경로 및 상태
+  └─ 메인: 다음 목표 도착 일정의 기본 방향, 출근·퇴근 탭 전환, 알림 로그 열기
      ├─ 커스텀: 이름 있는 루틴, 장소·경유지(최대 2개), 요일·도착시각·여유시간
      │   ├─ TMAP POI 검색 → 장소 좌표 선택
      │   ├─ TMAP 대중교통 경로 검색(명시적으로 호출)
@@ -24,9 +24,9 @@ Firebase 로그인 / 회원가입
      │   └─ 경로 선택·저장 → 로컬 캐시 및 루틴 설정
      ├─ 지도: 경로 선형·마커, TMAP Raster SDK 사용 시 지도 / 미설치 시 OSM 대체
      ├─ 실시간 이동: 선택 경로 도식, 예보, 첫 탑승 차량 도착정보, 현재 위치
-     │   └─ 명시적으로 GPS 추적 시작 → Foreground Service → 조건부 알림
+     │   └─ 자동 출발 시간대 또는 수동 시작 → 출발지 반경 확인 → 이동 추적과 조건부 알림
      ├─ 알림 기록: Room
-     └─ 설정: 알림 종류별 기준, 알림 테스트 모드
+     └─ 설정: 시간 표기, 자동 위치 추적, 출퇴근 위치 안내 표시, 알림 기준
 ```
 
 ### 화면과 연결 파일
@@ -36,11 +36,11 @@ Firebase 로그인 / 회원가입
 | 로그인·회원가입 | `ui/LoginActivity.java`, 해당 `res/layout/` | Firebase 인증 기반 진입. 데모 우회 로그인 없음 |
 | 메인/루틴 전환 | `ui/MainActivity.java`, `activity_main.xml` | 출근·퇴근 및 기본 경로 선택 |
 | 루틴 편집/추천 | `ui/CustomActivity.java`, `activity_custom.xml`, `item_route_result.xml` | 장소·경유지·목표시각·반복요일 입력, 경로 후보 카드 렌더링·선택 |
-| 장소 검색 | `ui/PlaceSearchActivity.java`, `network/TmapPoiClient.java` | POI 결과에서 위치 선택 |
+| 장소 검색 | `ui/PlaceSearchActivity.java`, `network/TmapPoiClient.java` | Activity Result로 장소명·위도·경도를 루틴의 요청한 장소 필드에 전달 |
 | 지도 | `ui/MapActivity.java`, `ui/TmapRasterMapAdapter.java` | 선택 경로 표시; 공급자 SDK 미설치/실패 시 OSM fallback |
 | 실시간 이동 | `ui/TrackingActivity.java`, `ui/CommuteLiveCoordinator.java`, `ui/RouteSchematicView.java` | 선택된 경로, 현재/다음 차량, 지도 이동, GPS 마커·상태·날씨 |
-| 위치 서비스 | `location/TrackingService.java` | 사용자가 시작하는 포그라운드 위치 업데이트와 이동 중 알림 판단 |
-| 설정 | `ui/SettingsActivity.java`, `activity_settings.xml` | 전체/개별 알림 스위치, 기준시간, 테스트 모드 |
+| 위치 서비스 | `location/TrackingService.java` | 자동·수동 시작의 출발지 검사, 위치 업데이트와 이동 중 알림 판단 |
+| 설정 | `ui/SettingsActivity.java`, `activity_settings.xml` | 12/24시간제, 자동 추적, 출퇴근 위치 안내 표시, 전체·개별 알림 기준 |
 | 알림 이력 | `data/AlarmLogRepository.java` 및 Room 관련 클래스 | 발송/차단 이력 저장·조회 |
 | 하단 메뉴 | `ui/Navigation.java`, `view_bottom_nav.xml` | 화면 간 이동 |
 
@@ -157,6 +157,7 @@ score = 총 소요시간(분)
 ### 위치와 이동 화면
 
 - 자동 위치 추적을 켜고 위치를 허용하면 예정 출발 30분 전부터 **Foreground TrackingService**가 기본 경로의 출발지 반경 500m를 확인한다. 이 시간 안에 최근 60초의 정확도 100m 이내 위치가 확인된 회차만 실제 안내와 예약 알림을 시작한다. 출발 시각까지 확인하지 못하면 위치 확인을 종료한다. 확인된 회차는 도착 감지 또는 목표 도착 시각 30분 후 종료한다. 화면 밖 확인에는 Android 10 이상에서 백그라운드 위치 권한이 필요하다.
+- 이동 화면은 선택한 저장 경로를 보여준다. 이동 안내를 시작하기 전 최신 위치가 출발지 반경 밖이면 출근·퇴근 방향에 맞는 안내 문구를 표시한다. `출퇴근 위치 안내 표시` 설정은 화면 문구에만 적용된다. 수동 추적도 반경 확인 후 이동 안내를 시작하며, 위치를 확인할 수 없으면 최대 30초 뒤 종료한다.
 - 홈은 현재 시각 이후 돌아오는 목표 도착 일정이 더 가까운 방향의 기본 경로를 보여준다. 방향 탭으로 현재 홈에서 보는 경로를 바꿀 수 있다.
 - 예약과 표시의 기준 시간대는 서울이다. 기기별 12/24시간제 선택은 화면과 새 알림 표시에 적용되며 루틴의 저장 시각과 예약은 그대로 유지한다.
 - GPS 정확도·신선도·경로 일치 확인 후 `StagePositionMatcher`로 현재 구간을 판정. `RouteSchematicView`의 파란 위치 마커는 도식상의 **근사 진행률**이지 지도상 실제 좌표 아이콘이 아님.
@@ -216,7 +217,7 @@ Room(알림 기록) / Firestore(사용자 루틴·환경설정만)
 | `debug/RouteGpsLabActivity` | 저장 경로의 모의 마커 및 좌표 판정 | Android 기기 GPS 조작이나 실제 서비스 수신 |
 | `debug/RouteRecommendationLabActivity` | 가상 후보·저장 후보에 대해 **실제 앱과 같은 `rank()`** | 실제 기상특보 수신·TMAP 예측 정확도 |
 
-로컬 개발 환경에서 `assembleDebug`, `assembleRelease`, 전체 JUnit 테스트 75개가 통과했다. Gradle 8.2의 Windows 한글 경로 클래스 로딩을 우회할 경우 `scripts/test-core.ps1`로 전체 테스트를 실행한다. 기상청 좌표 격자 검사는 Android 메인 스레드를 초기화하지 않고 순수 계산을 실행한다. 실제 GPS, 교통 API, Firebase 서버 동기화는 별도 기기 검증 항목이다.
+현재 작업 사본의 Debug·Release 빌드와 JUnit 82개가 통과했다. Lint 결과는 오류 0건, 경고 184건이다. Windows 한글 경로에서 JUnit 실행 시 `scripts/test-core.ps1`을 사용한다. 기기와 서버의 실행 검증 범위는 [현재 검증 결과](STATUS.md)에 있다.
 
 ## 9. 미완료·운영 위험
 
@@ -229,9 +230,9 @@ Room(알림 기록) / Firestore(사용자 루틴·환경설정만)
 
 ## 10. 관련 문서
 
-- [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md): 개발 단계·브랜치 전략·주요 변경과 이유
+- [DEVELOPMENT_HISTORY.md](history/DEVELOPMENT_HISTORY.md): 개발 단계·브랜치 전략·주요 변경과 이유
 - [ALARM_FEATURES.md](ALARM_FEATURES.md): 알림 10종 판단 및 저장
 - [ALERT_LAB.md](ALERT_LAB.md): 디버그 실험 모드의 격리 범위
-- [API_INTEGRATION_VERIFIED.md](API_INTEGRATION_VERIFIED.md): API 연동·실측 기록
+- [API_INTEGRATION_VERIFIED.md](history/API_INTEGRATION_VERIFIED.md): 이전 API 실측 기록
 - [UI_LAYOUT_QA.md](UI_LAYOUT_QA.md): 화면 QA 기준
-- [STATUS.md](STATUS.md), [REQUIREMENTS_CURRENT.md](REQUIREMENTS_CURRENT.md): 시점별 현황·요구사항(과거 기록 포함)
+- [STATUS.md](STATUS.md), [REQUIREMENTS_CURRENT.md](REQUIREMENTS_CURRENT.md): 현재 실행 결과와 과제 요구사항

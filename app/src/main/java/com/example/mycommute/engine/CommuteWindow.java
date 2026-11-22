@@ -28,9 +28,16 @@ public final class CommuteWindow {
     public static boolean qualifiesAtStart(long departure,long now,long fixTime,
             float accuracy,float distance) {
         return inStartCheck(departure,now)&&inStartCheck(departure,fixTime)
-                &&fixTime<=now&&now-fixTime<=60_000L
-                &&Float.isFinite(accuracy)&&accuracy>0&&accuracy<=100
-                &&Float.isFinite(distance)&&distance>=0&&distance<=START_RADIUS_METERS;
+                &&usableStartFix(now,fixTime,accuracy)&&withinStartRadius(distance);
+    }
+
+    public static boolean usableStartFix(long now,long fixTime,float accuracy) {
+        return fixTime>0&&fixTime<=now&&now-fixTime<=60_000L
+                &&Float.isFinite(accuracy)&&accuracy>0&&accuracy<=100;
+    }
+
+    public static boolean withinStartRadius(float distance) {
+        return Float.isFinite(distance)&&distance>=0&&distance<=START_RADIUS_METERS;
     }
 
     /** First target strictly after now, using the configured arrival weekdays. */
