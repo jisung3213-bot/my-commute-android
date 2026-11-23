@@ -66,27 +66,35 @@
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="12dp" android:text="출발 준비 · 몇 분 전"
                     android:textColor="@color/text_secondary"/>
-                <EditText android:id="@+id/settingPrepareMinutes"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:inputType="number" android:singleLine="true" android:maxLength="3"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/settingPrepareMinutes"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:text="15분" android:textAllCaps="false"
+                    android:contentDescription="분 단위 시간 선택"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="10dp" android:text="차량 도착 임박 · 몇 분 전"
                     android:textColor="@color/text_secondary"/>
-                <EditText android:id="@+id/settingVehicleMinutes"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:inputType="number" android:singleLine="true" android:maxLength="2"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/settingVehicleMinutes"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:text="5분" android:textAllCaps="false"
+                    android:contentDescription="분 단위 시간 선택"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="10dp" android:text="승차지 출발 · 남은 여유(분)"
                     android:textColor="@color/text_secondary"/>
-                <EditText android:id="@+id/settingWalkSlackMinutes"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:inputType="number" android:singleLine="true" android:maxLength="2"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/settingWalkSlackMinutes"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:text="2분" android:textAllCaps="false"
+                    android:contentDescription="분 단위 시간 선택"/>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="10dp" android:text="도착 지연 · 몇 분 이상"
                     android:textColor="@color/text_secondary"/>
-                <EditText android:id="@+id/settingDelayMinutes"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:inputType="number" android:singleLine="true" android:maxLength="2"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/settingDelayMinutes"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:text="5분" android:textAllCaps="false"
+                    android:contentDescription="분 단위 시간 선택"/>
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSaveAlarmSettings"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -102,9 +110,11 @@
                     android:layout_height="wrap_content" android:layout_marginTop="12dp"
                     android:text="새 루틴 기본 도착 여유시간(분)"
                     android:textColor="@color/text_secondary"/>
-                <EditText android:id="@+id/settingDefaultMargin"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:inputType="number" android:singleLine="true" android:maxLength="3"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/settingDefaultMargin"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent" android:layout_height="48dp"
+                    android:text="10분" android:textAllCaps="false"
+                    android:contentDescription="분 단위 시간 선택"/>
                 <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/switchDefaultWeather"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
