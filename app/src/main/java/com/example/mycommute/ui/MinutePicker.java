@@ -18,6 +18,7 @@ public final class MinutePicker {
                               int minimum,int maximum,int initial) {
         MaterialButton button=activity.findViewById(viewId);
         set(button,initial,minimum,maximum);
+        button.setTag(com.example.mycommute.R.id.minute_picker_accessibility_title,title);
         button.setContentDescription(title+" · "+value(button)+"분 · 변경");
         button.setOnClickListener(v->{
             NumberPicker wheel=new NumberPicker(activity);
@@ -50,6 +51,9 @@ public final class MinutePicker {
             throw new IllegalArgumentException("Minutes out of range");
         field.setTag(minutes);
         ((TextView)field).setText(minutes+"분");
+        Object title=field.getTag(com.example.mycommute.R.id.minute_picker_accessibility_title);
+        if(title instanceof String)
+            field.setContentDescription(title+" · "+minutes+"분 · 변경");
     }
 
     public static int value(View field){
