@@ -96,6 +96,14 @@ MyCommuteAndroid/
 | `alarms/AlertCopy.java` | 출퇴근 알림의 제목과 본문 생성 |
 | `alarms/NotificationHelper.java`, `AlertLedger.java` | 알림 채널·발송, 통근/유형/구간 중복 발송 방지 |
 
+### 화면 XML과 동적 UI 구성 (PR #2 포함)
+
+- 각 화면 Activity는 `setContentView(R.layout.activity_...)`로 레이아웃을 구성합니다. `view_bottom_nav.xml`은 XML `<include>`로 재사용하고 `Navigation.bind()`가 Activity 전환 Intent를 연결합니다.
+- 루틴 화면의 가변 경로 카드는 `item_route_result.xml`을 `getLayoutInflater().inflate(..., destination, false)`로 생성한 후 추천 후보·나머지 후보 컨테이너에 추가합니다.
+- 장소 검색 및 알림 로그는 결과 수만큼 Java에서 `TextView`/`LinearLayout`을 생성합니다. 지도는 `activity_map.xml`의 `FrameLayout`에 SDK View를 동적으로 추가하고, 이동 약도는 커스텀 `RouteSchematicView`가 그립니다.
+- **`ui/MinutePicker.java` (PR #2, 현재 `main`)**: `activity_custom.xml`의 `editMargin`과 `activity_settings.xml`의 다섯 기준 입력 필드가 `EditText`에서 `MaterialButton`으로 교체되었습니다. 버튼 클릭 시 Android `NumberPicker`를 `AlertDialog`에 표시하며 확인 시 정수 값을 태그/텍스트로 갱신합니다. `CustomActivity.readInputs()`와 `SettingsActivity.read()`는 `MinutePicker.value()`를 통해 기존 정수 분값을 읽고, 사용자는 별도 저장 버튼으로 확정합니다. **루틴 도착시각은 `TimePickerDialog`를 계속 사용**합니다.
+- 선택 범위: 루틴 여유 0~180분, 출발 준비 1~120분, 차량 임박 1~30분, 승차 여유 0~20분, 지연 기준 1~60분, 새 루틴 기본 여유 0~120분. 데이터 모델 및 추천/알림 계산식은 PR #2에서 변경하지 않았습니다.
+
 ## 4. 경로 검색·추천의 정확한 동작
 
 1. 사용자가 커스텀에서 장소·경유지·목표 도착시각·여유시간을 저장하고 **경로 검색 버튼**을 눌러야 TMAP 조회가 시작됨.
