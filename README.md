@@ -64,6 +64,7 @@ app/src/main/
 - [문서 목차](docs/README.md) / [사용 안내](docs/USER_GUIDE.md) / [파일 구조·데이터 흐름](docs/ARCHITECTURE_CURRENT.md)
 - [알림 10종](docs/ALARM_FEATURES.md) / [API·Firebase 설정](docs/API_SETUP.md)
 - [구현 및 검증 근거](docs/STATUS.md) / [남은 검증](docs/NEXT_STEPS.md) / [시연 점검](docs/UI_LAYOUT_QA.md)
+- **[최종 문서·코드 점검 및 잔여 위험](docs/FINAL_REVIEW_2026-11-23.md)**
 - [개발 변천사](docs/history/DEVELOPMENT_HISTORY.md) / [NumberPicker 병합 기록](docs/MINUTE_PICKER_EXPERIMENT.md)
 
 ## 브랜치와 변경 이력
