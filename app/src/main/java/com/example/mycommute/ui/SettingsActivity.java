@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.view.View;
@@ -84,12 +83,17 @@ public class SettingsActivity extends AppCompatActivity {
                     LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT));
         }
         refreshSwitchStates();
-        number(R.id.settingPrepareMinutes,AlarmSettingsStore.prepareMinutes(this));
-        number(R.id.settingVehicleMinutes,AlarmSettingsStore.vehicleMinutes(this));
-        number(R.id.settingWalkSlackMinutes,AlarmSettingsStore.walkSlackMinutes(this));
-        number(R.id.settingDelayMinutes,AlarmSettingsStore.delayMinutes(this));
+        MinutePicker.attach(this,R.id.settingPrepareMinutes,"출발 준비 · 몇 분 전",1,120,
+                AlarmSettingsStore.prepareMinutes(this));
+        MinutePicker.attach(this,R.id.settingVehicleMinutes,"차량 도착 임박 · 몇 분 전",1,30,
+                AlarmSettingsStore.vehicleMinutes(this));
+        MinutePicker.attach(this,R.id.settingWalkSlackMinutes,"승차지 출발 · 남은 여유",0,20,
+                AlarmSettingsStore.walkSlackMinutes(this));
+        MinutePicker.attach(this,R.id.settingDelayMinutes,"도착 지연 · 몇 분 이상",1,60,
+                AlarmSettingsStore.delayMinutes(this));
         findViewById(R.id.btnSaveAlarmSettings).setOnClickListener(v->saveThresholds());
-        number(R.id.settingDefaultMargin,AlarmSettingsStore.defaultMargin(this));
+        MinutePicker.attach(this,R.id.settingDefaultMargin,"기본 도착 여유시간",0,120,
+                AlarmSettingsStore.defaultMargin(this));
         ((SwitchMaterial)findViewById(R.id.switchDefaultWeather))
                 .setChecked(AlarmSettingsStore.defaultWeather(this));
         findViewById(R.id.btnSaveDefaultSettings).setOnClickListener(v->{
@@ -199,13 +203,8 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    private void number(int id,int value){
-        ((EditText)findViewById(id)).setText(String.valueOf(value));
-    }
-
     private int read(int id){
-        String value=((EditText)findViewById(id)).getText().toString().trim();
-        return Integer.parseInt(value);
+        return MinutePicker.value(findViewById(id));
     }
 
     private void saveThresholds(){

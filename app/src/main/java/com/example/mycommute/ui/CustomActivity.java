@@ -83,6 +83,8 @@ public class CustomActivity extends AppCompatActivity {
         if(!draft.isConfigured())draft=newConfiguredDraft(direction);
         restoreDraft();
         findViewById(R.id.editDeparture).setOnClickListener(v->pickArrival());
+        MinutePicker.attach(this,R.id.editMargin,"도착 여유시간",0,180,
+                Math.max(0,Math.min(180,draft.marginMinutes)));
         findViewById(R.id.btnDirectionOut).setOnClickListener(v->changeDirection(RoutineStore.OUTBOUND));
         findViewById(R.id.btnDirectionBack).setOnClickListener(v->changeDirection(RoutineStore.RETURN));
         findViewById(R.id.btnNewRoutine).setOnClickListener(v->{
@@ -161,7 +163,8 @@ public class CustomActivity extends AppCompatActivity {
         ((EditText)findViewById(R.id.editRouteName)).setText(draft.name);
         selectedArrival=PlanSchedule.validTime(draft.arrivalTime)?draft.arrivalTime:"09:00";
         renderArrival();
-        ((EditText)findViewById(R.id.editMargin)).setText(String.valueOf(draft.marginMinutes));
+        MinutePicker.set(findViewById(R.id.editMargin),
+                Math.max(0,Math.min(180,draft.marginMinutes)),0,180);
         for(int i=0;i<DAYS.length;i++)
             ((MaterialButton)findViewById(DAYS[i])).setChecked(draft.runsOn(CAL_DAYS[i]));
         ((SwitchMaterial)findViewById(R.id.switchWeather)).setChecked(draft.weatherEnabled);
@@ -332,8 +335,7 @@ public class CustomActivity extends AppCompatActivity {
         String name=((EditText)findViewById(R.id.editRouteName)).getText().toString().trim();
         if(name.isEmpty()){toast("경로 이름을 입력하세요");return false;}
         int margin;
-        try{margin=Integer.parseInt(((EditText)findViewById(R.id.editMargin)).getText().toString().trim());}
-        catch(Exception e){toast("여유시간은 숫자로 입력");return false;}
+        margin=MinutePicker.value(findViewById(R.id.editMargin));
         if(margin<0||margin>180){toast("여유시간은 0~180분");return false;}
         StringBuilder days=new StringBuilder();
         for(int i=0;i<DAYS.length;i++)if(((MaterialButton)findViewById(DAYS[i])).isChecked()){
