@@ -11,6 +11,7 @@
 | 알림·GPS | [알림 조건](ALARM_FEATURES.md) |
 | **수업 기술 요건과 제출 기준** | [과제 점검](REQUIREMENTS_CURRENT.md) |
 | 이전 빌드·시연 근거 | [검증 기록](STATUS.md) |
+| **최종 점검 및 미검증 범위** | [최종 검토 보고](FINAL_REVIEW_2026-11-23.md) |
 | 발표 시연 항목 | [UI 점검](UI_LAYOUT_QA.md) |
 | 미검증 및 후속 범위 | [남은 확인 항목](NEXT_STEPS.md) |
 | 분 입력 선택 UI 변경 | [NumberPicker 변경 기록](MINUTE_PICKER_EXPERIMENT.md) |
