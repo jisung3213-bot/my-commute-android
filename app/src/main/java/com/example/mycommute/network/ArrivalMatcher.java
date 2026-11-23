@@ -11,9 +11,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Pure matching/parsing helpers. Never use a TMAP station ID as a TAGO nodeId. */
 public final class ArrivalMatcher {
+    private static final Pattern STOP_DISTANCE = Pattern.compile(
+            "^\\[?(\\d{1,2})\\]?\\s*번째\\s*전역\\s*(?:\\((.+)\\))?$");
+    private static final Pattern SUBWAY_ETA = Pattern.compile(
+            "(?<!\\d)(?:(\\d{1,3})\\s*분\\s*(?:(\\d{1,2})\\s*초)?|(\\d{1,4})\\s*초)\\s*(?:후|뒤)");
+
     public static final class Stop {
         public final String cityCode,nodeId,name;
         public final double lat,lon;
@@ -212,13 +219,13 @@ public final class ArrivalMatcher {
             // even though they include a human-readable ETA in arvlMsg2.
             int providerSeconds=item.optInt("barvlDt",-1);
             int raw=providerSeconds;
-            if(raw<=0)raw=explicitSubwayEtaSeconds(item.optString("arvlMsg3",""));
             if(raw<=0)raw=explicitSubwayEtaSeconds(item.optString("arvlMsg2",""));
+            if(raw<=0)raw=explicitSubwayEtaSeconds(item.optString("arvlMsg3",""));
             if(raw>0){
                 int corrected=raw-(int)Math.max(0,age/1000L);
                 if(corrected>0){
                     arrivals.add(corrected);
-                    if(direction.isEmpty())direction=trainDirection;
+                    if(direction.isEmpty())direction=displaySubwayDirection(trainDirection);
                     continue;
                 }
             }
@@ -228,8 +235,14 @@ public final class ArrivalMatcher {
             missingEta++;
             if(age>120_000L)continue;
             String state=item.optString("arvlCd","");
-            String message=item.optString("arvlMsg2","").replace('\n',' ')
-                    .replace('\r',' ').trim();
+            String message=item.optString("arvlMsg2","").replaceAll("\\s+"," ").trim();
+            if(explicitSubwayEtaSeconds(message)>0)continue;
+            Matcher distanceText=STOP_DISTANCE.matcher(message);
+            if(distanceText.matches()){
+                String location=distanceText.group(2);
+                message=distanceText.group(1)+"정거장 전"
+                        +(location==null?"":" · "+location.trim());
+            }
             if(message.length()>70)message=message.substring(0,70);
             if(message.isEmpty()){
                 if("1".equals(state))message="역 도착";
@@ -242,7 +255,7 @@ public final class ArrivalMatcher {
             if(generated>latestStatusAt){
                 latestStatusAt=generated;
                 statusText=message;
-                statusDirection=trainDirection;
+                statusDirection=displaySubwayDirection(trainDirection);
             }
         }
         if(!arrivals.isEmpty()){
@@ -264,22 +277,24 @@ public final class ArrivalMatcher {
                 now);
     }
 
+    private static String displaySubwayDirection(String direction) {
+        return direction.replaceAll("\\s+"," ").trim()
+                .replaceAll("\\s+-\\s+"," · ").replaceAll("\\s*방면$"," 방면");
+    }
+
     /** Only explicit minute/second ETA text; station counts are not times. */
     private static int explicitSubwayEtaSeconds(String message) {
-        if(message==null||message.isEmpty())return -1;
-        java.util.regex.Matcher minutes=java.util.regex.Pattern
-                .compile("(\\d{1,3})\\s*분\\s*(?:후|뒤)").matcher(message);
-        if(minutes.find()){
-            int n=Integer.parseInt(minutes.group(1));
-            if(n>0&&n<=120)return n*60;
+        Matcher match=SUBWAY_ETA.matcher(message);
+        if(!match.find())return -1;
+        int seconds;
+        if(match.group(3)!=null){
+            seconds=Integer.parseInt(match.group(3));
+        }else{
+            int remainder=match.group(2)==null?0:Integer.parseInt(match.group(2));
+            if(remainder>=60)return -1;
+            seconds=Integer.parseInt(match.group(1))*60+remainder;
         }
-        java.util.regex.Matcher seconds=java.util.regex.Pattern
-                .compile("(\\d{1,4})\\s*초\\s*(?:후|뒤)").matcher(message);
-        if(seconds.find()){
-            int n=Integer.parseInt(seconds.group(1));
-            if(n>0&&n<=7200)return n;
-        }
-        return -1;
+        return seconds>0&&seconds<=7200?seconds:-1;
     }
 
     private static long timestamp(String text) {

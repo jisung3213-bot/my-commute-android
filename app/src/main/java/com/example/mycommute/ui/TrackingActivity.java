@@ -441,19 +441,21 @@ public class TrackingActivity extends AppCompatActivity {
         TextView eta=label(R.id.liveVehicleEta);
         TextView next=label(R.id.liveVehicleNext);
         TextView status=label(R.id.liveBoarding);
+        TextView direction=label(R.id.liveVehicleDirection);
         TextView walkLabel=label(R.id.liveVehicleWalk);
         TextView slackLabel=label(R.id.liveVehicleSlack);
         View etaRow=findViewById(R.id.liveVehicleEtaRow);
         View etaDivider=findViewById(R.id.liveVehicleEtaDivider);
         View nextColumn=findViewById(R.id.liveVehicleNextColumn);
         View auxRow=findViewById(R.id.liveVehicleAuxRow);
-        // Suppress unavailable arrival time areas entirely, not just the text.
+        View timeUnavailable=findViewById(R.id.liveVehicleTimeUnavailable);
         etaRow.setVisibility(View.GONE);
         etaDivider.setVisibility(View.GONE);
         nextColumn.setVisibility(View.GONE);
         auxRow.setVisibility(View.GONE);
+        direction.setVisibility(View.GONE);
+        timeUnavailable.setVisibility(View.GONE);
         mode.setText("교통"); station.setText("정보 확인 중");
-        // No fabricated ETA or placeholder when the provider did not supply one.
         eta.setText("");next.setText("");
         status.setText("도착정보 확인 중");
         walkLabel.setText("");slackLabel.setText("");
@@ -469,17 +471,15 @@ public class TrackingActivity extends AppCompatActivity {
             return;
         }
         TransitRoute.Leg leg=route.legs.get(index);
-        mode.setText("BUS".equals(leg.mode)?"버스":"SUBWAY".equals(leg.mode)?"지하철":"교통");
-        station.setText(leg.startName+" · "+leg.routeName);
+        boolean subway="SUBWAY".equals(leg.mode);
+        mode.setText("BUS".equals(leg.mode)?"버스":subway?"지하철":"교통");
+        String routeName=subway?leg.routeName.replaceFirst("^수도권\\s*(?=[1-9]\\s*호선$)",""):leg.routeName;
+        station.setText(leg.startName+" · "+routeName);
         if(arrival!=null&&arrival.statusOnly){
             if(arrival.hasFreshStatus(now)){
                 status.setText(arrival.statusText);
-                eta.setText("");
-                next.setText("");
-                if(arrival.direction!=null&&!arrival.direction.isEmpty()){
-                    walkLabel.setText(arrival.direction);
-                    auxRow.setVisibility(View.VISIBLE);
-                }
+                timeUnavailable.setVisibility(View.VISIBLE);
+                showVehicleDirection(direction,arrival.direction);
             }else{
                 status.setText("상태정보 만료 · 갱신 대기");
             }
@@ -499,6 +499,7 @@ public class TrackingActivity extends AppCompatActivity {
         eta.setText(remaining<60?"1분 이내":((remaining+59)/60)+"분 후");
         etaRow.setVisibility(View.VISIBLE);
         etaDivider.setVisibility(View.VISIBLE);
+        if(subway)showVehicleDirection(direction,arrival.direction);
         if(second>remaining){
             next.setText(((second+59)/60)+"분 후");
             nextColumn.setVisibility(View.VISIBLE);
@@ -527,5 +528,9 @@ public class TrackingActivity extends AppCompatActivity {
         status.setText(estimate.describe());
     }
 
-
+    private void showVehicleDirection(TextView view,String direction){
+        if(direction==null||direction.isEmpty())return;
+        view.setText(direction);
+        view.setVisibility(View.VISIBLE);
+    }
 }

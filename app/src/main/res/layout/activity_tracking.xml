@@ -162,6 +162,16 @@
                     android:layout_marginTop="12dp" android:text="승차 가능성 확인 중"
                     android:textSize="14sp" android:textStyle="bold"
                     android:textColor="@color/text_secondary"/>
+                <TextView android:id="@+id/liveVehicleTimeUnavailable"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="도착 예정 시간 미제공"
+                    android:textSize="13sp" android:textColor="@color/text_secondary"
+                    android:visibility="gone"/>
+                <TextView android:id="@+id/liveVehicleDirection"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:breakStrategy="balanced"
+                    android:textSize="13sp" android:textColor="@color/text_secondary"
+                    android:visibility="gone"/>
                 <LinearLayout android:id="@+id/liveVehicleAuxRow"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="9dp" android:orientation="horizontal"
