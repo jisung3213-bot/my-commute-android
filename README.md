@@ -197,6 +197,4 @@ MyCommuteAndroid/
 └── settings.gradle (올라가 있음)
 ```
 
-</details>
 
-상위 작업 공간의 `AGENTS.md`, `WORKSPACE.md`, `agent-notes/`, `materials/`는 Android 저장소 밖에서 개발 기록·입력 원본·검증 캡처를 관리합니다.
